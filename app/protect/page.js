@@ -9,7 +9,7 @@ export default function Protect() {
     <main className="protect">
       <header className="pr-top">
         <Link href="/" className="pr-brand"><img src="/logo.png" alt="" /><span>CTRL ROOM</span></Link>
-        <nav>{session ? <Link className="btn small" href="/">Open CTRL ROOM</Link> : <><Link className="btn small quiet" href="/login">Sign in</Link><Link className="btn small primary" href="/portal">Start a mix</Link></>}</nav>
+        <nav>{session ? <Link className="btn small" href="/">Open CTRL ROOM</Link> : <><Link className="btn small quiet" href="/login">Sign in</Link><Link className="btn small primary" href="/portal">Send your files</Link></>}</nav>
       </header>
 
       <section className="pr-hero">
@@ -63,7 +63,7 @@ export default function Protect() {
         ].map(([t, d]) => <div key={t} className="ins-rule"><b>{t}</b><span>{d}</span></div>)}
       </section>
 
-      <footer className="pr-foot"><span><b>CTRL ROOM</b> · where the music lives before it’s out.</span><span><Link href="/portal">Start a mix</Link> · <Link href="/login">Sign in</Link></span></footer>
+      <footer className="pr-foot"><span><b>CTRL ROOM</b> · where the music lives before it’s out.</span><span><Link href="/portal">Send your files</Link> · <Link href="/login">Sign in</Link></span></footer>
       <PoweredBy />
     </main>
   );

@@ -17,7 +17,7 @@ export default function Prep() {
     <main className="protect prep">
       <header className="pr-top">
         <Link href="/portal" className="pr-brand"><img src="/logo.png" alt="" /><span>CTRL ROOM</span></Link>
-        <nav><Link className="btn small primary" href="/portal">Start a mix</Link></nav>
+        <nav><Link className="btn small primary" href="/portal">Send your files</Link></nav>
       </header>
       <section className="pr-hero">
         <p className="pr-eyebrow">Before you send</p>
@@ -29,7 +29,7 @@ export default function Prep() {
           <li key={s.t}><span className="prepn mono">{String(i + 1).padStart(2, '0')}</span><div><b>{s.t}</b><p>{s.d}</p>{s.extra && <p className="prepx">{s.extra}</p>}{s.link && <p><Link className="link" href="/portal">Send your files ›</Link></p>}</div></li>
         ))}
       </ol>
-      <div className="prepcta"><Link className="btn primary" href="/portal">I’m ready, start a mix</Link></div>
+      <div className="prepcta"><Link className="btn primary" href="/portal">I’m ready, send my files</Link></div>
       <PoweredBy />
     </main>
   );

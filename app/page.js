@@ -249,7 +249,7 @@ function ClientHome() {
           <div className="empty-state">
             <strong>Nothing here yet</strong>
             Start a project and send your files through the Portal. If your engineer already set one up, make sure you signed in with the email they have for you.
-            <Link className="btn primary" href="/portal">Start a mix</Link>
+            <Link className="btn primary" href="/portal">Send your files</Link>
           </div>
         )}
       </section>

@@ -174,11 +174,11 @@ export default function Portal() {
       {dropNote && <div className="dropnote" role="status">{dropNote}</div>}
       <section className="page portal">
         <div>
-          <h1 className="up">Start a mix</h1>
+          <h1 className="up">Send your files</h1>
           <a className="preplink" href="/portal/prep" target="_blank" rel="noopener noreferrer">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 4h10l6 6v10H4z" /><path d="M14 4v6h6M8 14h8M8 17h5" /></svg>
             How to prep your files <span aria-hidden="true">↗</span></a>
-          <p className="lede">Tell me about the project, add your songs, and drop the files for each one. This sets up your project page, where you'll follow progress and hear every mix.</p>
+          <p className="lede">Drop your stems and reference for each song. We’ll set up your project page, where you can follow progress and hear every mix.</p>
         </div>
         <div className="setup">
           <form className="sform" id="pform" onSubmit={submit} noValidate>

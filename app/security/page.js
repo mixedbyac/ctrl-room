@@ -91,6 +91,7 @@ export default function SecurityPage() {
                   <li className="when"><small>Last checked {new Date(health.at).toLocaleString()}</small></li></ul>}
           </div>
         )}
+        {eng && <Engineers />}
         {eng && <LoginCovers />}
         <div className="panel secpanel">
           <b>How your music is protected</b>
@@ -125,6 +126,33 @@ function LoginCovers() {
       <div className="aerow"><input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://music.apple.com/us/playlist/…" />
         <button className="btn small primary" disabled={busy || !url.trim()} onClick={() => save(false)}>{busy ? 'Loading…' : 'Use playlist'}</button>
         <button className="btn small quiet" disabled={busy} onClick={() => save(true)}>Clear</button></div>
+      {msg && <p className="toast-inline" style={{ margin: 0 }}>{msg}</p>}
+    </div>
+  );
+}
+
+function Engineers() {
+  const [st, setSt] = useState(null);
+  const [email, setEmail] = useState('');
+  const [msg, setMsg] = useState('');
+  const call = async (body) => { try { setSt(await api('/api/engineers', body)); setMsg(body.action === 'add' ? `Added. ${body.email} has engineer access once they sign in (or create an account) with that email.` : body.action === 'remove' ? 'Removed.' : ''); } catch (e) { setMsg(e.message); } };
+  useEffect(() => { call({ action: 'list' }); }, []);
+  return (
+    <div className="panel secpanel">
+      <b>Engineers</b>
+      <span className="muted small">People with full engineer access to this CTRL ROOM: every project, the Portal inbox, Dropbox, invoices and Insights. Good for an assistant or co-engineer. For someone running their own clients, ask for their own CTRL ROOM instead.</span>
+      <ul className="team">
+        {(st?.list || []).map((e) => (
+          <li key={e.email}><span className="tav">{e.email[0].toUpperCase()}</span><span className="tmain"><b>{e.email}</b><small>{e.owner ? 'Main engineer' : 'Engineer'}</small></span>
+            {st.owner && !e.owner && <button className="btn small quiet" onClick={() => { if (window.confirm(`Remove ${e.email} as an engineer?`)) call({ action: 'remove', email: e.email }); }}>Remove</button>}</li>
+        ))}
+      </ul>
+      {st?.owner && (
+        <form className="teamadd" onSubmit={(e) => { e.preventDefault(); if (email.trim()) { call({ action: 'add', email: email.trim() }); setEmail(''); } }}>
+          <input type="email" placeholder="assistant@email.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Engineer email" />
+          <button className="btn small primary">Add engineer</button>
+        </form>
+      )}
       {msg && <p className="toast-inline" style={{ margin: 0 }}>{msg}</p>}
     </div>
   );

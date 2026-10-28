@@ -10,6 +10,7 @@ import { hashStr, artOf } from '@/lib/art';
 import { fmtDate, todayISO, statusText, shortDate } from '@/lib/format';
 import { ArtistHero, ArtistAvatar } from '@/components/ArtistProfile';
 import ArtistTeam from '@/components/ArtistTeam';
+import AddArtist from '@/components/AddArtist';
 
 const initials = (n) => n.split(/\s+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 const sortKey = (n) => n.replace(/^the\s+/i, '');
@@ -21,11 +22,13 @@ function Artists() {
   const [projects, setProjects] = useState(null);
   const [q, setQ] = useState('');
   const [profiles, setProfiles] = useState({});
+  const [adding, setAdding] = useState(false);
+  const [tick, setTick] = useState(0);
   useEffect(() => {
     if (!session) return;
     selectWithVersions((V) => supabase().from('projects').select(`*, songs(*, ${V}(id,label,created_at))`).order('created_at', { ascending: false })).then(({ data }) => setProjects(data || []));
     supabase().from('artists').select('*').then(({ data }) => setProfiles(Object.fromEntries((data || []).map((a) => [a.name.toLowerCase(), a]))));
-  }, [session, eng]);
+  }, [session, eng, tick]);
   const prof = (n) => profiles[n.toLowerCase()];
   const setProf = (a) => setProfiles((m) => ({ ...m, [a.name.toLowerCase()]: a }));
 
@@ -37,8 +40,10 @@ function Artists() {
       a.projects.push(p);
       a.contact ||= p.contact_name; a.phone ||= p.phone; a.email ||= p.client_email;
     });
+    // artists added by hand (no project yet) show too
+    Object.values(profiles).forEach((a) => { if (![...m.keys()].some((k) => k.toLowerCase() === a.name.toLowerCase())) m.set(a.name, { name: a.name, projects: [] }); });
     return [...m.values()].sort((a, b) => sortKey(a.name).localeCompare(sortKey(b.name)));
-  }, [projects]);
+  }, [projects, profiles]);
 
   if (!session) return null;
   if (!projects) return <><TopBar crumbs={[{ label: 'Home', href: '/' }, { label: 'Artists' }]} /><section className="page"><p className="muted">Loading…</p></section></>;
@@ -105,7 +110,9 @@ function Artists() {
     <>
       <TopBar crumbs={[{ label: 'Home', href: '/' }, { label: 'Artists' }]} />
       <section className="page">
-        <div className="hhead"><h1 className="up">Artists</h1><p className="lede">{artists.length} artist{artists.length === 1 ? '' : 's'} · {live} song{live === 1 ? '' : 's'} in progress</p></div>
+        <div className="hhead"><h1 className="up">Artists</h1><p className="lede">{artists.length} artist{artists.length === 1 ? '' : 's'} · {live} song{live === 1 ? '' : 's'} in progress</p>
+          {eng && <button className="btn primary small" onClick={() => setAdding(!adding)} aria-expanded={adding}>{adding ? 'Close' : '+ Add artist'}</button>}</div>
+        {eng && adding && <AddArtist onDone={() => setTick((t) => t + 1)} />}
         <div className="asearch"><input type="search" placeholder="Search artists" aria-label="Search artists" value={q} onChange={(e) => setQ(e.target.value)} /></div>
         <div className="aletters">{Object.keys(groups).map((L) => <button key={L} onClick={() => document.getElementById(`ag-${L}`)?.scrollIntoView({ behavior: 'smooth' })}>{L}</button>)}</div>
         <div className="arows">
@@ -117,7 +124,7 @@ function Artists() {
                 return (
                   <Link key={a.name} className="arow" href={`/artists?a=${encodeURIComponent(a.name)}`}>
                     <ArtistAvatar name={a.name} profile={prof(a.name)} />
-                    <span style={{ minWidth: 0 }}><b>{prof(a.name)?.display_name || a.name}</b><small>{a.projects.length} project{a.projects.length > 1 ? 's' : ''} · {st.songs.length} song{st.songs.length === 1 ? '' : 's'}{a.contact && a.contact !== a.name ? ` · ${a.contact}` : ''}</small></span>
+                    <span style={{ minWidth: 0 }}><b>{prof(a.name)?.display_name || a.name}</b><small>{a.projects.length ? `${a.projects.length} project${a.projects.length > 1 ? 's' : ''}` : 'No projects yet'} · {st.songs.length} song{st.songs.length === 1 ? '' : 's'}{a.contact && a.contact !== a.name ? ` · ${a.contact}` : ''}</small></span>
                     <span className="apill" style={st.live.length ? undefined : { color: 'var(--ok)' }}>{pill}</span><span className="chev" aria-hidden="true">›</span>
                   </Link>
                 ); })}

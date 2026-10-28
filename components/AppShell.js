@@ -18,7 +18,7 @@ import { forRole } from '@/lib/changelog';
 const Ctx = createContext(null);
 export const useApp = () => useContext(Ctx);
 
-const PUBLIC = ['/login', '/signup', '/portal', '/l', '/protect'];
+const PUBLIC = ['/login', '/signup', '/welcome', '/portal', '/l', '/protect'];
 // domains that show only the Portal (sendfileshere.com)
 export const PORTAL_HOSTS = (process.env.NEXT_PUBLIC_PORTAL_DOMAINS || 'sendfileshere.com,www.sendfileshere.com').split(',').map((h) => h.trim().toLowerCase());
 export const MAIN_SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://ctrl-room-eight.vercel.app';
@@ -96,7 +96,7 @@ export default function AppShell({ children }) {
     return <Ctx.Provider value={value}><MfaGate onDone={() => setMfaTick((t) => t + 1)} onSignOut={signOut} /></Ctx.Provider>;
   }
   if (portalHost && session !== undefined) return <Ctx.Provider value={value}><div className="portalhost">{children}<PoweredBy /></div></Ctx.Provider>;
-  if (pathname === '/login' || pathname === '/signup' || pathname === '/protect' || pathname === '/portal/prep' || pathname.startsWith('/l/')) return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  if (pathname === '/login' || pathname === '/signup' || pathname === '/welcome' || pathname === '/protect' || pathname === '/portal/prep' || pathname.startsWith('/l/')) return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
   if (session === undefined || (session === null && !isPublic)) {
     return <LogoLoader />;
   }

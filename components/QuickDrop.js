@@ -1,9 +1,10 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { parseMixName, matchSong } from '@/lib/filename';
 import { deliverFile } from '@/lib/deliver';
+import { takePending } from '@/lib/native';
 
 const AUDIO = /\.(wav|aiff?|mp3|m4a|flac)$/i;
 const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
@@ -86,16 +87,33 @@ export default function QuickDrop({ projects, onDone }) {
   const [warn, setWarn] = useState('');
   function alertGroup(g) { setWarn(!g.artist.trim() ? `Add the artist for ${g.files[0].file.name}.` : 'Give each new project a title.'); }
 
+  // files from the Mac app (Dock icon, Open With, ⌘U)
+  const box = useRef(null);
+  const [incoming, setIncoming] = useState(0);
+  const pickRef = useRef(pick); pickRef.current = pick;
+  useEffect(() => {
+    const take = () => {
+      const files = takePending();
+      setIncoming(0);
+      if (files.length) { setWarn(''); pickRef.current(files); box.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    };
+    const loading = (e) => setIncoming(e.detail?.count || 1);
+    take();
+    window.addEventListener('ctrl-room:files', take);
+    window.addEventListener('ctrl-room:files-loading', loading);
+    return () => { window.removeEventListener('ctrl-room:files', take); window.removeEventListener('ctrl-room:files-loading', loading); };
+  }, []);
+
   const total = groups.reduce((n, g) => n + g.files.length, 0);
   const allDone = total > 0 && groups.every((g) => g.files.every((f) => f.state === 'done'));
 
   return (
-    <section className="hsec">
+    <section className="hsec" ref={box}>
       <label className={`minidrop ${hot ? 'hot' : ''}`} style={{ cursor: 'pointer', padding: '18px 16px' }}
         onDragOver={(e) => { e.preventDefault(); setHot(true); }} onDragLeave={() => setHot(false)}
         onDrop={(e) => { e.preventDefault(); setHot(false); setWarn(''); pick(e.dataTransfer?.files); }}>
         <span className="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V4M7 9l5-5 5 5M4 15v4a1 1 0 001 1h14a1 1 0 001-1v-4" /></svg></span>
-        <span className="mt"><b>{total ? `${total} mix${total > 1 ? 'es' : ''} ready to deliver` : hot ? "Drop it like it's hot" : 'Drop mixes to deliver'}</b>
+        <span className="mt"><b>{incoming ? `Reading ${incoming} file${incoming > 1 ? 's' : ''} from your Mac…` : total ? `${total} mix${total > 1 ? 'es' : ''} ready to deliver` : hot ? "Drop it like it's hot" : 'Drop mixes to deliver'}</b>
           <span>Name them “Artist - Song - Mix 1.wav”. Projects, songs and versions get set up for you.</span></span>
         <input className="vh" type="file" multiple accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.flac" onChange={(e) => { setWarn(''); pick(e.target.files); e.target.value = ''; }} />
       </label>

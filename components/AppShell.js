@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Cover from '@/components/Cover';
 import { PlayerProvider } from '@/components/Player';
+import { installNativeBridge, isMacApp } from '@/lib/native';
 import UpdateWatcher, { getSeen } from '@/components/UpdateWatcher';
 import { forRole } from '@/lib/changelog';
 
@@ -50,6 +51,14 @@ export default function AppShell({ children }) {
     window.addEventListener('ctrl-room:seen', check);
     return () => window.removeEventListener('ctrl-room:seen', check);
   }, [eng]);
+
+  const [inMacApp, setInMacApp] = useState(false);
+  useEffect(() => setInMacApp(isMacApp()), []);
+  // Mac app: files dropped on the Dock icon go to the Home upload box
+  useEffect(() => {
+    if (!eng) return;
+    return installNativeBridge(() => { if (pathname !== '/') router.push('/'); });
+  }, [eng, pathname, router]);
 
   const signOut = async () => { await supabase().auth.signOut(); router.replace('/login'); };
   const value = { session, email: session?.user?.email || '', eng, projects, reloadProjects, signOut };
@@ -101,6 +110,11 @@ export default function AppShell({ children }) {
               <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l2.4 5.6L20 10l-4.5 3.9L17 20l-5-3-5 3 1.5-6.1L4 10l5.6-1.4z" /></svg></span>What’s new
               {unseen && <span className="newdot" aria-label="New" />}
             </Link>
+          )}
+          {session && eng && !inMacApp && (
+            <a className="navitem" href="/mac">
+              <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /></svg></span>Get the Mac app
+            </a>
           )}
           <div className="sidefoot">
             {session ? (

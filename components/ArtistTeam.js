@@ -25,7 +25,8 @@ export default function ArtistTeam({ artist, projects }) {
   }, [everyone.join(',')]); // eslint-disable-line
   const confirmAcct = async (em) => {
     if (!window.confirm(`Confirm ${em}? Only do this if you know this account really belongs to them.`)) return;
-    try { const r = await api('/api/verify', { action: 'confirm', email: em, artist }); setAcct((a) => ({ ...a, [em]: 'confirmed' })); setMsg(r.invited ? `${em} is verified and got an email invite to join.` : `${em} is verified and can see ${artist}’s projects.`); }
+    try { const r = await api('/api/verify', { action: 'confirm', email: em, artist }); setAcct((a) => ({ ...a, [em]: 'confirmed' })); if (r.invited && !r.invited.sent && r.invited.link) { try { await navigator.clipboard.writeText(r.invited.link); } catch {} }
+      setMsg(r.invited ? (r.invited.sent ? `${em} is verified and got an email invite to join.` : `${em} is verified. Email isn’t set up, so their invite link is copied. Text it to them.`) : `${em} is verified and can see ${artist}’s projects.`); }
     catch (e) { setMsg(e.message); }
   };
   const Badge = ({ em }) => {
@@ -52,6 +53,15 @@ export default function ArtistTeam({ artist, projects }) {
     load();
   };
   const invite = (em) => `${window.location.origin}/signup?email=${encodeURIComponent(em)}`;
+  const sendInvite = async (em) => {
+    setMsg('Sending…');
+    try {
+      const r = await api('/api/invite', { artist, emails: [em], role: rows?.find((x) => x.email.toLowerCase() === em.toLowerCase())?.role || 'Admin', verify: false });
+      const x = r.results?.[0] || {};
+      if (!x.sent && x.link) { try { await navigator.clipboard.writeText(x.link); } catch {} }
+      setMsg(x.sent ? `Invite emailed to ${em}.` : `Couldn’t email ${em}${x.message ? ` (${x.message})` : ''}. Their invite link is copied, text it to them.`);
+    } catch (e) { setMsg(e.message); }
+  };
   const copy = async (em) => { try { await navigator.clipboard.writeText(invite(em)); setMsg('Sign-up link copied.'); } catch {} };
 
   return (
@@ -65,7 +75,7 @@ export default function ArtistTeam({ artist, projects }) {
         {(rows || []).filter((r) => !contacts.includes(r.email.toLowerCase())).map((r) => (
           <li key={r.id}><span className="tav">{r.email[0].toUpperCase()}</span><span className="tmain"><b>{r.email}</b><small>{/^admin$/i.test(r.role || '') ? 'Admin · can edit cover art, track order, titles and the active version' : r.role || 'Team'}</small></span>
             <Badge em={r.email.toLowerCase()} /><select className="trole" value={r.role || 'Other'} aria-label="Role" onChange={async (e) => { await supabase().from('artist_members').update({ role: e.target.value }).eq('id', r.id); load(); }}>{ROLES.map((x) => <option key={x}>{x}</option>)}</select><Badge em={r.email.toLowerCase()} />
-            <span className="row-actions"><button className="btn small quiet" onClick={() => copy(r.email)}>Copy invite</button><button className="btn small quiet" onClick={() => remove(r)}>Remove</button></span></li>
+            <span className="row-actions"><button className="btn small quiet" onClick={() => sendInvite(r.email)}>Send invite</button><button className="btn small quiet" onClick={() => remove(r)}>Remove</button></span></li>
         ))}
         {rows && !rows.length && !contacts.length && <li className="muted small">No one yet.</li>}
       </ul>

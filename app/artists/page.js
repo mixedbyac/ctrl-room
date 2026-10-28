@@ -37,7 +37,9 @@ function Artists() {
 
   const artists = useMemo(() => {
     const m = new Map();
+    const keep = new Set([...(projects || []).filter((p) => !p.archived).map((p) => p.artist.toLowerCase()), ...Object.keys(profiles)]);
     (projects || []).forEach((p) => {
+      if (!keep.has(p.artist.toLowerCase())) return; // only archived projects and no artist page (e.g. a deleted artist)
       if (!m.has(p.artist)) m.set(p.artist, { name: p.artist, projects: [], contact: p.contact_name, phone: p.phone, email: p.client_email });
       const a = m.get(p.artist);
       a.projects.push(p);
@@ -97,6 +99,7 @@ function Artists() {
                 <span className="pc-bar"><i style={{ width: `${n ? (ap / n) * 100 : 0}%` }} /></span><span className="pc-sub">{ap} of {n} approved</span></Link>; })}
           </div></section>
           {eng && <ArtistTeam artist={artist.name} projects={artist.projects} />}
+          {eng && <DeleteArtist name={artist.name} count={artist.projects.length} onDone={() => { setTick((t) => t + 1); router.push('/artists'); }} />}
           {st.done.length > 0 && <section className="asec"><h2 className="h2 up">Finished</h2><ul className="mlist">
             {st.done.map(({ p, s }) => <li key={s.id}><Link className="mini-row" href={`/s/${s.id}`}><Cover {...artOf(s, p)} size={80} /><span><b>{s.title}</b><small>{p.title} · approved {shortDate(s.approved_at)}</small></span></Link></li>)}
           </ul></section>}
@@ -140,6 +143,33 @@ function Artists() {
         </div>
       </section>
     </>
+  );
+}
+
+function DeleteArtist({ name, count, onDone }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const go = async (projects) => {
+    if (projects === 'delete' && !window.confirm(`Delete ${name} and all ${count} of their project${count === 1 ? '' : 's'}? Every song, mix, note and file goes too. This can’t be undone.`)) return;
+    setBusy(true); setErr('');
+    try { await api('/api/artists/delete', { artist: name, projects }); onDone(); } catch (e) { setErr(e.message); setBusy(false); }
+  };
+  return (
+    <section className="asec adelete">
+      {!open ? <button className="btn small quiet danger" onClick={() => setOpen(true)}>Delete artist</button> : (
+        <div className="panel">
+          <h3>Delete {name}?</h3>
+          <p className="muted small" style={{ margin: 0 }}>Removes their artist page and team, so nobody on it can get in anymore.{count ? ` They have ${count} project${count === 1 ? '' : 's'}.` : ''}</p>
+          <div className="row-actions">
+            <button className="btn small quiet" onClick={() => setOpen(false)} disabled={busy}>Cancel</button>
+            {count > 0 && <button className="btn small" onClick={() => go('archive')} disabled={busy}>Delete artist, archive projects</button>}
+            <button className="btn small danger" onClick={() => go(count ? 'delete' : 'archive')} disabled={busy}>{busy ? 'Deleting…' : count ? 'Delete artist and projects' : 'Delete artist'}</button>
+          </div>
+          {err && <p className="ferr" style={{ margin: 0 }}>{err}</p>}
+        </div>
+      )}
+    </section>
   );
 }
 

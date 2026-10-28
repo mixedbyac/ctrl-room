@@ -91,6 +91,7 @@ export default function SecurityPage() {
                   <li className="when"><small>Last checked {new Date(health.at).toLocaleString()}</small></li></ul>}
           </div>
         )}
+        {eng && <EmailSetup />}
         {eng && <Engineers />}
         {eng && <LoginCovers />}
         <div className="panel secpanel">
@@ -127,6 +128,25 @@ function LoginCovers() {
         <button className="btn small primary" disabled={busy || !url.trim()} onClick={() => save(false)}>{busy ? 'Loading…' : 'Use playlist'}</button>
         <button className="btn small quiet" disabled={busy} onClick={() => save(true)}>Clear</button></div>
       {msg && <p className="toast-inline" style={{ margin: 0 }}>{msg}</p>}
+    </div>
+  );
+}
+
+function EmailSetup() {
+  const [st, setSt] = useState(null);
+  useEffect(() => { api('/api/invite', { check: true }).then(setSt).catch(() => setSt({ email: false })); }, []);
+  return (
+    <div className="panel secpanel" id="email">
+      <b>Email invites {st && (st.email ? <span className="tbadge ok">✓ On · from {st.from}</span> : <span className="tbadge warn">Not set up</span>)}</b>
+      <span className="muted small">CTRL ROOM sends sign-up invites to artists itself. Until this is set up, you get an invite link to copy and text instead.</span>
+      {st && !st.email && (
+        <ol className="small" style={{ margin: 0, paddingLeft: 18, lineHeight: 1.6 }}>
+          <li>Make a free account at <a className="link" href="https://resend.com" target="_blank" rel="noopener noreferrer">resend.com</a>.</li>
+          <li>Domains › Add domain › <b>art-house.us</b>, then add the DNS records it shows in Squarespace (Domains › DNS).</li>
+          <li>API Keys › Create API key (Sending access).</li>
+          <li>In Vercel › ctrl-room › Settings › Environment Variables, add <code>RESEND_API_KEY</code> (the key) and <code>EMAIL_FROM</code> = <code>CTRL ROOM &lt;hello@art-house.us&gt;</code>, then Redeploy.</li>
+        </ol>
+      )}
     </div>
   );
 }

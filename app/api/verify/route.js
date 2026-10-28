@@ -1,5 +1,6 @@
 import { admin, userFrom, engineerFrom, jwtClaims, json, fail } from '@/lib/server';
 import { limit } from '@/lib/ratelimit';
+import { invitePerson } from '@/lib/invite';
 
 export const runtime = 'nodejs';
 
@@ -73,9 +74,9 @@ export async function POST(req) {
     let u = await findUser(db, email), invited = false;
     if (!u) {
       const origin = req.headers.get('origin') || `https://${req.headers.get('host')}`;
-      const { data, error } = await db.auth.admin.inviteUserByEmail(email, { redirectTo: `${origin}/welcome`, data: b.artist ? { artist: b.artist } : {} });
-      if (error) return fail(/rate|limit/i.test(error.message) ? 'Supabase’s email limit is reached for now. Try again in an hour, or send them the sign-up link.' : error.message, 500);
-      u = data.user; invited = true;
+      const r = await invitePerson(db, { email, origin, artist: b.artist || '', invitedBy: '' });
+      if (!r.user) return fail(r.reason || 'Couldn’t set up their account.', 500);
+      u = r.user; invited = { sent: r.sent, link: r.link };
     }
     await db.auth.admin.updateUserById(u.id, { app_metadata: { ...(u.app_metadata || {}), needs_verify: false, vouched: true } });
     return json({ ok: true, invited });

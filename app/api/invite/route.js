@@ -1,5 +1,6 @@
 import { admin, engineerFrom, json, fail } from '@/lib/server';
 import { fetchSpotifyArtist, spotifyArtistId } from '@/lib/spotify';
+import { invitePerson } from '@/lib/invite';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -9,10 +10,12 @@ export async function POST(req) {
   const { user, why } = await engineerFrom(req);
   if (!user) return fail(why, 403);
   const b = await req.json().catch(() => ({}));
+  if (b.check) return json({ email: !!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM), from: process.env.EMAIL_FROM || null });
   const artist = String(b.artist || '').trim().slice(0, 100);
   const emails = [...new Set((Array.isArray(b.emails) ? b.emails : String(b.emails || '').split(/[\s,;]+/)).map((e) => String(e).trim().toLowerCase()).filter(Boolean))].slice(0, 10);
   const role = ['Admin', 'Artist', 'Manager', 'Team'].includes(b.role) ? b.role : 'Admin';
   const spotify = String(b.spotify || '').trim().slice(0, 300);
+  const phone = String(b.phone || '').trim().slice(0, 30);
   const vouch = b.verify !== false; // you know these people: they count as verified straight away
   if (!artist) return fail('Add the artist name.');
   const bad = emails.find((e) => !/^\S+@\S+\.\S+$/.test(e));
@@ -33,10 +36,9 @@ export async function POST(req) {
   for (const email of emails) {
     const { error: mErr } = await db.from('artist_members').insert({ artist, email, role });
     if (mErr && !/duplicate|unique/i.test(mErr.message)) { results.push({ email, status: 'error', message: mErr.message }); continue; }
-    const signup = `${origin}/signup?email=${encodeURIComponent(email)}&artist=${encodeURIComponent(artist)}`;
-    const { data: inv, error } = await db.auth.admin.inviteUserByEmail(email, { redirectTo: `${origin}/welcome`, data: { artist, invited_by: user.email } });
-    let u = inv?.user || null;
-    if (error && /already|registered|exists/i.test(error.message)) {
+    const r = await invitePerson(db, { email, origin, artist, invitedBy: user.email, phone: emails.length === 1 ? phone : '' });
+    let u = r.user;
+    if (!u && r.status !== 'link') {
       for (let page = 1; page <= 20 && !u; page++) {
         const { data: d } = await db.auth.admin.listUsers({ page, perPage: 200 });
         u = (d?.users || []).find((x) => (x.email || '').toLowerCase() === email) || null;
@@ -44,9 +46,8 @@ export async function POST(req) {
       }
     }
     if (vouch && u) await db.auth.admin.updateUserById(u.id, { app_metadata: { ...(u.app_metadata || {}), needs_verify: false, vouched: true } });
-    if (!error) { results.push({ email, status: 'invited', link: signup, verified: vouch }); continue; }
-    if (/already|registered|exists/i.test(error.message)) results.push({ email, status: 'existing', verified: vouch && !!u });
-    else results.push({ email, status: 'link', link: signup, message: /rate|limit/i.test(error.message) ? 'Email limit reached, send them the link instead.' : error.message });
+    results.push({ email, status: r.status, link: r.link, sent: r.sent, texted: r.texted, verified: vouch && !!u,
+      message: r.sent ? (r.reason === 'supabase' ? 'Sent by Supabase’s built-in email (it only reaches your Supabase team). Copy the link to be safe.' : '') : r.reason === 'not-set-up' ? 'Email isn’t set up yet. Copy the link and text it to them.' : r.reason });
   }
-  return json({ ok: true, artist, results });
+  return json({ ok: true, artist, results, email: !!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM) });
 }

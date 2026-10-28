@@ -1124,3 +1124,4 @@ a.driftc:hover { transform: scale(1.04); }
 .invstate.void { background: rgba(255,255,255,.06); color: var(--muted); }
 .invnote.paid { border-color: rgba(114,211,156,.3); }
 .invicon.ok { color: var(--ok); }
+.btn.quiet.danger { background: none; color: #ff6b7d; border-color: rgba(201,56,74,.45); } .btn.quiet.danger:hover { background: rgba(201,56,74,.12); } .adelete { margin-top: 28px; }

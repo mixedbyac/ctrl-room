@@ -162,13 +162,13 @@ export default function Portal() {
           <form className="sform" id="pform" onSubmit={submit} noValidate>
             <fieldset className="sec" disabled={sending}>
               <legend><span className="n">1</span>You</legend>
-              <SpotifyField value={f.spotify} onChange={(v) => setF((x) => ({ ...x, spotify: v }))} onArtist={(a) => setF((x) => ({ ...x, artist: x.artist.trim() ? x.artist : a.name || '' }))} />
               <div className="two">
-                <div className="fld"><label htmlFor="fName">Your name</label><input id="fName" autoComplete="name" value={f.name} onChange={set('name')} /></div>
                 <div className="fld"><label htmlFor="fArtist">Artist name</label><input id="fArtist" value={f.artist} onChange={set('artist')} /></div>
+                <div className="fld"><label htmlFor="fName">Your name</label><input id="fName" autoComplete="name" value={f.name} onChange={set('name')} /></div>
                 <div className="fld"><label htmlFor="fEmail">Email <span className="opt">you'll sign in with this</span></label><input id="fEmail" type="email" autoComplete="email" value={f.email} onChange={set('email')} /></div>
                 <div className="fld"><label htmlFor="fPhone">Phone <span className="opt">for text updates</span></label><input id="fPhone" type="tel" autoComplete="tel" value={f.phone} onChange={set('phone')} /></div>
               </div>
+              <SpotifyField value={f.spotify} onChange={(v) => setF((x) => ({ ...x, spotify: v }))} onArtist={(a) => setF((x) => ({ ...x, artist: x.artist.trim() ? x.artist : a.name || '' }))} />
             </fieldset>
 
             <fieldset className="sec" disabled={sending}>

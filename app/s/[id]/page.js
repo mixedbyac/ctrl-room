@@ -1,6 +1,7 @@
 'use client';
 import QualityBadge from '@/components/QualityBadge';
 import InlineText from '@/components/InlineText';
+import CommentList from '@/components/Comments';
 import { InvoiceNotice, useInvoices, lockingInvoice } from '@/components/Invoices';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -23,10 +24,11 @@ const PAUSE = <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" />;
 
 export default function SongPage() {
   const { id } = useParams();
-  const { eng, email } = useApp();
+  const { eng, email, session } = useApp();
   const [song, setSong] = useState(undefined);
   const [versions, setVersions] = useState([]);
   const [notes, setNotes] = useState([]);
+  const [reactions, setReactions] = useState([]);
   const [updates, setUpdates] = useState([]);
   const [plays, setPlays] = useState([]);
   const [vid, setVid] = useState(null);
@@ -52,6 +54,9 @@ export default function SongPage() {
     ]);
     const list = orderVersions(vs || []);
     setSong(s); setVersions(list); setNotes(ns || []); setUpdates(us || []);
+    const nids = (ns || []).map((n) => n.id);
+    if (nids.length) sb.from('note_reactions').select('note_id, emoji, who').in('note_id', nids).then(({ data, error }) => setReactions(error ? [] : data || []));
+    else setReactions([]);
     sb.from('songs').select('id').eq('project_id', s.project_id).order('position').then(({ data }) => setQueueIds((data || []).map((x) => x.id)));
     pl.refresh(id, list);
     if (list.length) {
@@ -166,7 +171,7 @@ export default function SongPage() {
             <button key={k} className="stab" role="tab" aria-selected={k === curTab} onClick={() => setTab(k)}>{l}{c ? <span className={`cnt ${hot ? 'hot' : ''}`}>{c}</span> : null}</button>
           ))}
         </div>
-        {curTab === 'notes' && <Notes {...{ notes, v, versions, time, playing, seek, setVid: switchTo, eng, email, song, reload: load }} />}
+        {curTab === 'notes' && <Notes {...{ notes, reactions, v, versions, time, playing, seek, setVid: switchTo, eng, email, meName: session?.user?.user_metadata?.name, song, reload: load }} />}
         {curTab === 'progress' && <Progress {...{ song, versions, eng, reload: load }} />}
         {curTab === 'updates' && <Updates {...{ updates, eng, song, p, reload: load }} />}
         {curTab === 'about' && <About {...{ song, eng, reload: load }} />}
@@ -317,56 +322,85 @@ function Scrub({ v, notes, time, dur, seek, eng, plays, header = null }) {
 }
 
 /* ---------- notes ---------- */
-function Notes({ notes, v, versions, time, playing, seek, setVid, eng, email, song, reload }) {
+function Notes({ notes, reactions, v, versions, time, playing, seek, setVid, eng, email, meName, song, reload }) {
   const [filter, setFilter] = useState('this');
   const [mode, setMode] = useState('time');
   const [body, setBody] = useState('');
   const [pinned, setPinned] = useState(null);
+  const [end, setEnd] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const me = String(email || '').toLowerCase();
   const at = pinned != null ? pinned : time;
-  const list = notes.filter((n) => filter === 'all' || n.version_id === v?.id).sort((a, b) => (a.t ?? -1) - (b.t ?? -1));
+  const list = notes.filter((n) => filter === 'all' || n.version_id === v?.id || (n.parent_id && notes.find((p) => p.id === n.parent_id)?.version_id === v?.id))
+    .sort((a, b) => (a.t ?? -1) - (b.t ?? -1) || a.created_at.localeCompare(b.created_at));
   const label = (vid) => versions.find((x) => x.id === vid)?.label || '';
   const nums = {};
-  notes.filter((n) => n.version_id === v?.id && n.t != null).sort((a, b) => a.t - b.t).forEach((n, i) => { nums[n.id] = i + 1; });
+  notes.filter((n) => n.version_id === v?.id && n.t != null && !n.parent_id).sort((a, b) => a.t - b.t).forEach((n, i) => { nums[n.id] = i + 1; });
+  const myName = eng ? (meName ? `${meName} (Engineer)` : 'Engineer') : meName || null;
+  const sqlHint = (m) => (/parent_id|t_end|note_reactions/.test(String(m)) ? 'Replies and reactions need a quick database update: run supabase/010_comments.sql in Supabase.' : m);
+  const insert = async (row) => {
+    let { error } = await supabase().from('notes').insert(row);
+    if (error && /t_end|parent_id|guest/.test(error.message) && !row.parent_id) { const { t_end, ...old } = row; ({ error } = await supabase().from('notes').insert(old)); }
+    if (error) setErr(sqlHint(error.message)); else setErr('');
+    return !error;
+  };
   const post = async () => {
     if (!body.trim()) return;
     setBusy(true);
-    await supabase().from('notes').insert({ song_id: song.id, version_id: v?.id || null, t: mode === 'time' ? Math.round(at * 10) / 10 : null, body: body.trim(), author_name: eng ? 'Engineer' : null, from_client: !eng });
-    setBusy(false); setBody(''); setPinned(null); reload();
+    const t = mode === 'time' ? Math.round(at * 10) / 10 : null;
+    const ok = await insert({ song_id: song.id, version_id: v?.id || null, t, t_end: t != null && end != null && end > t ? Math.round(end * 10) / 10 : null, body: body.trim(), author_name: myName, from_client: !eng });
+    setBusy(false);
+    if (ok) { setBody(''); setPinned(null); setEnd(null); reload(); }
   };
-  const resolve = async (n) => { await supabase().from('notes').update({ resolved: !n.resolved }).eq('id', n.id); reload(); };
+  const actions = {
+    reply: async (parent, text) => { if (await insert({ song_id: song.id, version_id: parent.version_id, parent_id: parent.id, t: null, body: text, author_name: myName, from_client: !eng })) reload(); },
+    react: async (n, emoji, on) => {
+      const sb = supabase();
+      const { error } = on ? await sb.from('note_reactions').insert({ note_id: n.id, emoji, who: me }) : await sb.from('note_reactions').delete().eq('note_id', n.id).eq('emoji', emoji).eq('who', me);
+      if (error && !/duplicate/i.test(error.message)) setErr(sqlHint(error.message)); else reload();
+    },
+    resolve: async (n) => { await supabase().from('notes').update({ resolved: !n.resolved }).eq('id', n.id); reload(); },
+    remove: async (n) => { const { error } = await supabase().from('notes').delete().eq('id', n.id); if (error) setErr(error.message); reload(); },
+  };
+  const nameOf = (n) => {
+    if (n.author_email && n.author_email.toLowerCase() === me) return 'You';
+    if (n.author_name) return n.author_name;
+    if (!n.from_client) return eng ? 'You' : 'Your engineer';
+    return (n.author_email || 'Client').split('@')[0];
+  };
   return (
     <section>
       <div className="boxhead">
         <div className="tabs" role="group" aria-label="Which notes">
-          <button aria-pressed={filter === 'this'} onClick={() => setFilter('this')}>This version ({notes.filter((n) => n.version_id === v?.id).length})</button>
-          <button aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>All ({notes.length})</button>
+          <button aria-pressed={filter === 'this'} onClick={() => setFilter('this')}>This version ({notes.filter((n) => n.version_id === v?.id && !n.parent_id).length})</button>
+          <button aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>All ({notes.filter((n) => !n.parent_id).length})</button>
         </div>
       </div>
       <div className="composer">
-        <textarea rows={2} value={body} placeholder={mode === 'time' ? 'Note on this moment, like “vocal feels buried here.”' : 'Note on the whole mix, like “overall it could be louder.”'}
-          onChange={(e) => { setBody(e.target.value); if (mode === 'time' && pinned == null && e.target.value.trim()) setPinned(time); if (!e.target.value.trim()) setPinned(null); }}
-          onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) post(); }} aria-label="Note" />
+        <textarea rows={2} value={body} placeholder={mode === 'time' ? 'Comment on this moment, like “love the delay on the guitar here.”' : 'Comment on the whole mix, like “overall it could be louder.”'}
+          onChange={(e) => { setBody(e.target.value); if (mode === 'time' && pinned == null && e.target.value.trim()) setPinned(time); if (!e.target.value.trim()) { setPinned(null); setEnd(null); } }}
+          onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) post(); }} aria-label="Comment" />
         <div className="row2">
           <span className="pin">
-            <span className="nmode" role="group" aria-label="Note type">
-              <button aria-pressed={mode === 'time'} data-mode="time" onClick={() => { setMode('time'); if (body.trim()) setPinned(time); }}>At <span className="mono">{fmt(at)}</span></button>
-              <button aria-pressed={mode === 'general'} data-mode="general" onClick={() => setMode('general')}>General note</button>
+            <span className="nmode" role="group" aria-label="Comment type">
+              <button aria-pressed={mode === 'time'} data-mode="time" onClick={() => { setMode('time'); if (body.trim()) setPinned(time); }}>At <span className="mono">{fmt(at)}</span>{end != null && end > at ? <> – <span className="mono">{fmt(end)}</span></> : null}</button>
+              <button aria-pressed={mode === 'general'} data-mode="general" onClick={() => { setMode('general'); setEnd(null); }}>General</button>
             </span>
-            {mode === 'time' && pinned != null && <button className="repin" onClick={() => setPinned(time)}>Use current time</button>}
+            {mode === 'time' && pinned != null && time > at + 0.5 && <button className="repin" onClick={() => setEnd(time)}>{end != null ? `End at ${fmt(time)}` : `Add end · ${fmt(time)}`}</button>}
+            {mode === 'time' && end != null && <button className="repin" onClick={() => setEnd(null)}>No end</button>}
+            {mode === 'time' && pinned != null && <button className="repin" onClick={() => { setPinned(time); setEnd(null); }}>Start from now</button>}
           </span>
-          <button className="post" onClick={post} disabled={!body.trim() || busy}>{mode === 'time' ? `Post at ${fmt(at)}` : 'Post general note'}</button>
+          <button className="post" onClick={post} disabled={!body.trim() || busy}>{mode === 'time' ? `Post at ${fmt(at)}${end != null && end > at ? `–${fmt(end)}` : ''}` : 'Post'}</button>
         </div>
       </div>
-      <ul className="clist">
-        {list.length ? list.map((n) => (
-          <li key={n.id} className={`cm ${n.resolved ? 'done' : ''}`}>
-            {n.t != null ? <button className="ts" onClick={() => { if (n.version_id && n.version_id !== v?.id) setVid(n.version_id); seek(n.t); }}>{nums[n.id] ? <i>{nums[n.id]}</i> : null}{fmt(n.t)}</button> : <span className="ts none">General</span>}
-            <div><div className="who"><b>{n.from_client ? (n.author_email === email ? 'You' : n.author_email || 'Client') : eng ? 'You' : 'Your engineer'}</b> · {ago(n.created_at)}{filter === 'all' ? ` · ${label(n.version_id)}` : ''}{n.resolved ? ' · resolved' : ''}</div><p className="txt">{n.body}</p></div>
-            {eng ? <button className="resolve" onClick={() => resolve(n)}>{n.resolved ? 'Reopen' : 'Resolve'}</button> : <span />}
-          </li>
-        )) : <li className="empty">No notes on this version yet. Press play and type when something catches your ear.</li>}
-      </ul>
+      {err && <p className="ferr">{err}</p>}
+      {list.some((n) => !n.parent_id) ? (
+        <CommentList notes={list} reactions={reactions} me={me} nameOf={nameOf} canResolve={eng}
+          canDelete={(n) => eng || (n.author_email && n.author_email.toLowerCase() === me)}
+          actions={actions} numbers={nums} versionLabel={filter === 'all' ? label : null}
+          seek={(t, vid) => { if (vid && vid !== v?.id) setVid(vid); seek(t); }} />
+      ) : <p className="cempty">No comments on this version yet. Press play and type when something catches your ear.</p>}
     </section>
   );
 }

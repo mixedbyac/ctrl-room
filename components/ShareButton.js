@@ -52,6 +52,10 @@ export default function ShareButton({ kind, id, eng, title }) {
               <span><b>Allow sharing</b><span className="muted small">{st.sharing ? 'Clients and anyone with the link can listen.' : 'Only people you’ve invited can listen.'}</span></span>
               <button className="switch" role="switch" aria-checked={st.sharing} disabled={busy} onClick={() => call({ action: 'set', on: !st.sharing })}><i /></button>
             </label>
+            <label className="shrow">
+              <span><b>Comments on the link</b><span className="muted small">{st.comments ? 'People with the link can comment and react. Your notes show on the link too.' : 'Off: notes stay private to you and the project team.'}</span></span>
+              <button className="switch" role="switch" aria-checked={!!st.comments} disabled={busy} onClick={() => call({ action: 'comments', on: !st.comments })}><i /></button>
+            </label>
             {kind === 'song' && !st.projectSharing && <p className="muted small">Sharing is off for the whole project, so this song can’t be shared either. Turn it on from the project page.</p>}
             {st.allowed && <button className="btn small quiet" disabled={busy} onClick={() => { if (confirm('Make a new link? The old one will stop working.')) call({ action: 'reset' }); }}>Reset link</button>}
           </div>}

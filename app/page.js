@@ -1,4 +1,5 @@
 'use client';
+import PoweredBy from '@/components/PoweredBy';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -153,6 +154,7 @@ function EngineerHome() {
             {fresh > 0 && <p style={{ marginTop: 12 }}><Link className="link" href="/portal/inbox">{fresh} new send{fresh > 1 ? 's' : ''} in the Portal ›</Link></p>}
           </section>
         </div>
+        <PoweredBy />
       </section>
     </>
   );
@@ -252,6 +254,7 @@ function ClientHome() {
             <Link className="btn primary" href="/portal">Start a mix</Link>
           </div>
         )}
+        <PoweredBy />
       </section>
     </>
   );

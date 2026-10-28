@@ -22,6 +22,11 @@ export async function POST(req) {
   const { data: proj } = await db.from('projects').select('sharing').eq('id', projectId).single();
   const action = b.action || 'link';
 
+  if (action === 'comments') {
+    if (!eng) return fail('Only the engineer can change that.', 403);
+    const { data: pr } = await db.from('projects').select('settings').eq('id', projectId).single();
+    await db.from('projects').update({ settings: { ...(pr?.settings || {}), share_comments: !!b.on } }).eq('id', projectId);
+  }
   if (action === 'set' || action === 'reset') {
     if (!eng) return fail('Only the engineer can change sharing.', 403);
     const patch = action === 'set' ? { sharing: !!b.on } : { share_token: newToken() };
@@ -30,7 +35,8 @@ export async function POST(req) {
   }
 
   const allowed = proj?.sharing !== false && row.sharing !== false;
-  const out = { allowed, sharing: row.sharing !== false, projectSharing: proj?.sharing !== false, url: null };
+  const { data: pset } = await db.from('projects').select('settings').eq('id', projectId).single();
+  const out = { allowed, sharing: row.sharing !== false, projectSharing: proj?.sharing !== false, comments: !!pset?.settings?.share_comments, url: null };
   if (!allowed) return json(out);
   let token = row.share_token;
   if (!token) {

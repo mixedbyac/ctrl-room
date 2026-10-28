@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Cover from '@/components/Cover';
 import { mmss, deviceName } from '@/lib/format';
 import SpotifyMark from '@/components/SpotifyMark';
+import LinkComments from '@/components/LinkComments';
 
 const PLAY = <path d="M7 4.5v15l13-7.5z" />;
 const PAUSE = <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" />;
@@ -150,6 +151,7 @@ export default function SharedListen() {
             ))}
           </ol>
         )}
+        {cur && <LinkComments token={token} songId={cur.id} versionId={cur.version.id} time={time} seek={seek} />}
         {ar && (ar.bio || ar.spotify_url) && (
           <section className="labout">
             {ar.image_url && <img src={ar.image_url} alt="" />}
@@ -157,7 +159,7 @@ export default function SharedListen() {
               {ar.spotify_url && <a className="spbtn" href={ar.spotify_url} target="_blank" rel="noopener noreferrer"><SpotifyMark />Listen on Spotify</a>}</div>
           </section>
         )}
-        <p className="lfoot">Shared privately with CTRL ROOM. Please don’t repost unreleased music.</p>
+        <p className="lfoot">Shared privately with CTRL ROOM. Please don’t repost unreleased music.<br />Powered by <b>ARTHOUSE</b></p>
       </div>
     </main>
   );

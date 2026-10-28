@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import Cover from '@/components/Cover';
 
 const I = {
   home: <path d="M4 11l8-7 8 7v8a1 1 0 01-1 1h-4v-6H9v6H5a1 1 0 01-1-1z" />,
@@ -29,7 +28,6 @@ export default function TabBar({ eng, projects, email, signOut, unseen }) {
     ? [['/', 'Home', I.home], ['/calendar', 'Calendar', I.cal], ['/portal/inbox', 'Portal', I.portal], ['/artists', 'Artists', I.artist]]
     : [['/', 'Home', I.home], ['/portal', 'Portal', I.portal], ...(projects.length ? [['/artists', 'Artist', I.artist]] : [])];
   const on = (href) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
-  const live = projects.filter((p) => !p.archived);
   return (
     <>
       <nav className="tabbar" aria-label="Main">
@@ -51,16 +49,6 @@ export default function TabBar({ eng, projects, email, signOut, unseen }) {
               <Link href="/protect">How your music is protected</Link>
               {eng && <a href="/mac">Get the Mac app</a>}
             </div>
-            {live.length > 0 && (
-              <>
-                <p className="morelabel">Projects</p>
-                <div className="moreprojects">
-                  {live.slice(0, 12).map((p) => (
-                    <Link key={p.id} href={`/p/${p.id}`}><Cover seed={p.seed} path={p.cover_path} size={80} /><span><b>{p.title}</b><small>{p.artist}</small></span></Link>
-                  ))}
-                </div>
-              </>
-            )}
             <div className="morefoot">
               <span>{email}{eng ? ' · Engineer' : ''}</span>
               <button className="btn small" onClick={signOut}>Sign out</button>

@@ -298,6 +298,7 @@ function NowPlaying() {
   const c = pl.current, v = pl.version;
   const [upNext, setUpNext] = useState([]);
   const close = () => pl.setExpanded(false);
+  const sheet = useRef(null), drag = useRef(null); // swipe down to close (phones)
   // quick comment at the exact moment (phone friendly)
   const [composing, setComposing] = useState(false);
   const [pinAt, setPinAt] = useState(0);
@@ -336,7 +337,20 @@ function NowPlaying() {
   return (
     <>
     <div className="npscrim" onClick={close} aria-hidden="true" />
-    <div className="np" role="dialog" aria-label="Now playing">
+    <div className="np" role="dialog" aria-label="Now playing" ref={sheet}
+      onTouchStart={(e) => { const el = sheet.current; if (!el || el.scrollTop > 0 || e.target.closest('.npwave, textarea, input, .npq, .npvers')) return; drag.current = { y: e.touches[0].clientY, dy: 0 }; }}
+      onTouchMove={(e) => {
+        const d = drag.current; if (!d) return;
+        d.dy = Math.max(0, e.touches[0].clientY - d.y);
+        if (d.dy > 4) { sheet.current.style.transition = 'none'; sheet.current.style.transform = `translateY(${d.dy}px)`; }
+      }}
+      onTouchEnd={() => {
+        const d = drag.current; drag.current = null; if (!d || !sheet.current) return;
+        const el = sheet.current;
+        el.style.transition = 'transform .25s cubic-bezier(.2,.8,.2,1)';
+        if (d.dy > 110) { el.style.transform = 'translateY(100%)'; setTimeout(close, 220); } else el.style.transform = '';
+      }}>
+      <span className="npgrab" aria-hidden="true" />
       <Cover as="div" {...artOf(c.song, c.project)} size={240} className="npbg" />
       <div className="npinner">
         <div className="nptop">

@@ -88,7 +88,7 @@ export default function SongPage() {
     prevVid.current = vid;
     setVid(newId);
     if (isCur) pl.switchVersion(newId);
-    document.querySelector('.bigdisc')?.animate?.([{ transform: 'rotate(0)' }, { transform: 'rotate(-28deg)' }, { transform: 'rotate(8deg)' }, { transform: 'rotate(0)' }], { duration: 550, easing: 'cubic-bezier(.3,.7,.3,1)' });
+    if (!window.matchMedia('(max-width: 900px)').matches) document.querySelector('.bigdisc')?.animate?.([{ transform: 'rotate(0)' }, { transform: 'rotate(-28deg)' }, { transform: 'rotate(8deg)' }, { transform: 'rotate(0)' }], { duration: 550, easing: 'cubic-bezier(.3,.7,.3,1)' });
   };
   // X jumps back to the version you were just on (same spot in the song)
   const flip = () => { const back = prevVid.current && versions.some((x) => x.id === prevVid.current) ? prevVid.current : null; if (back) switchTo(back); };

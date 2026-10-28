@@ -991,3 +991,33 @@ a.driftc:hover { transform: scale(1.04); }
   .aprof { border-radius: 18px; min-height: 240px; }
   .arows .arow { padding-right: 4px; }
 }
+
+/* phones: swipe the player down; only the mini player's round cover spins */
+.npgrab { display: none; }
+@media (max-width: 760px) {
+  .npgrab { display: block; position: sticky; top: 0; z-index: 3; width: 40px; height: 5px; margin: calc(6px + env(safe-area-inset-top, 0px)) auto -8px; border-radius: 3px; background: rgba(255,255,255,.35); }
+  .np { touch-action: pan-y; overscroll-behavior: contain; }
+  .npinner { padding-top: 10px; }
+  .npbg, body.playing .npbg { animation: none !important; transform: none !important; }
+  .npsquare { animation: none !important; }
+}
+@media (max-width: 900px) {
+  .mini .mart.spin { animation: dzspin 6s linear infinite !important; animation-play-state: paused !important; border-radius: 50%; }
+  body.playing .mini .mart.spin { animation-play-state: running !important; }
+  .bigdisc, .bigdisc .art, .bigdisc.scratch, .bigdisc.stamp .art, .enter-song .bigdisc { animation: none !important; }
+  body.playing .lbg, body.playing .ambient { animation: none !important; }
+}
+
+/* phones: a compact mini player that fits above the tabs (round spinning cover, title, play, next, thin progress line) */
+@media (max-width: 900px) {
+  .mini { padding-left: 10px; padding-right: 10px; }
+  .minibar { position: relative; gap: 10px; padding: 7px 8px 9px 7px; border-radius: 16px; max-width: none; overflow: hidden; background: rgba(34,34,38,.94); }
+  .mini .mart { width: 42px; height: 42px; }
+  .mtext { flex: 1 1 auto; min-width: 0; }
+  .mtext b { font-size: 14px; }
+  .mtime, .mexp, .mctl button:first-child { display: none !important; }
+  .mctl { gap: 2px; flex: none; }
+  .mctl button { width: 40px; height: 40px; }
+  .mctl .mp svg { width: 24px; height: 24px; }
+  .mwave { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; flex: none; pointer-events: none; opacity: .9; }
+}

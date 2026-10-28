@@ -200,3 +200,11 @@ body.playing .lbg { animation: breathe 9s ease-in-out infinite; }
   .aprof.hashdr .aprofin { padding-top: 110px; }
   .avatar.abig { width: 116px; height: 116px; font-size: 36px; }
 }
+
+/* rename songs from the tracklist */
+.row:has(.rpen) { grid-template-columns: 52px minmax(0, 1fr) auto auto; }
+.rpen { width: 30px; height: 30px; border-radius: 8px; color: var(--muted); opacity: 0; transition: opacity .15s; font-size: 14px; }
+.row:hover .rpen, .rpen:focus-visible { opacity: 1; }
+.rpen:hover { color: var(--ink); background: var(--s2); }
+@media (hover: none) { .rpen { opacity: .6; } }
+.rowedit { font: inherit; font-weight: 700; font-size: 16px; width: 100%; background: var(--s1); border: 1px solid var(--sig); border-radius: 8px; color: var(--ink); padding: 3px 8px; }

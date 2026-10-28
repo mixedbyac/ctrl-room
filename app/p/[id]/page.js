@@ -1,5 +1,6 @@
 'use client';
 import ShareButton from '@/components/ShareButton';
+import EditableTitle from '@/components/EditableTitle';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -17,6 +18,14 @@ export default function ProjectPage() {
   const { eng, reloadProjects } = useApp();
   const [p, setP] = useState(undefined);
   const [panel, setPanel] = useState(null); // 'share' | 'edit' | 'add'
+  const [renaming, setRenaming] = useState(null);
+  const renameSong = async (song, raw) => {
+    setRenaming(null);
+    const t = String(raw || '').trim();
+    if (!t || t === song.title) return;
+    await supabase().from('songs').update({ title: t }).eq('id', song.id);
+    load();
+  };
   const pl = usePlayer();
 
   const load = useCallback(async () => {
@@ -54,7 +63,7 @@ export default function ProjectPage() {
               {eng && <CoverMenu table="projects" row={p} onChange={() => { load(); reloadProjects(); }} />}</div>
           </div>
           <div className="pinfo">
-            <h1 className="up">{p.title}</h1>
+            <EditableTitle value={p.title} canEdit={eng} label="project" onSave={async (t) => { await supabase().from('projects').update({ title: t }).eq('id', p.id); load(); reloadProjects(); }} />
             <p className="psub">{p.artist} · {p.type} · {p.songs.length} song{p.songs.length === 1 ? '' : 's'} · {approved} approved{p.release ? ` · out ${fmtDate(p.release)}` : ''}</p>
             <div className="prow">
               {firstPlayable && <button className="bigplay" onClick={() => (pl.current?.project?.id === p.id ? pl.toggle() : playSong(firstPlayable))} aria-label={projectPlaying ? 'Pause' : 'Play the project'}>
@@ -86,7 +95,11 @@ export default function ProjectPage() {
                 <button className="rplay" onClick={() => vs.length && playSong({ ...s, versions: vs })} disabled={!vs.length} aria-label={vs.length ? `Play ${s.title}` : 'No mix yet'}>
                   <span className="num">{i + 1}</span><svg viewBox="0 0 24 24">{pl.current?.song?.id === s.id && pl.playing ? <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" /> : <path d="M7 4.5v15l13-7.5z" />}</svg>
                   <span className="eq"><span /><span /><span /></span></button>
-                <Link className="ropen" href={`/s/${s.id}`}><span className="t up">{s.title}</span><span className="rsub"><span className={`dot ${s.status}`}>{sub}</span>{last ? <span>· {shortDate(last.created_at)}</span> : null}</span></Link>
+                <Link className="ropen" href={`/s/${s.id}`}>{eng && renaming === s.id
+                  ? <input className="rowedit up" defaultValue={s.title} autoFocus maxLength={120} aria-label="Rename song" onClick={(e) => e.preventDefault()} onFocus={(e) => e.target.select()}
+                      onBlur={(e) => renameSong(s, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } if (e.key === 'Escape') { e.currentTarget.value = s.title; e.currentTarget.blur(); } }} />
+                  : <span className="t up">{s.title}</span>}<span className="rsub"><span className={`dot ${s.status}`}>{sub}</span>{last ? <span>· {shortDate(last.created_at)}</span> : null}</span></Link>
+                {eng && renaming !== s.id && <button className="rpen" onClick={() => setRenaming(s.id)} aria-label={`Rename ${s.title}`} title="Rename">✎</button>}
                 <Link className="rmeta" href={`/s/${s.id}`} tabIndex={-1} aria-hidden="true">{last ? <span className="vtag">{last.label}</span> : null}<span className="chev">›</span></Link>
               </div>
             );

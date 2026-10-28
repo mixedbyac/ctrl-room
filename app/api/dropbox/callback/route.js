@@ -1,4 +1,4 @@
-import { getConfig, setConfig, forgetDropboxToken, dropboxApi } from '@/lib/server';
+import { getConfig, setConfig, forgetDropboxToken, forgetPathRoot, dropboxApi } from '@/lib/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -25,8 +25,12 @@ export async function GET(req) {
   await setConfig('dropbox_refresh_token', j.refresh_token);
   forgetDropboxToken();
   try {
-    const me = await dropboxApi('users/get_current_account');
-    await setConfig('dropbox_account', JSON.stringify({ name: me.name?.display_name, email: me.email }));
+    const me = await dropboxApi('users/get_current_account', undefined, { noRoot: true });
+    const ri = me.root_info || {};
+    const team = ri['.tag'] === 'team' && ri.root_namespace_id && ri.root_namespace_id !== ri.home_namespace_id;
+    await setConfig('dropbox_account', JSON.stringify({ name: me.name?.display_name, email: me.email, team: me.team?.name || (team ? 'Team' : null), teamRoot: team ? ri.root_namespace_id : null }));
+    await setConfig('dropbox_path_root', team ? ri.root_namespace_id : null); // business: use the team space by default
+    forgetPathRoot();
   } catch {}
   return back('connected=1');
 }

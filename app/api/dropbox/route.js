@@ -1,4 +1,4 @@
-import { userFrom, isEngineer, getConfig, setConfig, forgetDropboxToken, dropboxApi, dropboxRoot, json, fail, newToken } from '@/lib/server';
+import { userFrom, isEngineer, getConfig, setConfig, forgetDropboxToken, forgetPathRoot, dropboxApi, dropboxRoot, json, fail, newToken } from '@/lib/server';
 
 export const runtime = 'nodejs';
 
@@ -17,11 +17,11 @@ export async function POST(req) {
     const state = newToken() + newToken();
     await setConfig('dropbox_state', `${state}.${Date.now()}`);
     const u = new URL('https://www.dropbox.com/oauth2/authorize');
-    u.search = new URLSearchParams({ client_id: process.env.DROPBOX_APP_KEY, response_type: 'code', token_access_type: 'offline', redirect_uri: redirect, state }).toString();
+    u.search = new URLSearchParams({ client_id: process.env.DROPBOX_APP_KEY, response_type: 'code', token_access_type: 'offline', redirect_uri: redirect, state, force_reapprove: 'true', force_reauthentication: 'true' }).toString(); // always ask which account (personal or business)
     return json({ url: u.toString() });
   }
   if (b.action === 'disconnect') {
-    await setConfig('dropbox_refresh_token', null); await setConfig('dropbox_account', null); forgetDropboxToken();
+    await setConfig('dropbox_refresh_token', null); await setConfig('dropbox_account', null); await setConfig('dropbox_path_root', null); forgetDropboxToken(); forgetPathRoot();
     return json({ ok: true });
   }
   if (b.action === 'root') {
@@ -31,6 +31,13 @@ export async function POST(req) {
     const { error } = await setConfig('dropbox_root', clean);
     if (error) return fail(error.message, 500);
     return json({ root: await dropboxRoot() });
+  }
+  if (b.action === 'space') {
+    // business accounts: switch between the whole team space and just your own folder
+    let acct = null; try { acct = JSON.parse((await getConfig('dropbox_account')) || 'null'); } catch {}
+    if (!acct?.teamRoot) return fail('This Dropbox account has no team space.');
+    await setConfig('dropbox_path_root', b.team ? acct.teamRoot : null); forgetPathRoot();
+    return json({ teamSpace: !!b.team });
   }
   if (b.action === 'mkdir') {
     const path = '/' + String(b.path || '').split('/').map((x) => x.trim()).filter(Boolean).join('/');
@@ -50,5 +57,5 @@ export async function POST(req) {
   const refresh = (await getConfig('dropbox_refresh_token')) || process.env.DROPBOX_REFRESH_TOKEN;
   let account = null;
   try { account = JSON.parse((await getConfig('dropbox_account')) || 'null'); } catch {}
-  return json({ hasKeys, connected: !!refresh, account, root: await dropboxRoot(), redirect });
+  return json({ hasKeys, connected: !!refresh, account, teamSpace: !!(await getConfig('dropbox_path_root')), root: await dropboxRoot(), redirect });
 }

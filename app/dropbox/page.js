@@ -71,7 +71,8 @@ function DropboxSetup() {
                 <span className={`dbxdot ${st.connected ? 'on' : ''}`} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <b>{st.connected ? 'Connected' : 'Not connected'}</b>
-                  <p className="muted small" style={{ margin: 0 }}>{st.connected ? (st.account ? `${st.account.name} · ${st.account.email}` : 'Your Dropbox') : st.hasKeys ? 'Click Connect and approve in Dropbox.' : 'Finish the setup above first.'}</p>
+                  <p className="muted small" style={{ margin: 0 }}>{st.connected ? (st.account ? `${st.account.name} · ${st.account.email}${st.account.team ? ` · ${st.account.team} (business)` : ' · personal'}` : 'Your Dropbox') : st.hasKeys ? 'Click Connect and approve in Dropbox.' : 'Finish the setup above first.'}</p>
+                  {st.connected && !st.account?.team && <p className="muted small" style={{ margin: '4px 0 0' }}>Wrong account? Click <b>Reconnect</b>. Dropbox will ask you to sign in, so pick your business account there.</p>}
                 </div>
                 {st.connected
                   ? <><button className="btn small" onClick={connect}>Reconnect</button><button className="btn small quiet" onClick={disconnect}>Disconnect</button></>
@@ -79,6 +80,12 @@ function DropboxSetup() {
               </div>
               {st.connected && (
                 <div className="dbxfolder">
+                  {st.account?.teamRoot && (
+                    <label className="shrow" style={{ marginBottom: 8 }}>
+                      <span><b>Use team folders</b><span className="muted small">{st.teamSpace ? `Showing ${st.account.team}’s shared team space.` : 'Showing only your own folder.'}</span></span>
+                      <button className="switch" role="switch" aria-checked={st.teamSpace} disabled={busy} onClick={async () => { setBusy(true); try { const r = await api('/api/dropbox', { action: 'space', team: !st.teamSpace }); setSt((x) => ({ ...x, teamSpace: r.teamSpace })); setBrowse(null); } catch (e) { setBErr(e.message); } setBusy(false); }}><i /></button>
+                    </label>
+                  )}
                   <p className="muted small" style={{ margin: 0 }}>Client files go into</p>
                   <div className="dbxpath mono">{st.root || '/'}<span className="muted">/Artist/Project/Song/</span></div>
                   <form className="dbxtype" onSubmit={(e) => { e.preventDefault(); choose(typed, true); }}>

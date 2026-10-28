@@ -62,6 +62,14 @@ export default function SongMenu({ song, versions = [], project, eng, canEdit, q
     setBusy('');
   };
 
+  const canDownload = has && last?.storage_path && (eng || project?.allow_download);
+  const download = async () => {
+    shut();
+    const name = `${song.title} ${last.label}${(last.file_name || '').match(/\.[a-z0-9]{2,5}$/i)?.[0] || ''}`;
+    const { data, error } = await supabase().storage.from('mixes').createSignedUrl(last.storage_path, 300, { download: name });
+    if (error) return say(error.message);
+    const a = document.createElement('a'); a.href = data.signedUrl; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  };
   const info = [
     ['Status', statusText(song, versions)],
     ['BPM', song.bpm || '—'],
@@ -96,6 +104,7 @@ export default function SongMenu({ song, versions = [], project, eng, canEdit, q
               {has && onVersions && <button role="menuitem" onClick={() => { shut(); onVersions(); }}>{versionsOpen ? 'Hide versions' : `Versions (${versions.length})`}</button>}
               {has && <button role="menuitem" onClick={() => { shut(); setSharing(true); }}>Share song</button>}
               <button role="menuitem" onClick={() => setView('info')}>More info</button>
+              {canDownload && <button role="menuitem" onClick={download}>Download {last.label}</button>}
               {eng && <button role="menuitem" onClick={() => { shut(); mixIn.current?.click(); }}>Deliver new versions</button>}
               {(eng || canEdit) && !demo && <button role="menuitem" onClick={() => { shut(); demoIn.current?.click(); }}>Add a demo</button>}
               {canEdit && onRename && <button role="menuitem" onClick={() => { shut(); onRename(); }}>Rename</button>}

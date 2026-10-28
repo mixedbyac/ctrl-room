@@ -25,14 +25,14 @@ export default function ArtistTeam({ artist, projects }) {
   }, [everyone.join(',')]); // eslint-disable-line
   const confirmAcct = async (em) => {
     if (!window.confirm(`Confirm ${em}? Only do this if you know this account really belongs to them.`)) return;
-    try { await api('/api/verify', { action: 'confirm', email: em }); setAcct((a) => ({ ...a, [em]: 'confirmed' })); setMsg(`${em} is confirmed and can see ${artist}’s projects.`); }
+    try { const r = await api('/api/verify', { action: 'confirm', email: em, artist }); setAcct((a) => ({ ...a, [em]: 'confirmed' })); setMsg(r.invited ? `${em} is verified and got an email invite to join.` : `${em} is verified and can see ${artist}’s projects.`); }
     catch (e) { setMsg(e.message); }
   };
   const Badge = ({ em }) => {
     const st = acct[em];
-    if (st === 'unconfirmed') return <span className="row-actions"><span className="tbadge warn">Not confirmed</span><button className="btn small" onClick={() => confirmAcct(em)}>Confirm</button></span>;
-    if (st === 'invited') return <span className="tbadge">Invited, hasn’t joined</span>;
-    if (st === 'none') return <span className="tbadge">No account yet</span>;
+    if (st === 'unconfirmed') return <span className="row-actions"><span className="tbadge warn">Not confirmed</span><button className="btn small" onClick={() => confirmAcct(em)}>Verify</button></span>;
+    if (st === 'invited') return <span className="row-actions"><span className="tbadge">Invited, hasn’t joined</span><button className="btn small" onClick={() => confirmAcct(em)}>Verify</button></span>;
+    if (st === 'none') return <span className="row-actions"><span className="tbadge">No account yet</span><button className="btn small" onClick={() => confirmAcct(em)} title="Marks them verified and emails an invite to join">Verify &amp; invite</button></span>;
     if (st === 'confirmed') return <span className="tbadge ok" title="Signed up with this email and confirmed it">✓ Verified</span>;
     return null;
   };

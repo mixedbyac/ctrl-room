@@ -3,6 +3,7 @@ import { limit } from '@/lib/ratelimit';
 
 export const runtime = 'nodejs';
 
+const state = (u) => !u ? 'none' : u.app_metadata?.needs_verify ? 'unconfirmed' : (!u.email_confirmed_at && !u.app_metadata?.vouched) ? 'invited' : 'confirmed';
 async function findUser(db, email) {
   const e = String(email || '').toLowerCase();
   for (let page = 1; page <= 20; page++) {
@@ -47,7 +48,7 @@ export async function POST(req) {
     for (let page = 1; page <= 20; page++) {
       const { data, error } = await db.auth.admin.listUsers({ page, perPage: 200 });
       if (error) break;
-      (data.users || []).forEach((u) => { if (u.email) users[u.email.toLowerCase()] = !u.email_confirmed_at ? 'invited' : u.app_metadata?.needs_verify ? 'unconfirmed' : 'confirmed'; });
+      (data.users || []).forEach((u) => { if (u.email) users[u.email.toLowerCase()] = state(u); });
       if ((data.users || []).length < 200) break;
     }
     const out = {};
@@ -61,15 +62,23 @@ export async function POST(req) {
     const out = {};
     for (const e of (b.emails || []).slice(0, 50)) {
       const u = await findUser(db, e);
-      out[String(e).toLowerCase()] = !u ? 'none' : !u.email_confirmed_at ? 'invited' : u.app_metadata?.needs_verify ? 'unconfirmed' : 'confirmed';
+      out[String(e).toLowerCase()] = state(u);
     }
     return json({ status: out });
   }
   if (b.action === 'confirm') {
-    const u = await findUser(db, b.email);
-    if (!u) return fail('No account with that email yet.', 404);
-    await db.auth.admin.updateUserById(u.id, { app_metadata: { ...(u.app_metadata || {}), needs_verify: false } });
-    return json({ ok: true });
+    // the engineer vouches for this email: they count as verified. No account yet? Email them an invite to join.
+    const email = String(b.email || '').trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(email)) return fail('Enter a valid email.');
+    let u = await findUser(db, email), invited = false;
+    if (!u) {
+      const origin = req.headers.get('origin') || `https://${req.headers.get('host')}`;
+      const { data, error } = await db.auth.admin.inviteUserByEmail(email, { redirectTo: `${origin}/welcome`, data: b.artist ? { artist: b.artist } : {} });
+      if (error) return fail(/rate|limit/i.test(error.message) ? 'Supabase’s email limit is reached for now. Try again in an hour, or send them the sign-up link.' : error.message, 500);
+      u = data.user; invited = true;
+    }
+    await db.auth.admin.updateUserById(u.id, { app_metadata: { ...(u.app_metadata || {}), needs_verify: false, vouched: true } });
+    return json({ ok: true, invited });
   }
   return fail('Unknown action.');
 }

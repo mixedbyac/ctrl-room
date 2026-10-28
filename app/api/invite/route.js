@@ -13,6 +13,7 @@ export async function POST(req) {
   const emails = [...new Set((Array.isArray(b.emails) ? b.emails : String(b.emails || '').split(/[\s,;]+/)).map((e) => String(e).trim().toLowerCase()).filter(Boolean))].slice(0, 10);
   const role = ['Admin', 'Artist', 'Manager', 'Team'].includes(b.role) ? b.role : 'Admin';
   const spotify = String(b.spotify || '').trim().slice(0, 300);
+  const vouch = b.verify !== false; // you know these people: they count as verified straight away
   if (!artist) return fail('Add the artist name.');
   const bad = emails.find((e) => !/^\S+@\S+\.\S+$/.test(e));
   if (bad) return fail(`“${bad}” doesn’t look like an email.`);
@@ -33,9 +34,18 @@ export async function POST(req) {
     const { error: mErr } = await db.from('artist_members').insert({ artist, email, role });
     if (mErr && !/duplicate|unique/i.test(mErr.message)) { results.push({ email, status: 'error', message: mErr.message }); continue; }
     const signup = `${origin}/signup?email=${encodeURIComponent(email)}&artist=${encodeURIComponent(artist)}`;
-    const { error } = await db.auth.admin.inviteUserByEmail(email, { redirectTo: `${origin}/welcome`, data: { artist, invited_by: user.email } });
-    if (!error) { results.push({ email, status: 'invited', link: signup }); continue; }
-    if (/already|registered|exists/i.test(error.message)) results.push({ email, status: 'existing' });
+    const { data: inv, error } = await db.auth.admin.inviteUserByEmail(email, { redirectTo: `${origin}/welcome`, data: { artist, invited_by: user.email } });
+    let u = inv?.user || null;
+    if (error && /already|registered|exists/i.test(error.message)) {
+      for (let page = 1; page <= 20 && !u; page++) {
+        const { data: d } = await db.auth.admin.listUsers({ page, perPage: 200 });
+        u = (d?.users || []).find((x) => (x.email || '').toLowerCase() === email) || null;
+        if ((d?.users || []).length < 200) break;
+      }
+    }
+    if (vouch && u) await db.auth.admin.updateUserById(u.id, { app_metadata: { ...(u.app_metadata || {}), needs_verify: false, vouched: true } });
+    if (!error) { results.push({ email, status: 'invited', link: signup, verified: vouch }); continue; }
+    if (/already|registered|exists/i.test(error.message)) results.push({ email, status: 'existing', verified: vouch && !!u });
     else results.push({ email, status: 'link', link: signup, message: /rate|limit/i.test(error.message) ? 'Email limit reached, send them the link instead.' : error.message });
   }
   return json({ ok: true, artist, results });

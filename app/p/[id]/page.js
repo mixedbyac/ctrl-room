@@ -243,6 +243,11 @@ function SharePanel({ p, onSaved }) {
         <div className="fld"><label htmlFor="sh-p">Client phone <span className="opt">for texts</span></label><input id="sh-p" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
       </div>
       <div className="share-link"><code>{link}</code><button className="btn small" onClick={copy}>Copy link</button><button className="btn small primary" onClick={save}>Save</button></div>
+      <label className="invsw"><button type="button" className="switch" role="switch" aria-checked={!!p.allow_download} onClick={async () => {
+        const { error } = await supabase().from('projects').update({ allow_download: !p.allow_download }).eq('id', p.id);
+        setMsg(error ? (/allow_download/.test(error.message) ? 'Run supabase/015_downloads.sql in Supabase first.' : error.message) : !p.allow_download ? 'Downloads are on. The artist’s team can download mixes from the ⋯ menu.' : 'Downloads are off. They can listen, not download.');
+        if (!error) onSaved();
+      }}><i /></button>Allow downloads <span className="muted small">Off until you switch it on. Everyone on the team still has full access to listen, comment and approve.</span></label>
       {msg && <p className="toast-inline">{msg}</p>}
     </div>
   );

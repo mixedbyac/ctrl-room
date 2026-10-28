@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase, api } from '@/lib/supabase';
 import { fmtDate, todayISO } from '@/lib/format';
 
@@ -22,10 +22,28 @@ export function useInvoices(projectId) {
 
 export const lockingInvoice = (list) => (list || []).find((i) => i.lock && i.status === 'unpaid' && i.visible) || null;
 
-/** What the client sees, only for invoices you chose to show. */
+const openReceipt = async (inv) => {
+  const { data, error } = await supabase().storage.from('mixes').createSignedUrl(inv.receipt_path, 600);
+  if (error) return alert(error.message);
+  window.open(data.signedUrl, '_blank', 'noopener');
+};
+
+/** What the client sees, only for invoices you chose to show: pending payment, or paid with the receipt. */
 export function InvoiceNotice({ list, compact = false }) {
   const open = (list || []).filter((i) => i.visible && i.status === 'unpaid');
-  if (!open.length) return null;
+  const paid = (list || []).filter((i) => i.visible && i.status === 'paid' && i.receipt_path);
+  if (!open.length && !paid.length) return null;
+  if (!open.length) return (
+    <div className={`invnote paid ${compact ? 'compact' : ''}`}>
+      {paid.map((i) => (
+        <div key={i.id} className="invrow">
+          <span className="invicon ok" aria-hidden="true">✓</span>
+          <div className="invtext"><b>Paid{i.number ? ` · #${i.number}` : ''}</b><span>{[i.amount != null ? money(i.amount, i.currency) : '', i.paid_at ? `paid ${fmtDate(i.paid_at.slice(0, 10))}` : ''].filter(Boolean).join(' · ')}. Thank you!</span></div>
+          <button className="btn small" onClick={() => openReceipt(i)}>Receipt (PDF)</button>
+        </div>
+      ))}
+    </div>
+  );
   return (
     <div className={`invnote ${open.some((i) => i.lock) ? 'locked' : ''} ${compact ? 'compact' : ''}`}>
       {open.map((i) => {
@@ -34,7 +52,7 @@ export function InvoiceNotice({ list, compact = false }) {
           <div key={i.id} className="invrow">
             <span className="invicon" aria-hidden="true">{i.lock ? '🔒' : '$'}</span>
             <div className="invtext">
-              <b>{i.lock ? 'Mixes unlock when this invoice is paid' : 'Invoice due'}{i.number ? ` · #${i.number}` : ''}</b>
+              <b>{i.lock ? 'Mixes unlock when this invoice is paid' : 'Pending payment'}{i.number ? ` · #${i.number}` : ''}</b>
               <span>{[i.amount != null ? money(i.amount, i.currency) : '', i.due_date ? `${late ? 'was due' : 'due'} ${fmtDate(i.due_date)}` : '', i.note].filter(Boolean).join(' · ')}</span>
             </div>
             {i.url && <a className="btn small primary" href={i.url} target="_blank" rel="noopener noreferrer">View &amp; pay</a>}
@@ -81,6 +99,18 @@ export function InvoicePanel({ project, firstSongId, onChange }) {
     }
     done(texted ? 'Shown to the client and texted them.' : 'Shown to the client. It’s in their updates. Add Twilio to text them too.');
   };
+  const receiptIn = useRef(null), receiptFor = useRef(null);
+  const uploadReceipt = async (file) => {
+    const inv = receiptFor.current; if (!file || !inv) return;
+    if (!/pdf$/i.test(file.type) && !/\.pdf$/i.test(file.name)) return setMsg('Pick a PDF receipt.');
+    if (file.size > 20 * 1024 * 1024) return setMsg('That PDF is over 20 MB.');
+    setMsg('Uploading the receipt…');
+    const path = `${project.id}/receipts/${inv.id}-${Date.now()}.pdf`;
+    const { error } = await supabase().storage.from('mixes').upload(path, file, { contentType: 'application/pdf' });
+    if (error) return setMsg(error.message);
+    if (inv.receipt_path) supabase().storage.from('mixes').remove([inv.receipt_path]).catch(() => {});
+    await patch(inv, { receipt_path: path, ...(inv.status !== 'paid' ? { status: 'paid', paid_at: new Date().toISOString() } : {}) }, inv.visible ? 'Receipt added. The client can open it from the project.' : 'Receipt added. Switch on “Show to client” so they can see it.');
+  };
   const getHook = async (reset = false) => { try { setHook((await api('/api/invoices', { reset })).url); } catch (e) { setMsg(e.message); } };
 
   return (
@@ -92,7 +122,7 @@ export function InvoicePanel({ project, firstSongId, onChange }) {
       {(list || []).map((i) => (
         <div key={i.id} className={`invitem ${i.status}`}>
           <div className="invmain">
-            <b>{i.number ? `#${i.number}` : 'Invoice'}{i.amount != null ? ` · ${money(i.amount, i.currency)}` : ''}</b>
+            <b>{i.number ? `#${i.number}` : 'Invoice'}{i.amount != null ? ` · ${money(i.amount, i.currency)}` : ''} <span className={`invstate ${i.status}`}>{i.status === 'paid' ? (i.receipt_path ? 'Paid · receipt on file' : 'Paid') : i.status === 'void' ? 'Void' : 'Pending payment'}</span></b>
             <span>{[i.due_date ? `due ${fmtDate(i.due_date)}` : '', i.status === 'paid' && i.paid_at ? `paid ${fmtDate(i.paid_at.slice(0, 10))}` : '', i.note].filter(Boolean).join(' · ') || 'No due date'}</span>
             {i.url && <a className="link small" href={i.url} target="_blank" rel="noopener noreferrer">Open in Invoice2go ›</a>}
           </div>
@@ -103,6 +133,8 @@ export function InvoicePanel({ project, firstSongId, onChange }) {
           <label className="invsw"><button type="button" className="switch" role="switch" aria-checked={i.lock} disabled={i.status !== 'unpaid'} onClick={() => patch(i, { lock: !i.lock, ...(!i.lock ? { visible: true } : {}) }, i.lock ? 'Unlocked. The client can listen again.' : 'Locked. The client sees the invoice and can’t play mixes until it’s paid.')}><i /></button>Lock until paid</label>
           <span className="row-actions">
             {i.status === 'unpaid' && <button className="btn small" onClick={() => tell(i)}>Let them know</button>}
+            {i.receipt_path && <button className="btn small quiet" onClick={() => openReceipt(i)}>View receipt</button>}
+            <button className="btn small" onClick={() => { receiptFor.current = i; receiptIn.current?.click(); }}>{i.receipt_path ? 'Replace receipt' : i.status === 'paid' ? 'Upload receipt (PDF)' : 'Paid? Upload receipt'}</button>
             <button className="btn small quiet" onClick={() => remove(i)}>Remove</button>
           </span>
         </div>
@@ -123,6 +155,7 @@ export function InvoicePanel({ project, firstSongId, onChange }) {
         </div>
       </form>
       {msg && <p className="toast-inline" style={{ margin: 0 }}>{msg}</p>}
+      <input ref={receiptIn} type="file" accept="application/pdf,.pdf" className="vh" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; uploadReceipt(f); }} />
 
       <details className="invzap" onToggle={(e) => { if (e.currentTarget.open && !hook) getHook(); }}>
         <summary>Mark invoices paid automatically (Zapier)</summary>

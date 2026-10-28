@@ -1111,3 +1111,11 @@ a.driftc:hover { transform: scale(1.04); }
   .rcomment, .smore { min-width: 40px; height: 40px; }
 }
 .rowwrap:has(.spop), .rowwrap:has(.snote), .rowwrap:has(.sharepop) { position: relative; z-index: 30; }
+
+/* verified badges */
+.vbadge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: #6fb6ff; background: rgba(80,160,255,.12); border: 1px solid rgba(80,160,255,.25); border-radius: 999px; padding: 3px 9px 3px 6px; white-space: nowrap; }
+.vbadge svg { width: 15px; height: 15px; color: #4aa3ff; }
+.vbadge.pending { color: var(--muted); background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.1); padding-left: 9px; }
+.vbadge.mine { margin-left: 8px; padding: 2px 8px; font-size: 11px; }
+.arow .vbadge { margin-right: 6px; }
+@media (max-width: 760px) { .arow .vbadge.pending { display: none; } }

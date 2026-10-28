@@ -3,7 +3,7 @@ import { selectWithVersions } from '@/lib/embed';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase, api } from '@/lib/supabase';
 import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
 import { hashStr, artOf } from '@/lib/art';
@@ -12,6 +12,7 @@ import { ArtistHero, ArtistAvatar } from '@/components/ArtistProfile';
 import ArtistTeam from '@/components/ArtistTeam';
 import AddArtist from '@/components/AddArtist';
 
+export const VCheck = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.4 1.8 3-.2.9 2.9 2.5 1.7-1 2.8 1 2.8-2.5 1.7-.9 2.9-3-.2L12 22l-2.4-1.8-3 .2-.9-2.9-2.5-1.7 1-2.8-1-2.8 2.5-1.7.9-2.9 3 .2z" fill="currentColor" /><path d="M8 12.2l2.6 2.6L16.2 9" fill="none" stroke="#0f0f10" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const initials = (n) => n.split(/\s+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 const sortKey = (n) => n.replace(/^the\s+/i, '');
 
@@ -23,11 +24,13 @@ function Artists() {
   const [q, setQ] = useState('');
   const [profiles, setProfiles] = useState({});
   const [adding, setAdding] = useState(false);
+  const [ver, setVer] = useState({});
   const [tick, setTick] = useState(0);
   useEffect(() => {
     if (!session) return;
     selectWithVersions((V) => supabase().from('projects').select(`*, songs(*, ${V}(id,label,created_at))`).order('created_at', { ascending: false })).then(({ data }) => setProjects(data || []));
     supabase().from('artists').select('*').then(({ data }) => setProfiles(Object.fromEntries((data || []).map((a) => [a.name.toLowerCase(), a]))));
+    if (eng) api('/api/verify', { action: 'artists' }).then((r) => setVer(r.artists || {})).catch(() => {});
   }, [session, eng, tick]);
   const prof = (n) => profiles[n.toLowerCase()];
   const setProf = (a) => setProfiles((m) => ({ ...m, [a.name.toLowerCase()]: a }));
@@ -66,6 +69,7 @@ function Artists() {
         <section className="page"><div className="adetail">
           {(eng || artists.length > 1) && <button className="aback" onClick={() => router.push('/artists')}>‹ All artists</button>}
           <ArtistHero name={artist.name} profile={prof(artist.name)} canEdit onChange={setProf}>
+            {eng && ver[artist.name.toLowerCase()] && <div className="acontact"><span className={`vbadge ${ver[artist.name.toLowerCase()].verified ? '' : 'pending'}`}>{ver[artist.name.toLowerCase()].verified ? <><VCheck />{ver[artist.name.toLowerCase()].verified} of {ver[artist.name.toLowerCase()].total} verified</> : 'No one verified yet'}</span></div>}
             {eng && (artist.contact || artist.phone || artist.email) && <div className="acontact">
               {artist.contact && <span className="sichip">Contact <b>{artist.contact}</b></span>}
               {artist.phone && <span className="sichip mono">{artist.phone}</span>}
@@ -125,6 +129,8 @@ function Artists() {
                   <Link key={a.name} className="arow" href={`/artists?a=${encodeURIComponent(a.name)}`}>
                     <ArtistAvatar name={a.name} profile={prof(a.name)} />
                     <span style={{ minWidth: 0 }}><b>{prof(a.name)?.display_name || a.name}</b><small>{a.projects.length ? `${a.projects.length} project${a.projects.length > 1 ? 's' : ''}` : 'No projects yet'} · {st.songs.length} song{st.songs.length === 1 ? '' : 's'}{a.contact && a.contact !== a.name ? ` · ${a.contact}` : ''}</small></span>
+                    {eng && ver[a.name.toLowerCase()]?.verified > 0 && <span className="vbadge" title={`${ver[a.name.toLowerCase()].verified} of ${ver[a.name.toLowerCase()].total} people verified`}><VCheck />Verified</span>}
+                    {eng && ver[a.name.toLowerCase()] && !ver[a.name.toLowerCase()].verified && <span className="vbadge pending" title="No one on this artist has a confirmed account yet">{ver[a.name.toLowerCase()].joined ? 'Not confirmed' : 'Not joined'}</span>}
                     <span className="apill" style={st.live.length ? undefined : { color: 'var(--ok)' }}>{pill}</span><span className="chev" aria-hidden="true">›</span>
                   </Link>
                 ); })}

@@ -1,4 +1,4 @@
-import { admin, userFrom, isEngineer, jwtClaims, json, fail } from '@/lib/server';
+import { admin, userFrom, engineerFrom, jwtClaims, json, fail } from '@/lib/server';
 import { limit } from '@/lib/ratelimit';
 
 export const runtime = 'nodejs';
@@ -34,12 +34,34 @@ export async function POST(req) {
     await db.auth.admin.updateUserById(user.id, { app_metadata: { ...(user.app_metadata || {}), needs_verify: false } });
     return json({ ok: true });
   }
-  if (!(await isEngineer(user.email))) return fail('Only the engineer can do that.', 403);
+  if (!(await engineerFrom(req)).user) return fail('Only the engineer can do that.', 403);
+  if (b.action === 'artists') {
+    // per artist: how many of their people (project contacts + team) have confirmed accounts
+    const people = {};
+    const add = (artist, email) => { if (!artist || !email) return; const k = artist; (people[k] ||= new Set()).add(String(email).toLowerCase()); };
+    const { data: ps } = await db.from('projects').select('artist, client_email');
+    (ps || []).forEach((p) => add(p.artist, p.client_email));
+    const { data: ms } = await db.from('artist_members').select('artist, email');
+    (ms || []).forEach((m) => add(m.artist, m.email));
+    const users = {};
+    for (let page = 1; page <= 20; page++) {
+      const { data, error } = await db.auth.admin.listUsers({ page, perPage: 200 });
+      if (error) break;
+      (data.users || []).forEach((u) => { if (u.email) users[u.email.toLowerCase()] = !u.email_confirmed_at ? 'invited' : u.app_metadata?.needs_verify ? 'unconfirmed' : 'confirmed'; });
+      if ((data.users || []).length < 200) break;
+    }
+    const out = {};
+    Object.entries(people).forEach(([a, set]) => {
+      const list = [...set];
+      out[a.toLowerCase()] = { total: list.length, verified: list.filter((e) => users[e] === 'confirmed').length, joined: list.filter((e) => users[e] && users[e] !== 'invited').length };
+    });
+    return json({ artists: out });
+  }
   if (b.action === 'status') {
     const out = {};
     for (const e of (b.emails || []).slice(0, 50)) {
       const u = await findUser(db, e);
-      out[String(e).toLowerCase()] = !u ? 'none' : u.app_metadata?.needs_verify ? 'unconfirmed' : 'confirmed';
+      out[String(e).toLowerCase()] = !u ? 'none' : !u.email_confirmed_at ? 'invited' : u.app_metadata?.needs_verify ? 'unconfirmed' : 'confirmed';
     }
     return json({ status: out });
   }

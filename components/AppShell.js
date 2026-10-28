@@ -176,7 +176,7 @@ export default function AppShell({ children }) {
           <div className="sidefoot">
             {session ? (
               <>
-                <p className="demo">{session.user.email}{eng ? ' · Engineer' : ''}</p>
+                <p className="demo">{session.user.email}{eng ? ' · Engineer' : ''}{!eng && !session.user.app_metadata?.needs_verify && <span className="vbadge mine" title="Your email is confirmed">✓ Verified</span>}</p>
                 <Link className="seclink" href="/security">Security</Link>
                 <button className="btn small" onClick={signOut}>Sign out</button>
               </>
@@ -194,7 +194,7 @@ export default function AppShell({ children }) {
         </div>
         <EnterAnimation active={!!session && !needMfa} ready={loaded} />
         {session && <UpdateWatcher eng={eng} />}
-        {session && <TabBar eng={eng} projects={projects} email={session.user.email} signOut={signOut} unseen={unseen} />}
+        {session && <TabBar eng={eng} projects={projects} verified={!session.user.app_metadata?.needs_verify} email={session.user.email} signOut={signOut} unseen={unseen} />}
       </div>
       </PlayerProvider>
     </Ctx.Provider>

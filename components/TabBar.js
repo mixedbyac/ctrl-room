@@ -13,7 +13,7 @@ const I = {
 const Icon = ({ d }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>;
 
 /** Phone navigation: tabs along the bottom, with a "More" sheet for everything else and signing out. */
-export default function TabBar({ eng, projects, email, signOut, unseen }) {
+export default function TabBar({ eng, projects, email, signOut, unseen, verified }) {
   const pathname = usePathname();
   const [more, setMore] = useState(false);
   useEffect(() => { setMore(false); }, [pathname]);
@@ -50,7 +50,7 @@ export default function TabBar({ eng, projects, email, signOut, unseen }) {
               {eng && <a href="/mac">Get the Mac app</a>}
             </div>
             <div className="morefoot">
-              <span>{email}{eng ? ' · Engineer' : ''}</span>
+              <span>{email}{eng ? ' · Engineer' : ''}{!eng && verified && <span className="vbadge mine">✓ Verified</span>}</span>
               <button className="btn small" onClick={signOut}>Sign out</button>
             </div>
           </div>

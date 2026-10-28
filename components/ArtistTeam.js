@@ -31,8 +31,9 @@ export default function ArtistTeam({ artist, projects }) {
   const Badge = ({ em }) => {
     const st = acct[em];
     if (st === 'unconfirmed') return <span className="row-actions"><span className="tbadge warn">Not confirmed</span><button className="btn small" onClick={() => confirmAcct(em)}>Confirm</button></span>;
+    if (st === 'invited') return <span className="tbadge">Invited, hasn’t joined</span>;
     if (st === 'none') return <span className="tbadge">No account yet</span>;
-    if (st === 'confirmed') return <span className="tbadge ok">Confirmed</span>;
+    if (st === 'confirmed') return <span className="tbadge ok" title="Signed up with this email and confirmed it">✓ Verified</span>;
     return null;
   };
   const add = async (e) => {
@@ -63,7 +64,7 @@ export default function ArtistTeam({ artist, projects }) {
         ))}
         {(rows || []).filter((r) => !contacts.includes(r.email.toLowerCase())).map((r) => (
           <li key={r.id}><span className="tav">{r.email[0].toUpperCase()}</span><span className="tmain"><b>{r.email}</b><small>{/^admin$/i.test(r.role || '') ? 'Admin · can edit cover art, track order, titles and the active version' : r.role || 'Team'}</small></span>
-            <select className="trole" value={r.role || 'Other'} aria-label="Role" onChange={async (e) => { await supabase().from('artist_members').update({ role: e.target.value }).eq('id', r.id); load(); }}>{ROLES.map((x) => <option key={x}>{x}</option>)}</select><Badge em={r.email.toLowerCase()} />
+            <Badge em={r.email.toLowerCase()} /><select className="trole" value={r.role || 'Other'} aria-label="Role" onChange={async (e) => { await supabase().from('artist_members').update({ role: e.target.value }).eq('id', r.id); load(); }}>{ROLES.map((x) => <option key={x}>{x}</option>)}</select><Badge em={r.email.toLowerCase()} />
             <span className="row-actions"><button className="btn small quiet" onClick={() => copy(r.email)}>Copy invite</button><button className="btn small quiet" onClick={() => remove(r)}>Remove</button></span></li>
         ))}
         {rows && !rows.length && !contacts.length && <li className="muted small">No one yet.</li>}

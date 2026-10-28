@@ -1,4 +1,5 @@
 'use client';
+import { selectWithVersions } from '@/lib/embed';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -22,7 +23,7 @@ function Artists() {
   const [profiles, setProfiles] = useState({});
   useEffect(() => {
     if (!session) return;
-    supabase().from('projects').select('*, songs(*, versions(id,label,created_at))').order('created_at', { ascending: false }).then(({ data }) => setProjects(data || []));
+    selectWithVersions((V) => supabase().from('projects').select(`*, songs(*, ${V}(id,label,created_at))`).order('created_at', { ascending: false })).then(({ data }) => setProjects(data || []));
     supabase().from('artists').select('*').then(({ data }) => setProfiles(Object.fromEntries((data || []).map((a) => [a.name.toLowerCase(), a]))));
   }, [session, eng]);
   const prof = (n) => profiles[n.toLowerCase()];

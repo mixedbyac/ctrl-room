@@ -1,4 +1,5 @@
 'use client';
+import { selectWithVersions } from '@/lib/embed';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -29,7 +30,7 @@ function EngineerHome() {
   const [day, setDay] = useState(todayISO());
   const [showNew, setShowNew] = useState(false);
 
-  const loadProjects = () => supabase().from('projects').select('*, songs(*, versions(id,label,created_at))').eq('archived', false).order('created_at', { ascending: false })
+  const loadProjects = () => selectWithVersions((V) => supabase().from('projects').select(`*, songs(*, ${V}(id,label,created_at))`).eq('archived', false).order('created_at', { ascending: false }))
     .then(({ data }) => setProjects(data || []));
   useEffect(() => {
     const sb = supabase();

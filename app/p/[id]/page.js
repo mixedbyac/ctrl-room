@@ -5,6 +5,7 @@ import { InvoicePanel, InvoiceNotice, useInvoices, lockingInvoice } from '@/comp
 import ShareButton from '@/components/ShareButton';
 import EditableTitle from '@/components/EditableTitle';
 import { measureVersion, needsMeasure } from '@/lib/measure';
+import { selectWithVersions } from '@/lib/embed';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -48,8 +49,8 @@ export default function ProjectPage() {
   const load = useCallback(async () => {
     const sb = supabase();
     const cols = 'id,label,note,created_at,storage_path,file_name,duration,lufs,peak_db,rms_db,file_format,sample_rate,bit_depth,file_size,lossless';
-    let { data, error } = await sb.from('projects').select(`*, songs(*, versions(${cols}))`).eq('id', id).single();
-    if (error && /column/i.test(error.message)) ({ data } = await sb.from('projects').select('*, songs(*, versions(*))').eq('id', id).single()); // older database
+    let { data, error } = await selectWithVersions((V) => sb.from('projects').select(`*, songs(*, ${V}(${cols}))`).eq('id', id).single());
+    if (error && /column/i.test(error.message)) ({ data, error } = await selectWithVersions((V) => sb.from('projects').select(`*, songs(*, ${V}(*))`).eq('id', id).single())); // older database
     if (data) data.songs = (data.songs || []).sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at));
     setP(data || null);
     const ids = (data?.songs || []).map((x) => x.id);

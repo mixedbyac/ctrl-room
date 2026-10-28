@@ -114,7 +114,7 @@ function LoginCovers() {
   const [busy, setBusy] = useState(false);
   const save = async (clear = false) => {
     setBusy(true); setMsg('');
-    try { const r = await api('/api/covers', { url: clear ? '' : url }); setMsg(clear ? 'Back to generated covers.' : `Using ${r.covers} covers from that playlist. Open the sign-in page to see them.`); if (clear) setUrl(''); }
+    try { const r = await api('/api/covers', { url: clear ? '' : url }); setMsg(clear ? 'Back to your default playlist (The Engineer’s).' : `Using ${r.covers} covers from that playlist. Open the sign-in page to see them.`); if (clear) setUrl(''); }
     catch (e) { setMsg(e.message); }
     setBusy(false);
   };

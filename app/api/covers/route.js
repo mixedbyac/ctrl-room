@@ -7,6 +7,8 @@ export const maxDuration = 30;
 
 // Cover art for the sign-in page background, pulled from an Apple Music playlist the engineer picks.
 // Cached for a day so the page stays fast.
+// Anthony "AC" Carballo – The Engineer's playlist; used until a different one is set in Security.
+const DEFAULT_PLAYLIST = 'https://music.apple.com/us/playlist/anthony-ac-carballo-the-engineers/pl.0c730da3fdbe4c029a36649986cfc842';
 const ART = /https:\/\/is\d-ssl\.mzstatic\.com\/image\/thumb\/[^"'\s\\]+?\/\{w\}x\{h\}[^"'\s\\]*/g;
 
 function walk(node, out, seen) {
@@ -38,8 +40,7 @@ async function fromPlaylist(url) {
 
 export async function GET(req) {
   const slow = limit(req, 'covers', 60, 600_000); if (slow) return slow;
-  const url = await getConfig('login_playlist');
-  if (!url) return json({ covers: [] }, 200);
+  const url = (await getConfig('login_playlist')) || DEFAULT_PLAYLIST;
   const cached = JSON.parse((await getConfig('login_covers')) || 'null');
   if (cached && cached.url === url && Date.now() - cached.at < 24 * 3600 * 1000) return json({ covers: cached.covers });
   try {
@@ -57,7 +58,7 @@ export async function POST(req) {
   if (!user || !(await isEngineer(user.email))) return fail('Only the engineer can change this.', 403);
   const b = await req.json().catch(() => ({}));
   const url = String(b.url || '').trim();
-  if (!url) { await setConfig('login_playlist', null); await setConfig('login_covers', null); return json({ covers: [] }); }
+  if (!url) { await setConfig('login_playlist', null); await setConfig('login_covers', null); return json({ covers: 0, default: true }); }
   if (!/^https:\/\/music\.apple\.com\/[a-z]{2}\/playlist\//i.test(url)) return fail('Paste an Apple Music playlist link (music.apple.com/…/playlist/…).');
   try {
     const covers = await fromPlaylist(url);

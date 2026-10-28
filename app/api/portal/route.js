@@ -28,8 +28,8 @@ export async function POST(req) {
     if (Object.keys(patch).length) await db.from('projects').update(patch).eq('id', p.id);
   } else {
     const t = b.project || {};
-    const title = String(t.title || '').trim();
-    if (!title) return fail('Give the project a title.');
+    const fallback = songs.length === 1 ? String(songs[0].title).trim() : `${artist} – ${songs.length} songs`;
+    const title = (String(t.title || '').trim() || fallback).slice(0, 120);
     const { data: p, error } = await db.from('projects').insert({
       title, artist, type: ['Single', 'EP', 'Album', 'Mixtape'].includes(t.type) ? t.type : 'Single',
       release: t.release || null, seed: Number(t.seed) || Math.floor(Math.random() * 1e9),

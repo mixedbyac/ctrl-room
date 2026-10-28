@@ -33,6 +33,10 @@ export default function Portal() {
   }, [myEmail]); // eslint-disable-line
 
   const project = mode === 'new' ? null : projects.find((p) => p.id === mode);
+  // no project questions: name and type come from the songs (the engineer can rename later)
+  const named = songs.filter((s) => s.title.trim());
+  const autoType = songs.length <= 1 ? 'Single' : songs.length <= 6 ? 'EP' : 'Album';
+  const autoTitle = songs.length <= 1 ? (named[0]?.title.trim() || '') : `${f.artist.trim() || 'New'} – ${songs.length} songs`;
   const bytes = songs.reduce((n, s) => n + s.files.reduce((m, x) => m + x.size, 0), 0);
   const fileCount = songs.reduce((n, s) => n + s.files.length, 0);
 
@@ -42,7 +46,6 @@ export default function Portal() {
     if (!f.name.trim()) return setErr('Add your name so I know who sent it.');
     if (!f.artist.trim()) return setErr('Add the artist name.');
     if (!/^\S+@\S+\.\S+$/.test(f.email.trim())) return setErr('Add an email address. You sign in with it to follow along.');
-    if (mode === 'new' && !f.title.trim()) return setErr('Give the project a title.');
     if (songs.some((s) => !s.title.trim())) return setErr('Every song needs a title.');
     const big = songs.flatMap((s) => s.files).find((x) => x.size > LIMIT_FILE);
     if (big) return setErr(`${big.name} is over 150 MB. Zip it into smaller parts or split it up.`);
@@ -53,7 +56,7 @@ export default function Portal() {
       const r = await api('/api/portal', {
         name: f.name, email: f.email, phone: f.phone, artist: f.artist, spotify: f.spotify, message: f.message,
         projectId: mode === 'new' ? null : mode,
-        project: { title: f.title, type: f.type, release: f.release || null, seed },
+        project: { title: autoTitle || 'Untitled', type: autoType, release: null, seed },
         songs: songs.map((s) => ({ title: s.title, bpm: s.bpm, key: s.key, ref: s.ref, notes: s.notes })),
       });
       const results = [];
@@ -87,7 +90,7 @@ export default function Portal() {
             <Cover seed={mode === 'new' ? seed : project?.seed} size={400} />
             <div>
               <h2 className="up">You're set up</h2>
-              <p>{result.projectTitle} has {result.songs.length} song{result.songs.length > 1 ? 's' : ''} and {result.files} file{result.files > 1 ? 's' : ''} ({fmtBytes(result.bytes)}) on the way to the studio.
+              <p>{result.projectTitle} has {result.songs.length} song{result.songs.length > 1 ? 's' : ''} and {result.files} file{result.files > 1 ? 's' : ''} ({fmtBytes(result.bytes)}) in the CTRL ROOM.
                 {session ? ' Your project page shows every step from here.' : ` Sign in with ${f.email} to follow progress and hear every mix.`}{f.phone ? ` You'll get a text at ${f.phone} when a mix is ready.` : ''}</p>
               <div className="dzbtns">
                 {session ? <a className="btn primary" href={`${appBase()}/p/${result.projectId}`}>Open the project</a> : <a className="btn primary" href={`${appBase()}/signup?email=${encodeURIComponent(f.email)}&next=${encodeURIComponent(`/p/${result.projectId}`)}`}>Create an account to follow along</a>}
@@ -124,28 +127,16 @@ export default function Portal() {
             </fieldset>
 
             <fieldset className="sec" disabled={sending}>
-              <legend><span className="n">2</span>The project</legend>
-              {session && projects.length > 0 && (
-                <div className="projpick" role="group" aria-label="Which project">
-                  {projects.filter((p) => !p.archived).map((p) => (
-                    <button type="button" key={p.id} className="pchip" aria-pressed={mode === p.id} onClick={() => setMode(p.id)}><Cover seed={p.seed} size={64} />{p.title}</button>
-                  ))}
-                  <button type="button" className="pchip" aria-pressed={mode === 'new'} onClick={() => setMode('new')}><span className="plus">+</span>New project</button>
+              <legend><span className="n">2</span>Songs</legend>
+              {session && projects.filter((p) => !p.archived).length > 0 && (
+                <div className="fld addto">
+                  <label htmlFor="fAddTo">Add to</label>
+                  <select id="fAddTo" value={mode} onChange={(e) => setMode(e.target.value)}>
+                    <option value="new">A new project</option>
+                    {projects.filter((p) => !p.archived).map((p) => <option key={p.id} value={p.id}>{p.title} · {p.artist}</option>)}
+                  </select>
                 </div>
               )}
-              {mode === 'new' && (
-                <div style={{ display: 'grid', gap: 12 }}>
-                  <div className="fld"><label htmlFor="fPT">Project title</label><input id="fPT" value={f.title} onChange={set('title')} /></div>
-                  <div className="two">
-                    <div className="fld"><label htmlFor="fTy">Type</label><select id="fTy" value={f.type} onChange={set('type')}><option>Single</option><option>EP</option><option>Album</option><option>Mixtape</option></select></div>
-                    <div className="fld"><label htmlFor="fRel">Release date <span className="opt">if you have one</span></label><input id="fRel" type="date" value={f.release} onChange={set('release')} /></div>
-                  </div>
-                </div>
-              )}
-            </fieldset>
-
-            <fieldset className="sec" disabled={sending}>
-              <legend><span className="n">3</span>Songs</legend>
               <div className="songsF">
                 {songs.map((s, i) => <SongCard key={s.k} s={s} n={i + 1} artist={f.artist} canRemove={songs.length > 1} onChange={(patch) => setSong(s.k, patch)} onRemove={() => setSongs((ss) => ss.filter((x) => x.k !== s.k))} />)}
               </div>
@@ -153,7 +144,7 @@ export default function Portal() {
             </fieldset>
 
             <fieldset className="sec" disabled={sending}>
-              <legend><span className="n">4</span>Anything else?</legend>
+              <legend><span className="n">3</span>Anything else?</legend>
               <div className="fld"><textarea aria-label="Message" value={f.message} onChange={set('message')} placeholder="Deadlines, vibe, things you love about the rough mix…" /></div>
             </fieldset>
           </form>
@@ -163,8 +154,8 @@ export default function Portal() {
               <Cover seed={mode === 'new' ? seed : project?.seed} size={480} alt="Project cover" />
               {mode === 'new' && !sending && <button type="button" className="shuf" onClick={() => setSeed(Math.floor(Math.random() * 1e9))}>Shuffle cover</button>}
             </div>
-            <div><p className="sumt up">{mode === 'new' ? (f.title.trim() || 'Untitled project') : project?.title}</p>
-              <p className="sums">{mode === 'new' ? `${f.type}${f.release ? ` · out ${fmtDate(f.release)}` : ''}` : project?.artist}</p></div>
+            <div><p className="sumt up">{mode === 'new' ? (autoTitle || 'Your mix') : project?.title}</p>
+              <p className="sums">{mode === 'new' ? `${autoType}${f.artist.trim() ? ` · ${f.artist.trim()}` : ''}` : project?.artist}</p></div>
             <ul className="sumsongs">
               {songs.map((s, i) => <li key={s.k}><span>{s.title || `Song ${i + 1}`}</span><small>{s.files.length ? `${s.files.length} · ${fmtBytes(s.files.reduce((n, x) => n + x.size, 0))}` : 'no files yet'}</small></li>)}
             </ul>
@@ -173,7 +164,7 @@ export default function Portal() {
               <span>{sending ? `Sending ${progress.file ? progress.file + ' · ' : ''}${pct}%` : `${fileCount} file${fileCount === 1 ? '' : 's'} · ${fmtBytes(bytes)}`}</span>
             </div>
             {err && <p className="ferr">{err}</p>}
-            <button className="send" type="submit" form="pform" disabled={sending}>{sending ? 'Sending… keep this page open' : 'Send to the studio'}</button>
+            <button className="send" type="submit" form="pform" disabled={sending}>{sending ? 'Sending… keep this page open' : 'Send to the CTRL ROOM'}</button>
             <p className="fine">Files up to 150 MB each. Zip big sessions into parts.</p>
           </aside>
         </div>

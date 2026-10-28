@@ -282,3 +282,4 @@ body.playing .lbg { animation: breathe 9s ease-in-out infinite; }
 .dbxwarn p { margin: 0; }
 .dbxwarn ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
 .dbxwarn code { font-family: var(--mono); font-size: 12px; background: var(--s2); padding: 1px 5px; border-radius: 5px; overflow-wrap: anywhere; }
+.addto { max-width: 360px; margin-bottom: 4px; }

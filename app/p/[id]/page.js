@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabase';
 import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
 import { fmtDate, shortDate, statusText } from '@/lib/format';
+import { parseMixName, matchSong } from '@/lib/filename';
+import { deliverFile } from '@/lib/deliver';
 
 export default function ProjectPage() {
   const { id } = useParams();
@@ -48,6 +50,7 @@ export default function ProjectPage() {
               {!eng && <span className="chipnote">{ready ? `${ready} mix${ready > 1 ? 'es' : ''} waiting on you` : "You're all caught up"}</span>}
               {eng && <>
                 <button className="gear" onClick={() => setPanel(panel === 'share' ? null : 'share')}>Share with client</button>
+                <button className="gear" onClick={() => setPanel(panel === 'mixes' ? null : 'mixes')}>+ Add mixes</button>
                 <button className="gear" onClick={() => setPanel(panel === 'add' ? null : 'add')}>+ Add song</button>
                 <button className="gear" onClick={() => setPanel(panel === 'edit' ? null : 'edit')}>Edit details</button>
               </>}
@@ -56,6 +59,7 @@ export default function ProjectPage() {
         </div>
 
         {eng && panel === 'share' && <SharePanel p={p} onSaved={load} />}
+        {eng && panel === 'mixes' && <AddMixes p={p} onSaved={load} />}
         {eng && panel === 'add' && <AddSong p={p} onSaved={() => { load(); setPanel(null); }} />}
         {eng && panel === 'edit' && <EditProject p={p} onSaved={() => { load(); reloadProjects(); setPanel(null); }} />}
 
@@ -152,5 +156,83 @@ function EditProject({ p, onSaved }) {
         <button type="button" className="btn quiet" onClick={archive}>{p.archived ? 'Unarchive' : 'Archive project'}</button>
       </div>
     </form>
+  );
+}
+
+function AddMixes({ p, onSaved }) {
+  const [rows, setRows] = useState([]);
+  const [text, setText] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [hot, setHot] = useState(false);
+  const pick = (list) => {
+    const files = Array.from(list || []).filter((f) => f.size > 0 && /\.(wav|aiff?|mp3|m4a|flac)$/i.test(f.name));
+    setRows(files.map((file) => {
+      const parsed = parseMixName(file.name, { artist: p.artist, project: p.title });
+      const song = matchSong(p.songs, parsed.title);
+      return { file, title: parsed.title || file.name.replace(/\.[^.]+$/, ''), label: parsed.label, note: parsed.note, songId: song?.id || null, state: 'ready' };
+    }));
+  };
+  const setRow = (i, patch) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  const go = async () => {
+    setBusy(true);
+    const sb = supabase();
+    let pos = p.songs.reduce((m, s) => Math.max(m, s.position), -1);
+    const created = {};
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      try {
+        setRow(i, { state: 'working' });
+        let song = r.songId ? p.songs.find((s) => s.id === r.songId) : created[r.title.toLowerCase()] || matchSong(p.songs, r.title);
+        if (!song) {
+          const { data, error } = await sb.from('songs').insert({ project_id: p.id, title: r.title.trim(), position: ++pos, seed: Math.floor(Math.random() * 1e9) }).select('*').single();
+          if (error) throw new Error(error.message);
+          song = { ...data, versions: [] };
+          created[r.title.toLowerCase()] = song;
+        }
+        const { data: vs } = await sb.from('versions').select('id,label,created_at').eq('song_id', song.id).order('created_at');
+        const res = await deliverFile({ song, versions: vs || [], file: r.file, project: p, text, onStatus: (m) => setRow(i, { status: m }) });
+        setRow(i, { state: 'done', status: `${song.title} · ${res.label}${res.texted ? ' · texted' : ''}` });
+      } catch (e) {
+        setRow(i, { state: 'error', status: e.message });
+      }
+    }
+    setBusy(false);
+    onSaved();
+  };
+  return (
+    <div className="panel" style={{ marginBottom: 24 }}>
+      <h3>Add mixes</h3>
+      <p className="muted small" style={{ margin: 0 }}>Drop bounces named however you like, e.g. “{p.artist} - Song Name - Mix 2.wav”. Each file goes to the matching song (or a new one), and “Mix 2” becomes v2.</p>
+      <label className={`minidrop ${hot ? 'hot' : ''}`} style={{ cursor: 'pointer' }}
+        onDragOver={(e) => { e.preventDefault(); setHot(true); }} onDragLeave={() => setHot(false)}
+        onDrop={(e) => { e.preventDefault(); setHot(false); pick(e.dataTransfer?.files); }}>
+        <span className="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V4M7 9l5-5 5 5M4 15v4a1 1 0 001 1h14a1 1 0 001-1v-4" /></svg></span>
+        <span className="mt"><b>{rows.length ? `${rows.length} mix${rows.length > 1 ? 'es' : ''} ready` : 'Drop mixes here, or click to choose'}</b><span>WAV, AIFF, MP3, M4A or FLAC</span></span>
+        <input className="vh" type="file" multiple accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.flac" onChange={(e) => { pick(e.target.files); e.target.value = ''; }} />
+      </label>
+      {rows.length > 0 && (
+        <>
+          <ul className="act">
+            {rows.map((r, i) => (
+              <li key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.4fr) minmax(0,1fr) 70px', gap: 10, alignItems: 'center' }}>
+                <span className="small muted" style={{ overflowWrap: 'anywhere' }}>{r.file.name}</span>
+                {r.state === 'ready' ? (
+                  <select className="sinput" value={r.songId || 'new'} onChange={(e) => setRow(i, { songId: e.target.value === 'new' ? null : e.target.value })} aria-label="Which song">
+                    <option value="new">New song: {r.title}</option>
+                    {p.songs.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
+                  </select>
+                ) : <span className="small" style={{ color: r.state === 'error' ? 'var(--warn)' : r.state === 'done' ? 'var(--ok)' : 'var(--muted)' }}>{r.status}</span>}
+                <span className="mono small">{r.label || 'next'}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="row-actions">
+            <button className="btn primary" onClick={go} disabled={busy || rows.every((r) => r.state === 'done')}>{busy ? 'Delivering…' : `Deliver ${rows.length} mix${rows.length > 1 ? 'es' : ''}`}</button>
+            <label className="smsopt"><input type="checkbox" checked={text} onChange={(e) => setText(e.target.checked)} /> Text the client</label>
+            {!busy && <button className="btn quiet" onClick={() => setRows([])}>Clear</button>}
+          </div>
+        </>
+      )}
+    </div>
   );
 }

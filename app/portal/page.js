@@ -5,6 +5,7 @@ import { supabase, api } from '@/lib/supabase';
 import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
 import { fmtBytes, fmtDate } from '@/lib/format';
+import { parseMixName } from '@/lib/filename';
 
 const LIMIT_FILE = 150 * 1024 * 1024;
 const blank = () => ({ k: Math.random().toString(36).slice(2), title: '', bpm: '', key: '', ref: '', notes: '', files: [] });
@@ -138,7 +139,7 @@ export default function Portal() {
             <fieldset className="sec" disabled={sending}>
               <legend><span className="n">3</span>Songs</legend>
               <div className="songsF">
-                {songs.map((s, i) => <SongCard key={s.k} s={s} n={i + 1} canRemove={songs.length > 1} onChange={(patch) => setSong(s.k, patch)} onRemove={() => setSongs((ss) => ss.filter((x) => x.k !== s.k))} />)}
+                {songs.map((s, i) => <SongCard key={s.k} s={s} n={i + 1} artist={f.artist} canRemove={songs.length > 1} onChange={(patch) => setSong(s.k, patch)} onRemove={() => setSongs((ss) => ss.filter((x) => x.k !== s.k))} />)}
               </div>
               <button type="button" className="addsong" onClick={() => setSongs((ss) => [...ss, blank()])}>+ Add another song</button>
             </fieldset>
@@ -173,10 +174,19 @@ export default function Portal() {
   );
 }
 
-function SongCard({ s, n, canRemove, onChange, onRemove }) {
+function SongCard({ s, n, canRemove, onChange, onRemove, artist }) {
   const [hot, setHot] = useState(false);
   const files = useRef(null), folder = useRef(null);
-  const add = (list) => onChange({ files: [...s.files, ...Array.from(list || []).filter((x) => x.size > 0 && !x.name.startsWith('.'))] });
+  const add = (list) => {
+    const picked = Array.from(list || []).filter((x) => x.size > 0 && !x.name.startsWith('.'));
+    const patch = { files: [...s.files, ...picked] };
+    if (!s.title.trim() && picked.length) {
+      const first = picked[0], folder = first.webkitRelativePath ? first.webkitRelativePath.split('/')[0] : '';
+      const guess = parseMixName(folder || first.name, { artist }).title;
+      if (guess) patch.title = guess;
+    }
+    onChange(patch);
+  };
   const total = s.files.reduce((m, x) => m + x.size, 0);
   return (
     <div className="songcard">

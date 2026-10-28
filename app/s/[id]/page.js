@@ -6,7 +6,7 @@ import { supabase, api } from '@/lib/supabase';
 import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
 import { fmt, mmss, fmtDate, shortDate, ago, statusText, nextLabel, deviceName, todayISO } from '@/lib/format';
-import { analyseFile } from '@/lib/audio';
+import { deliverFile } from '@/lib/deliver';
 
 const BINS = 100;
 const PLAY = <path d="M7 4.5v15l13-7.5z" />;
@@ -286,25 +286,9 @@ function DeliverVersion({ song, versions, onDone, setMsg }) {
   const deliver = async (e) => {
     const f = e.target.files?.[0]; e.target.value = '';
     if (!f) return;
-    const sb = supabase(), label = nextLabel(versions);
     try {
-      setBusy(`Reading ${f.name}…`);
-      let stats = {};
-      try { stats = await analyseFile(f); } catch { stats = {}; }
-      setBusy(`Uploading ${label}…`);
-      const safe = f.name.replace(/[^\w.\- ]+/g, '_');
-      const path = `${song.project_id}/${song.id}/${Date.now()}-${safe}`;
-      const { error: upErr } = await sb.storage.from('mixes').upload(path, f, { contentType: f.type || 'audio/wav', upsert: false });
-      if (upErr) throw new Error(upErr.message);
-      const { error: vErr } = await sb.from('versions').insert({ song_id: song.id, label, note: f.name.replace(/\.[^.]+$/, ''), storage_path: path, ...stats });
-      if (vErr) throw new Error(vErr.message);
-      const today = todayISO();
-      await sb.from('songs').update({ status: 'review', eta: null, approved_version: null, approved_at: null, mixing_at: song.mixing_at || today, downloaded_at: song.downloaded_at || today, received_at: song.received_at || today }).eq('id', song.id);
-      const body = `${label} is ready to listen.`;
-      let texted = false;
-      if (text) { try { texted = (await api('/api/sms', { songId: song.id, body })).sent; } catch {} }
-      await sb.from('updates').insert({ song_id: song.id, body, texted });
-      setMsg(`Delivered ${f.name} as ${label}.${text ? (texted ? ' Texted the client.' : ' (Text not sent — check the phone number and Twilio setup.)') : ''} Tap ✎ to rename it.`);
+      const r = await deliverFile({ song, versions, file: f, project: song.projects, text, onStatus: setBusy });
+      setMsg(`Delivered ${f.name} as ${r.label}${r.parsed.note ? ` (${r.parsed.note})` : ''}.${text ? (r.texted ? ' Texted the client.' : ' (Text not sent — check the phone number and Twilio setup.)') : ''} Tap ✎ to rename it.`);
       onDone();
     } catch (err) {
       setMsg(`Couldn't deliver ${f.name}: ${err.message}`);

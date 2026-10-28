@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
+import QuickDrop from '@/components/QuickDrop';
 import { fmtDate, todayISO, addDaysISO, statusText, ago, mmss, fmtBytes } from '@/lib/format';
 
 export default function HomePage() {
@@ -27,10 +28,11 @@ function EngineerHome() {
   const [day, setDay] = useState(todayISO());
   const [showNew, setShowNew] = useState(false);
 
+  const loadProjects = () => supabase().from('projects').select('*, songs(*, versions(id,label,created_at))').eq('archived', false).order('created_at', { ascending: false })
+    .then(({ data }) => setProjects(data || []));
   useEffect(() => {
     const sb = supabase();
-    sb.from('projects').select('*, songs(*, versions(id,label,created_at))').eq('archived', false).order('created_at', { ascending: false })
-      .then(({ data }) => setProjects(data || []));
+    loadProjects();
     Promise.all([
       sb.from('plays').select('*, songs(title,seed,project_id), versions(label)').order('updated_at', { ascending: false }).limit(15),
       sb.from('notes').select('*, songs(title,seed), versions(label)').eq('from_client', true).order('created_at', { ascending: false }).limit(15),
@@ -70,6 +72,8 @@ function EngineerHome() {
               fresh ? `${fresh} new in the Portal` : ''].filter(Boolean).join(' · ')}.
           </p>
         </div>
+
+        <QuickDrop projects={projects} onDone={() => { loadProjects(); reloadProjects(); }} />
 
         <div className="week" role="group" aria-label="This week">
           {week.map((d) => {

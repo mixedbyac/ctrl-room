@@ -1050,3 +1050,17 @@ a.driftc:hover { transform: scale(1.04); }
   .spin { transform: none !important; }
 }
 .bigdisc .hub { z-index: 6; }
+
+/* phones, client side: only what an artist needs (cover, play, songs, versions, notes, approve) */
+@media (max-width: 900px) {
+  .app.client .tstats, .app.client .colpick, .app.client .nerd, .app.client .chipnote,
+  .app.client .adddemo, .app.client .sleevewrap .record,
+  .app.client .stab[data-k="about"], .app.client .stabs.hasmix .stab[data-k="progress"],
+  .app.client .sinfo .meta > span:last-child { display: none !important; }
+  .app.client .sleevewrap { aspect-ratio: 1; max-width: 300px; margin: 0 auto; }
+  .app.client .sleevewrap .sleeve, .app.client .sleevewrap:hover .sleeve, body.playing .app.client .sleevewrap .sleeve { width: 100%; transform: none; }
+  .app.client .phero, .app.client .shero { gap: 18px; padding-block: 8px 20px; }
+  .app.client .pinfo, .app.client .sinfo { text-align: center; }
+  .app.client .prow, .app.client .sinfo .meta, .app.client .shbar { justify-content: center; }
+  .app.client .psub { font-size: 14px; }
+}

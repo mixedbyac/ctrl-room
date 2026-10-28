@@ -170,9 +170,9 @@ export default function SongPage() {
           <div className="nomix"><strong className="up">No mix yet</strong>{song.eta ? `The first mix is expected ${fmtDate(song.eta)}.` : 'The first mix will show up here.'}{p.phone ? " You'll get a text the moment it's ready." : ''}</div>
         )}
 
-        <div className="stabs" role="tablist" aria-label="Song details">
+        <div className={`stabs ${hasMix ? 'hasmix' : ''}`} role="tablist" aria-label="Song details">
           {tabs.map(([k, l, c, hot]) => (
-            <button key={k} className="stab" role="tab" aria-selected={k === curTab} onClick={() => setTab(k)}>{l}{c ? <span className={`cnt ${hot ? 'hot' : ''}`}>{c}</span> : null}</button>
+            <button key={k} data-k={k} className="stab" role="tab" aria-selected={k === curTab} onClick={() => setTab(k)}>{l}{c ? <span className={`cnt ${hot ? 'hot' : ''}`}>{c}</span> : null}</button>
           ))}
         </div>
         {curTab === 'notes' && <Notes {...{ notes, reactions, v, versions, time, playing, seek, setVid: switchTo, eng, email, meName: session?.user?.user_metadata?.name, song, reload: load }} />}
@@ -606,7 +606,7 @@ function AddDemo({ song, eng, onDone, setMsg }) {
     setBusy('');
   };
   return (
-    <div className={`row-actions deliverbox ${hot ? 'hot' : ''}`} onDragOver={(e) => { e.preventDefault(); setHot(true); }} onDragLeave={() => setHot(false)}
+    <div className={`row-actions deliverbox adddemo ${hot ? 'hot' : ''}`} onDragOver={(e) => { e.preventDefault(); setHot(true); }} onDragLeave={() => setHot(false)}
       onDrop={(e) => { e.preventDefault(); setHot(false); if (!busy) go(e.dataTransfer?.files?.[0]); }}>
       <label className="btn small quiet" htmlFor={id} style={{ cursor: 'pointer' }}>{busy || (hot ? 'Drop the demo' : '+ Add demo')}</label>
       <input id={id} className="vh" type="file" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.flac" disabled={!!busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; go(f); }} />

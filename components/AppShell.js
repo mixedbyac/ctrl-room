@@ -185,7 +185,7 @@ export default function AppShell({ children }) {
             )}
           </div>
         </aside>
-        <div className="app">
+        <div className={`app ${session && !eng ? 'client' : ''}`}>
           {session && !eng && session.user?.app_metadata?.needs_verify && (
             <div className="page" style={{ paddingBottom: 0 }}><VerifyBanner email={session.user.email} onDone={() => { reloadProjects(); setMfaTick((t) => t + 1); }} /></div>
           )}

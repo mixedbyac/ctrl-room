@@ -17,7 +17,7 @@ export async function POST(req) {
   if (error) return fail(/share_token|sharing/.test(error.message) ? MIGRATE : error.message, 500);
   if (!row) return fail('Not found.', 404);
   const projectId = b.kind === 'song' ? row.project_id : row.id;
-  if (!(await canSee(user.email, projectId))) return fail('You don’t have access to this.', 403);
+  if (!(await canSee(user, projectId))) return fail('You don’t have access to this.', 403);
   const eng = await isEngineer(user.email);
   const { data: proj } = await db.from('projects').select('sharing').eq('id', projectId).single();
   const action = b.action || 'link';

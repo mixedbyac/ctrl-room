@@ -1,4 +1,5 @@
 import { admin, json, fail } from '@/lib/server';
+import { limit } from '@/lib/ratelimit';
 import { fetchSpotifyArtist, spotifyArtistId } from '@/lib/spotify';
 
 export const runtime = 'nodejs';
@@ -6,6 +7,7 @@ export const maxDuration = 30;
 
 // Creates a client account with a password. No confirmation email, so it never hits email limits.
 export async function POST(req) {
+  const slow = limit(req, 'signup', 5, 3600_000); if (slow) return slow;
   const b = await req.json().catch(() => null);
   const name = String(b?.name || '').trim().slice(0, 100);
   const artist = String(b?.artist || '').trim().slice(0, 100);
@@ -22,6 +24,7 @@ export async function POST(req) {
   const { error } = await db.auth.admin.createUser({
     email, password, email_confirm: true,
     user_metadata: { name, artist, phone, spotify },
+    app_metadata: { needs_verify: true }, // projects unlock after the email is confirmed (code) or the engineer confirms them
   });
   if (error) {
     if (/already|registered|exists/i.test(error.message)) return fail('There’s already an account with this email. Sign in instead, or use “Email me a sign-in link” if you forgot the password.', 409);

@@ -1,3 +1,4 @@
+import { limit } from '@/lib/ratelimit';
 import { admin, json, fail, dropboxFolder, dropboxPath, dropboxChunk } from '@/lib/server';
 
 export const runtime = 'nodejs';
@@ -8,6 +9,7 @@ const MAX = 2 * 1024 * 1024 * 1024;
 // Files over 150 MB: the browser sends 4 MB pieces here and we pass them to a Dropbox upload session.
 // Headers: x-upload-id, x-song-id, x-name (URI-encoded), x-step (start|append|finish), x-session, x-offset, x-size
 export async function POST(req) {
+  const slow = limit(req, 'portal-chunk', 6000, 600000); if (slow) return slow;
   const h = (k) => req.headers.get(k) || '';
   const uploadId = h('x-upload-id'), songId = h('x-song-id'), step = h('x-step');
   const name = decodeURIComponent(h('x-name') || 'file');

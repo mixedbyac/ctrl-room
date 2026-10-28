@@ -1,3 +1,4 @@
+import { limit } from '@/lib/ratelimit';
 import { admin, userFrom, canSee, json, fail } from '@/lib/server';
 import { fetchSpotifyArtist, spotifyArtistId } from '@/lib/spotify';
 
@@ -5,6 +6,7 @@ export const runtime = 'nodejs';
 
 // Creates (or adds to) a project from the Portal setup form, before any files are sent.
 export async function POST(req) {
+  const slow = limit(req, 'portal', 20, 3600000); if (slow) return slow;
   const b = await req.json().catch(() => null);
   if (!b) return fail('Missing form data.');
   const name = String(b.name || '').trim(), email = String(b.email || '').trim().toLowerCase();
@@ -20,7 +22,7 @@ export async function POST(req) {
   if (b.projectId) {
     const user = await userFrom(req);
     const { data: p } = await db.from('projects').select('*').eq('id', b.projectId).single();
-    const ok = p && user && (await canSee(user.email, p.id));
+    const ok = p && user && (await canSee(user, p.id));
     if (!ok) return fail('You don’t have access to that project. Ask your engineer to add you to the artist’s team.', 403);
     project = p;
     const patch = {};

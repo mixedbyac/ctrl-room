@@ -45,8 +45,9 @@ export function PlayerProvider({ eng, children }) {
   const signed = useCallback(async (paths) => {
     const now = Date.now(), need = paths.filter((p) => !urls.current[p] || urls.current[p].exp < now + 60_000);
     if (need.length) {
-      const { data } = await supabase().storage.from('mixes').createSignedUrls(need, 6 * 3600);
-      (data || []).forEach((x, i) => { if (x.signedUrl) urls.current[need[i]] = { url: x.signedUrl, exp: now + 6 * 3600 * 1000 }; });
+      // short-lived play links: they only work for people on the project, and expire after 2 hours
+      const { data } = await supabase().storage.from('mixes').createSignedUrls(need, 2 * 3600);
+      (data || []).forEach((x, i) => { if (x.signedUrl) urls.current[need[i]] = { url: x.signedUrl, exp: now + 2 * 3600 * 1000 }; });
     }
   }, []);
 
@@ -62,6 +63,16 @@ export function PlayerProvider({ eng, children }) {
       a.src = u;
       a.addEventListener('ended', () => { if (curRef.current?.versionId === v.id) { setPlaying(false); nextRef.current?.(true); } });
       a.addEventListener('loadedmetadata', () => { if (curRef.current?.versionId === v.id) setDuration(a.duration || 0); });
+      // link expired (left paused a long time): get a fresh one and carry on from the same spot
+      a.addEventListener('error', async () => {
+        if (a._renewing) return;
+        a._renewing = true;
+        const at = a.currentTime || 0, wasOn = curRef.current?.versionId === v.id;
+        delete urls.current[v.storage_path];
+        await signed([v.storage_path]);
+        const fresh = urls.current[v.storage_path]?.url;
+        if (fresh) { a.src = fresh; a.addEventListener('loadedmetadata', () => { try { a.currentTime = at; } catch {} if (wasOn) a.play().catch(() => {}); a._renewing = false; }, { once: true }); }
+      });
       audios.current[v.id] = a;
     }
     return a;

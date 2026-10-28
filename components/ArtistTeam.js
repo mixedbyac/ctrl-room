@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, api } from '@/lib/supabase';
 
 const ROLES = ['Artist', 'Manager', 'Producer', 'Writer', 'Label', 'A&R', 'Other'];
 
@@ -10,6 +10,7 @@ export default function ArtistTeam({ artist, projects }) {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('Artist');
   const [msg, setMsg] = useState('');
+  const [acct, setAcct] = useState({});
   const load = () => supabase().from('artist_members').select('*').ilike('artist', artist).order('added_at').then(({ data, error }) => {
     if (error) { setRows([]); setMsg(/artist_members/.test(error.message) ? 'Teams need a quick database update: run supabase/006_artist_team.sql in Supabase.' : error.message); return; }
     setRows((data || []).filter((r) => r.artist.toLowerCase() === artist.toLowerCase()));
@@ -17,6 +18,23 @@ export default function ArtistTeam({ artist, projects }) {
   useEffect(() => { load(); }, [artist]); // eslint-disable-line
 
   const contacts = [...new Set(projects.map((p) => (p.client_email || '').toLowerCase()).filter(Boolean))];
+  const everyone = [...new Set([...contacts, ...(rows || []).map((r) => r.email.toLowerCase())])];
+  useEffect(() => {
+    if (!everyone.length) return;
+    api('/api/verify', { action: 'status', emails: everyone }).then((r) => setAcct(r.status || {})).catch(() => {});
+  }, [everyone.join(',')]); // eslint-disable-line
+  const confirmAcct = async (em) => {
+    if (!window.confirm(`Confirm ${em}? Only do this if you know this account really belongs to them.`)) return;
+    try { await api('/api/verify', { action: 'confirm', email: em }); setAcct((a) => ({ ...a, [em]: 'confirmed' })); setMsg(`${em} is confirmed and can see ${artist}’s projects.`); }
+    catch (e) { setMsg(e.message); }
+  };
+  const Badge = ({ em }) => {
+    const st = acct[em];
+    if (st === 'unconfirmed') return <span className="row-actions"><span className="tbadge warn">Not confirmed</span><button className="btn small" onClick={() => confirmAcct(em)}>Confirm</button></span>;
+    if (st === 'none') return <span className="tbadge">No account yet</span>;
+    if (st === 'confirmed') return <span className="tbadge ok">Confirmed</span>;
+    return null;
+  };
   const add = async (e) => {
     e.preventDefault(); setMsg('');
     const em = email.trim().toLowerCase();
@@ -41,10 +59,10 @@ export default function ArtistTeam({ artist, projects }) {
       <p className="muted small" style={{ margin: '0 0 12px' }}>Everyone here can listen, leave notes, and add songs and files to {artist}’s projects. Other artists never see them.</p>
       <ul className="team">
         {contacts.map((em) => (
-          <li key={`c-${em}`}><span className="tav">{em[0].toUpperCase()}</span><span className="tmain"><b>{em}</b><small>Project contact</small></span></li>
+          <li key={`c-${em}`}><span className="tav">{em[0].toUpperCase()}</span><span className="tmain"><b>{em}</b><small>Project contact</small></span><Badge em={em} /></li>
         ))}
         {(rows || []).filter((r) => !contacts.includes(r.email.toLowerCase())).map((r) => (
-          <li key={r.id}><span className="tav">{r.email[0].toUpperCase()}</span><span className="tmain"><b>{r.email}</b><small>{r.role || 'Team'}</small></span>
+          <li key={r.id}><span className="tav">{r.email[0].toUpperCase()}</span><span className="tmain"><b>{r.email}</b><small>{r.role || 'Team'}</small></span><Badge em={r.email.toLowerCase()} />
             <span className="row-actions"><button className="btn small quiet" onClick={() => copy(r.email)}>Copy invite</button><button className="btn small quiet" onClick={() => remove(r)}>Remove</button></span></li>
         ))}
         {rows && !rows.length && !contacts.length && <li className="muted small">No one yet.</li>}

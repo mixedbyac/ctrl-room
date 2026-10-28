@@ -1,9 +1,11 @@
+import { limit } from '@/lib/ratelimit';
 import { admin, json, fail } from '@/lib/server';
 
 export const runtime = 'nodejs';
 
 // Public: counts listens on share links so the engineer sees them in Activity.
 export async function POST(req) {
+  const slow = limit(req, 'share-play', 600, 600000); if (slow) return slow;
   const b = await req.json().catch(() => null);
   if (!b?.t || !b?.songId) return fail('Missing details.');
   const db = admin();

@@ -1,3 +1,4 @@
+import { limit } from '@/lib/ratelimit';
 import { admin, json, fail, dropboxFolder, dropboxPath, dropboxUploadLink } from '@/lib/server';
 
 export const runtime = 'nodejs';
@@ -5,6 +6,7 @@ const MAX = 150 * 1024 * 1024; // Dropbox single-request upload limit
 
 // Hands the browser a one-time Dropbox upload link for one file.
 export async function POST(req) {
+  const slow = limit(req, 'portal-link', 3000, 600000); if (slow) return slow;
   const b = await req.json().catch(() => null);
   if (!b?.uploadId || !b?.songId || !b?.name) return fail('Missing file details.');
   if (Number(b.size) > MAX) return fail(`${b.name} is over 150 MB. Split it up or send a smaller zip.`);

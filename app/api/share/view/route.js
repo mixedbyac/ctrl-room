@@ -1,3 +1,4 @@
+import { limit } from '@/lib/ratelimit';
 import { admin, json, fail } from '@/lib/server';
 
 export const runtime = 'nodejs';
@@ -8,6 +9,7 @@ const pickVersion = (s, vs) => vs.find((v) => v.id === s.approved_version) || vs
 
 // Public: what a share link plays. Only the shared song/project, only its current mix, no notes.
 export async function GET(req) {
+  const slow = limit(req, 'share-view', 120, 600000); if (slow) return slow;
   const t = new URL(req.url).searchParams.get('t');
   if (!t || t.length > 40) return fail('This link isn’t valid.', 404);
   const db = admin();

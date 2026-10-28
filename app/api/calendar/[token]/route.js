@@ -1,3 +1,4 @@
+import { limit } from '@/lib/ratelimit';
 import { admin, getConfig } from '@/lib/server';
 
 export const runtime = 'nodejs';
@@ -12,6 +13,7 @@ const fold = (line) => { const out = []; let s = line; while (s.length > 74) { o
 const STATUS = { progress: 'In progress', review: 'Waiting on the client', changes: 'Changes requested', approved: 'Approved' };
 
 export async function GET(req, { params }) {
+  const slow = limit(req, 'calendar', 60, 600_000); if (slow) return slow;
   const token = String(params.token || '').replace(/\.ics$/i, '');
   const want = await getConfig('calendar_token');
   if (!want || token !== want) return new Response('Not found', { status: 404 });

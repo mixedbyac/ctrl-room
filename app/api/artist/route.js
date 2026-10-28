@@ -31,6 +31,7 @@ export async function POST(req) {
   const b = await req.json().catch(() => null);
   const name = String(b?.name || '').trim();
   if (!name) return fail('Which artist?');
+  if (user.app_metadata?.needs_verify && !(await isEngineer(user.email))) return fail('Confirm your email first.', 403);
   if (!(await canEdit(user.email, name))) return fail('You can only edit your own artist page.', 403);
   const db = admin();
   try {

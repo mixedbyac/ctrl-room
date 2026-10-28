@@ -1,3 +1,4 @@
+import { limit } from '@/lib/ratelimit';
 import { admin, userFrom, canSee, isEngineer, json, fail } from '@/lib/server';
 
 export const runtime = 'nodejs';
@@ -7,6 +8,7 @@ const isDemo = (v) => /^demo\b/i.test(String(v?.label || ''));
 // Adds a demo (the baseline mixes get compared to). Works for the engineer, signed-in clients,
 // and Portal sends (authorised by the send's id). body: { step: 'start' | 'done', songId, name?, path?, stats?, info?, uploadId? }
 export async function POST(req) {
+  const slow = limit(req, 'demo', 60, 600000); if (slow) return slow;
   const b = await req.json().catch(() => null);
   if (!b?.songId || !['start', 'done'].includes(b.step)) return fail('Missing details.');
   const db = admin();
@@ -19,7 +21,7 @@ export async function POST(req) {
     ok = !!up && up.project_id === song.project_id && (up.songs || []).some((s) => s.songId === song.id) && Date.now() - new Date(up.created_at).getTime() < 24 * 3600 * 1000;
   } else {
     const user = await userFrom(req);
-    ok = !!user && (await canSee(user.email, song.project_id));
+    ok = !!user && (await canSee(user, song.project_id));
     if (ok && (await isEngineer(user.email))) who = 'engineer';
   }
   if (!ok) return fail('You don’t have access to this song.', 403);

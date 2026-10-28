@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabase';
 import Cover from '@/components/Cover';
 import { PlayerProvider } from '@/components/Player';
 import { installNativeBridge, isMacApp } from '@/lib/native';
+import MfaGate from '@/components/MfaGate';
+import VerifyBanner from '@/components/VerifyBanner';
 import UpdateWatcher, { getSeen } from '@/components/UpdateWatcher';
 import { forRole } from '@/lib/changelog';
 
@@ -39,11 +41,19 @@ export default function AppShell({ children }) {
     setProjects(data || []);
   }, []);
 
+  // two-step verification: accounts with it on must enter the code before anything loads
+  const [needMfa, setNeedMfa] = useState(false);
+  const [mfaTick, setMfaTick] = useState(0);
   useEffect(() => {
-    if (!session) { setEng(false); setProjects([]); return; }
+    if (!session) { setNeedMfa(false); return; }
+    supabase().auth.mfa.getAuthenticatorAssuranceLevel().then(({ data }) => setNeedMfa(!!data && data.nextLevel === 'aal2' && data.currentLevel !== 'aal2')).catch(() => setNeedMfa(false));
+  }, [session, mfaTick]);
+
+  useEffect(() => {
+    if (!session || needMfa) { setEng(false); setProjects([]); return; }
     supabase().rpc('is_engineer').then(({ data }) => setEng(!!data));
     reloadProjects();
-  }, [session, reloadProjects]);
+  }, [session, needMfa, reloadProjects]);
 
   useEffect(() => {
     if (session === null && !isPublic) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
@@ -68,6 +78,9 @@ export default function AppShell({ children }) {
   const signOut = async () => { await supabase().auth.signOut(); router.replace('/login'); };
   const value = { session, email: session?.user?.email || '', eng, projects, reloadProjects, signOut };
 
+  if (session && needMfa && !(portalHost || pathname.startsWith('/l/'))) {
+    return <Ctx.Provider value={value}><MfaGate onDone={() => setMfaTick((t) => t + 1)} onSignOut={signOut} /></Ctx.Provider>;
+  }
   if (portalHost && session !== undefined) return <Ctx.Provider value={value}><div className="portalhost">{children}</div></Ctx.Provider>;
   if (pathname === '/login' || pathname === '/signup' || pathname.startsWith('/l/')) return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
   if (session === undefined || (session === null && !isPublic)) {
@@ -131,6 +144,7 @@ export default function AppShell({ children }) {
             {session ? (
               <>
                 <p className="demo">{session.user.email}{eng ? ' · Engineer' : ''}</p>
+                <Link className="seclink" href="/security">Security</Link>
                 <button className="btn small" onClick={signOut}>Sign out</button>
               </>
             ) : (
@@ -138,7 +152,12 @@ export default function AppShell({ children }) {
             )}
           </div>
         </aside>
-        <div className="app">{children}</div>
+        <div className="app">
+          {session && !eng && session.user?.app_metadata?.needs_verify && (
+            <div className="page" style={{ paddingBottom: 0 }}><VerifyBanner email={session.user.email} onDone={() => { reloadProjects(); setMfaTick((t) => t + 1); }} /></div>
+          )}
+          {children}
+        </div>
         {session && <UpdateWatcher eng={eng} />}
       </div>
       </PlayerProvider>

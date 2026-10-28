@@ -1,3 +1,4 @@
+import { limit } from '@/lib/ratelimit';
 import { admin, json, fail, sendText, dropboxFolder } from '@/lib/server';
 
 export const runtime = 'nodejs';
@@ -6,6 +7,7 @@ const fmtBytes = (b) => (b >= 1e9 ? (b / 1e9).toFixed(1) + ' GB' : b >= 1e6 ? Ma
 
 // Called when the browser finishes sending files: updates each song's progress.
 export async function POST(req) {
+  const slow = limit(req, 'portal-done', 60, 600000); if (slow) return slow;
   const b = await req.json().catch(() => null);
   if (!b?.uploadId || !Array.isArray(b.results)) return fail('Missing results.');
   const db = admin();

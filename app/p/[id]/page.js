@@ -1,9 +1,8 @@
 'use client';
 import ShareButton from '@/components/ShareButton';
 import EditableTitle from '@/components/EditableTitle';
-import { analyseFile } from '@/lib/audio';
-import { readFileInfo } from '@/lib/fileinfo';
-import { useEffect, useState, useCallback } from 'react';
+import { measureVersion, needsMeasure } from '@/lib/measure';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -303,38 +302,33 @@ function TrackStats({ songs, eng, onMeasured }) {
   const total = latest.reduce((n, v) => n + (v.duration || 0), 0);
   const lu = latest.map((v) => v.lufs).filter((x) => x != null);
   const pk = latest.map((v) => v.peak_db).filter((x) => x != null);
-  const hasCol = latest.some((v) => 'lufs' in v);
-  const missing = latest.filter((v) => v.storage_path && (v.lufs == null || v.duration == null || !v.sample_rate));
-  const measure = async () => {
-    const sb = supabase();
-    for (let i = 0; i < missing.length; i++) {
-      const v = missing[i];
-      setBusy(`Measuring ${i + 1} of ${missing.length}…`);
-      try {
-        const { data: u } = await sb.storage.from('mixes').createSignedUrl(v.storage_path, 600);
-        const blob = await (await fetch(u.signedUrl)).blob();
-        const file = new File([blob], v.file_name || v.storage_path.split('/').pop().replace(/^\d+-/, ''), { type: blob.type });
-        const [st, info] = await Promise.all([analyseFile(file), readFileInfo(file)]);
-        const patch = { lufs: st.lufs, peak_db: st.peak_db, rms_db: st.rms_db, duration: v.duration ?? st.duration };
-        if (!v.sample_rate) Object.assign(patch, { file_format: info.file_format, sample_rate: info.sample_rate, bit_depth: info.bit_depth, file_size: info.file_size, lossless: info.lossless, file_name: v.file_name || info.file_name });
-        const { error } = await sb.from('versions').update(patch).eq('id', v.id);
-        if (error && /column/i.test(error.message)) { setBusy('Run supabase/005_loudness.sql in Supabase first, then try again.'); return; }
-      } catch { /* skip files that can't be read */ }
-    }
-    setBusy('');
-    onMeasured();
-  };
+  const tried = (() => { try { return JSON.parse(localStorage.getItem('ctrl-room:measured') || '[]'); } catch { return []; } })();
+  const todo = songs.map((s) => ({ s, v: latestMix(s.versions || []) }))
+    .filter((x) => x.v && !tried.includes(x.v.id) && (needsMeasure(x.v) || !x.s.bpm || !x.s.musical_key));
+  const started = useRef(false);
+  // older mixes get measured in the background the first time you open the project (engineer only)
+  useEffect(() => {
+    if (!eng || started.current || !todo.length) return;
+    started.current = true;
+    (async () => {
+      for (let i = 0; i < todo.length; i++) {
+        setBusy(`Measuring ${i + 1} of ${todo.length}…`);
+        try { await measureVersion(todo[i].v, todo[i].s); } catch { /* skip files that can't be read */ }
+        try { localStorage.setItem('ctrl-room:measured', JSON.stringify([...tried, todo[i].v.id].slice(-500))); tried.push(todo[i].v.id); } catch {}
+      }
+      setBusy('');
+      onMeasured();
+    })();
+  }, [eng, todo.length]); // eslint-disable-line
   const parts = [];
   if (total) parts.push(`${latest.length} mix${latest.length === 1 ? '' : 'es'} · ${mmss(total)} total`);
   if (eng && lu.length) parts.push(lu.length > 1 ? `${Math.min(...lu).toFixed(1)} to ${Math.max(...lu).toFixed(1)} LUFS · ${(Math.max(...lu) - Math.min(...lu)).toFixed(1)} LU spread` : `${lu[0].toFixed(1)} LUFS`);
   if (eng && pk.length) parts.push(`peaks up to ${Math.max(...pk).toFixed(1)} dBFS`);
-  if (!parts.length && !(eng && missing.length)) return null;
+  if (!parts.length && !busy) return null;
   return (
     <div className="tstats">
       <span className="mono">{parts.join('  ·  ')}</span>
-      {eng && missing.length > 0 && (busy
-        ? <span className="muted small">{busy}</span>
-        : <button className="btn small" onClick={measure} title="Reads each mix to measure LUFS, peak and format. Nothing about the file changes.">{hasCol || lu.length ? `Measure ${missing.length} mix${missing.length === 1 ? '' : 'es'}` : 'Measure loudness'}</button>)}
+      {eng && busy && <span className="muted small">{busy}</span>}
     </div>
   );
 }

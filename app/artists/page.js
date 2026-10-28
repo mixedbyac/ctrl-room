@@ -7,6 +7,7 @@ import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
 import { hashStr } from '@/lib/art';
 import { fmtDate, todayISO, statusText, shortDate } from '@/lib/format';
+import { ArtistHero, ArtistAvatar } from '@/components/ArtistProfile';
 
 const initials = (n) => n.split(/\s+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 const sortKey = (n) => n.replace(/^the\s+/i, '');
@@ -17,10 +18,14 @@ function Artists() {
   const sel = useSearchParams().get('a');
   const [projects, setProjects] = useState(null);
   const [q, setQ] = useState('');
+  const [profiles, setProfiles] = useState({});
   useEffect(() => {
-    if (!eng) return;
+    if (!session) return;
     supabase().from('projects').select('*, songs(*, versions(id,label,created_at))').order('created_at', { ascending: false }).then(({ data }) => setProjects(data || []));
-  }, [eng]);
+    supabase().from('artists').select('*').then(({ data }) => setProfiles(Object.fromEntries((data || []).map((a) => [a.name.toLowerCase(), a]))));
+  }, [session, eng]);
+  const prof = (n) => profiles[n.toLowerCase()];
+  const setProf = (a) => setProfiles((m) => ({ ...m, [a.name.toLowerCase()]: a }));
 
   const artists = useMemo(() => {
     const m = new Map();
@@ -34,7 +39,6 @@ function Artists() {
   }, [projects]);
 
   if (!session) return null;
-  if (!eng) return <><TopBar crumbs={[{ label: 'Artists' }]} /><section className="page"><p className="muted">This page is for your engineer.</p></section></>;
   if (!projects) return <><TopBar crumbs={[{ label: 'Home', href: '/' }, { label: 'Artists' }]} /><section className="page"><p className="muted">Loading…</p></section></>;
 
   const today = todayISO();
@@ -45,23 +49,22 @@ function Artists() {
     return { songs, live, done, next };
   };
 
-  const artist = sel && artists.find((a) => a.name === sel);
+  // clients with a single artist go straight to that artist's page
+  const artist = (sel && artists.find((a) => a.name === sel)) || (!eng && artists.length === 1 ? artists[0] : null);
   if (artist) {
     const st = stats(artist);
     return (
       <>
-        <TopBar crumbs={[{ label: 'Home', href: '/' }, { label: 'Artists', href: '/artists' }, { label: artist.name }]} />
+        <TopBar crumbs={[{ label: 'Home', href: '/' }, ...(eng || artists.length > 1 ? [{ label: 'Artists', href: '/artists' }] : []), { label: prof(artist.name)?.display_name || artist.name }]} />
         <section className="page"><div className="adetail">
-          <button className="aback" onClick={() => router.push('/artists')}>‹ All artists</button>
-          <div className="ahero">
-            <Cover as="div" seed={hashStr(artist.name)} size={360} className="avatar">{initials(artist.name)}</Cover>
-            <div><p className="eyebrow">Artist</p><h1 className="up">{artist.name}</h1>
-              <div className="acontact">
-                {artist.contact && <span className="sichip">Contact <b>{artist.contact}</b></span>}
-                {artist.phone && <span className="sichip mono">{artist.phone}</span>}
-                {artist.email && <span className="sichip">{artist.email}</span>}
-              </div></div>
-          </div>
+          {(eng || artists.length > 1) && <button className="aback" onClick={() => router.push('/artists')}>‹ All artists</button>}
+          <ArtistHero name={artist.name} profile={prof(artist.name)} canEdit onChange={setProf}>
+            {eng && (artist.contact || artist.phone || artist.email) && <div className="acontact">
+              {artist.contact && <span className="sichip">Contact <b>{artist.contact}</b></span>}
+              {artist.phone && <span className="sichip mono">{artist.phone}</span>}
+              {artist.email && <span className="sichip">{artist.email}</span>}
+            </div>}
+          </ArtistHero>
           <div className="astats">
             <div className="astat"><b>{artist.projects.length}</b><span>Projects</span></div>
             <div className="astat"><b>{st.songs.length}</b><span>Songs</span></div>
@@ -78,7 +81,7 @@ function Artists() {
           </div></section>
           <section className="asec"><h2 className="h2 up">Projects</h2><div className="shelf">
             {artist.projects.map((p) => { const n = p.songs?.length || 0, ap = (p.songs || []).filter((s) => s.status === 'approved').length;
-              return <Link key={p.id} className="pcard" href={`/p/${p.id}`}><span className="pc-art"><span className="pc-rec" /><Cover seed={p.seed} size={360} /></span>
+              return <Link key={p.id} className="pcard" href={`/p/${p.id}`}><span className="pc-art"><span className="pc-rec" /><Cover seed={p.seed} path={p.cover_path} size={360} /></span>
                 <b className="up">{p.title}</b><span className="pc-sub">{p.type}{p.release ? ` · out ${fmtDate(p.release)}` : ''}</span>
                 <span className="pc-bar"><i style={{ width: `${n ? (ap / n) * 100 : 0}%` }} /></span><span className="pc-sub">{ap} of {n} approved</span></Link>; })}
           </div></section>
@@ -110,8 +113,8 @@ function Artists() {
                 const pill = st.next ? `Due ${st.next.s.eta === today ? 'today' : fmtDate(st.next.s.eta)}` : st.live.length ? `${st.live.length} in progress` : 'All approved';
                 return (
                   <Link key={a.name} className="arow" href={`/artists?a=${encodeURIComponent(a.name)}`}>
-                    <Cover as="div" seed={hashStr(a.name)} size={120} className="avatar">{initials(a.name)}</Cover>
-                    <span style={{ minWidth: 0 }}><b>{a.name}</b><small>{a.projects.length} project{a.projects.length > 1 ? 's' : ''} · {st.songs.length} song{st.songs.length === 1 ? '' : 's'}{a.contact && a.contact !== a.name ? ` · ${a.contact}` : ''}</small></span>
+                    <ArtistAvatar name={a.name} profile={prof(a.name)} />
+                    <span style={{ minWidth: 0 }}><b>{prof(a.name)?.display_name || a.name}</b><small>{a.projects.length} project{a.projects.length > 1 ? 's' : ''} · {st.songs.length} song{st.songs.length === 1 ? '' : 's'}{a.contact && a.contact !== a.name ? ` · ${a.contact}` : ''}</small></span>
                     <span className="apill" style={st.live.length ? undefined : { color: 'var(--ok)' }}>{pill}</span><span className="chev" aria-hidden="true">›</span>
                   </Link>
                 ); })}

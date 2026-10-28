@@ -10,6 +10,7 @@ import { deliverFile } from '@/lib/deliver';
 import { describeFormat } from '@/lib/fileinfo';
 import { usePlayer } from '@/components/Player';
 import CoverMenu from '@/components/CoverMenu';
+import ShareButton from '@/components/ShareButton';
 
 const BINS = 100;
 const PLAY = <path d="M7 4.5v15l13-7.5z" />;
@@ -126,6 +127,7 @@ export default function SongPage() {
             <SongTitle song={song} eng={eng} reload={load} />
             <div className="meta"><span className={`dot ${song.status}`}>{statusText(song, versions)}</span>
               <span>{[song.bpm ? `${song.bpm} BPM` : '', hasMix ? `${versions.length} version${versions.length > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ')}</span></div>
+            {hasMix && <div className="shbar"><ShareButton kind="song" id={song.id} eng={eng} title={song.title} /></div>}
             {hasMix && <Versions {...{ versions, vid, ab, setAb, switchTo, flip, eng, song, reload: load, setMsg }} />}
             {v?.note && <p className="vnote">{v.label}: {v.note}</p>}
             {eng && <DeliverVersion song={song} versions={versions} onDone={load} setMsg={setMsg} />}
@@ -525,7 +527,7 @@ function Listening({ plays, versions }) {
         const pct = x.duration ? Math.min(100, Math.round((x.listened / x.duration) * 100)) : 0;
         return (
           <li key={x.id} style={{ display: 'grid', gap: 6 }}>
-            <span><b>{x.listener_email || 'Client'}</b> played <span className="mono">{label(x.version_id)}</span> · {x.device || 'Unknown device'}{x.source ? ` · ${x.source}` : ''}</span>
+            <span><b>{x.listener_email || (x.source === 'from a share link' ? 'Someone' : 'Client')}</b> played <span className="mono">{label(x.version_id)}</span> · {x.device || 'Unknown device'}{x.source ? ` · ${x.source}` : ''}</span>
             <span className="nlisten"><span className="nbar"><i style={{ width: `${pct}%` }} /></span><small className="mono">{mmss(x.listened)} of {mmss(x.duration)} · {pct}% · {ago(x.updated_at)}</small></span>
           </li>
         );

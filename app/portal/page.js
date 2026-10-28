@@ -12,7 +12,7 @@ const blank = () => ({ k: Math.random().toString(36).slice(2), title: '', bpm: '
 
 export default function Portal() {
   const { session, email: myEmail, projects } = useApp();
-  const [f, setF] = useState({ name: '', artist: '', email: '', phone: '', message: '', title: '', type: 'EP', release: '' });
+  const [f, setF] = useState({ name: '', artist: '', email: '', phone: '', spotify: '', message: '', title: '', type: 'EP', release: '' });
   const [mode, setMode] = useState('new');
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 1e9));
   const [songs, setSongs] = useState([blank()]);
@@ -44,7 +44,7 @@ export default function Portal() {
     setState('sending');
     try {
       const r = await api('/api/portal', {
-        name: f.name, email: f.email, phone: f.phone, artist: f.artist, message: f.message,
+        name: f.name, email: f.email, phone: f.phone, artist: f.artist, spotify: f.spotify, message: f.message,
         projectId: mode === 'new' ? null : mode,
         project: { title: f.title, type: f.type, release: f.release || null, seed },
         songs: songs.map((s) => ({ title: s.title, bpm: s.bpm, key: s.key, ref: s.ref, notes: s.notes })),
@@ -113,6 +113,7 @@ export default function Portal() {
                 <div className="fld"><label htmlFor="fEmail">Email <span className="opt">you'll sign in with this</span></label><input id="fEmail" type="email" autoComplete="email" value={f.email} onChange={set('email')} /></div>
                 <div className="fld"><label htmlFor="fPhone">Phone <span className="opt">for text updates</span></label><input id="fPhone" type="tel" autoComplete="tel" value={f.phone} onChange={set('phone')} /></div>
               </div>
+              <div className="fld"><label htmlFor="fSpotify">Artist’s Spotify link <span className="opt">optional · sets up the artist page with their photo and bio</span></label><input id="fSpotify" type="url" inputMode="url" placeholder="https://open.spotify.com/artist/…" value={f.spotify} onChange={set('spotify')} /></div>
             </fieldset>
 
             <fieldset className="sec" disabled={sending}>

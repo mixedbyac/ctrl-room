@@ -11,7 +11,7 @@ import { forRole } from '@/lib/changelog';
 const Ctx = createContext(null);
 export const useApp = () => useContext(Ctx);
 
-const PUBLIC = ['/login', '/portal'];
+const PUBLIC = ['/login', '/portal', '/l'];
 
 export default function AppShell({ children }) {
   const pathname = usePathname();
@@ -54,7 +54,7 @@ export default function AppShell({ children }) {
   const signOut = async () => { await supabase().auth.signOut(); router.replace('/login'); };
   const value = { session, email: session?.user?.email || '', eng, projects, reloadProjects, signOut };
 
-  if (pathname === '/login') return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  if (pathname === '/login' || pathname.startsWith('/l/')) return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
   if (session === undefined || (session === null && !isPublic)) {
     return <div className="boot"><img src="/logo.png" alt="" className="bootlogo" /></div>;
   }
@@ -71,9 +71,9 @@ export default function AppShell({ children }) {
               <Link className="navitem" href="/" aria-current={pathname === '/'}>
                 <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 11l8-7 8 7v8a1 1 0 01-1 1h-4v-6H9v6H5a1 1 0 01-1-1z" /></svg></span>Home
               </Link>
-              {eng && (
+              {(eng || projects.length > 0) && (
                 <Link className="navitem" href="/artists" aria-current={pathname.startsWith('/artists')}>
-                  <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" /></svg></span>Artists
+                  <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" /></svg></span>{eng ? 'Artists' : 'Artist page'}
                 </Link>
               )}
             </div>

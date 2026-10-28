@@ -1,4 +1,5 @@
 import { admin, userFrom, isEngineerEmail, json, fail } from '@/lib/server';
+import { fetchSpotifyArtist, spotifyArtistId } from '@/lib/spotify';
 
 export const runtime = 'nodejs';
 
@@ -65,6 +66,18 @@ export async function POST(req) {
     songs: out.map((s) => ({ ...s, files: 0, bytes: 0 })),
   }).select('id').single();
   if (upErr) return fail(upErr.message, 500);
+
+  // optional: set up the artist page from their Spotify link (never blocks the upload)
+  if (spotifyArtistId(b.spotify)) {
+    try {
+      const { data: cur } = await db.from('artists').select('id, spotify_url').ilike('name', artist).maybeSingle();
+      if (!cur?.spotify_url) {
+        const sp = await fetchSpotifyArtist(b.spotify);
+        const row = { spotify_id: sp.spotify_id, spotify_url: sp.spotify_url, display_name: sp.display_name, image_url: sp.image_url, header_url: sp.header_url, bio: sp.bio, listeners: sp.listeners, genres: sp.genres, followers: sp.followers, updated_at: new Date().toISOString() };
+        if (cur) await db.from('artists').update(row).eq('id', cur.id); else await db.from('artists').insert({ name: artist, ...row });
+      }
+    } catch {}
+  }
 
   return json({ uploadId: up.id, projectId: project.id, projectTitle: project.title, songs: out });
 }

@@ -1,4 +1,5 @@
 'use client';
+import ShareButton from '@/components/ShareButton';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -58,9 +59,10 @@ export default function ProjectPage() {
             <div className="prow">
               {firstPlayable && <button className="bigplay" onClick={() => (pl.current?.project?.id === p.id ? pl.toggle() : playSong(firstPlayable))} aria-label={projectPlaying ? 'Pause' : 'Play the project'}>
                 <svg viewBox="0 0 24 24">{projectPlaying ? <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" /> : <path d="M7 4.5v15l13-7.5z" />}</svg></button>}
+              <ShareButton kind="project" id={p.id} eng={eng} title={p.title} />
               {!eng && <span className="chipnote">{ready ? `${ready} mix${ready > 1 ? 'es' : ''} waiting on you` : "You're all caught up"}</span>}
               {eng && <>
-                <button className="gear" onClick={() => setPanel(panel === 'share' ? null : 'share')}>Share with client</button>
+                <button className="gear" onClick={() => setPanel(panel === 'share' ? null : 'share')}>Client access</button>
                 <button className="gear" onClick={() => setPanel(panel === 'mixes' ? null : 'mixes')}>+ Add mixes</button>
                 <button className="gear" onClick={() => setPanel(panel === 'add' ? null : 'add')}>+ Add song</button>
                 <button className="gear" onClick={() => setPanel(panel === 'edit' ? null : 'edit')}>Edit details</button>

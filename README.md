@@ -61,3 +61,11 @@ npm install
 cp .env.example .env.local   # fill in your keys
 npm run dev
 ```
+
+
+## Share links and artist pages
+
+Run `supabase/004_sharing_and_artists.sql` once in the Supabase SQL editor (after 002 and 003).
+
+- **Share links**: the Share button on a song or project makes a listen-only link (`/l/…`). The engineer can switch sharing off per project or song, or reset a link.
+- **Artist pages**: paste a Spotify artist link to pull in the name, photo, header and monthly listeners. Optionally add `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` (from developer.spotify.com) in Vercel for genres and followers.

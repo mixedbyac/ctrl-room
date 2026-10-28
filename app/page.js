@@ -158,7 +158,7 @@ function EngineerHome() {
 
 function ActivityItem({ a }) {
   const x = a.x, song = x.songs || {};
-  const who = x.listener_email || x.author_name || x.author_email || 'Client';
+  const who = x.listener_email || x.author_name || x.author_email || (x.source === 'from a share link' ? 'Someone' : 'Client');
   let text, body = null, icon = '▶';
   if (a.kind === 'play') {
     const pct = x.duration ? Math.min(100, Math.round((x.listened / x.duration) * 100)) : 0;

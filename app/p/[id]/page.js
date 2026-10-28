@@ -8,10 +8,10 @@ import { measureVersion, needsMeasure } from '@/lib/measure';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase, api } from '@/lib/supabase';
 import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
-import { fmtDate, shortDate, statusText, mmss, latestMix, mixesOf } from '@/lib/format';
+import { fmtDate, shortDate, statusText, mmss, latestMix, mixesOf, currentMix } from '@/lib/format';
 import { parseMixName, matchSong } from '@/lib/filename';
 import { deliverFile } from '@/lib/deliver';
 import { usePlayer } from '@/components/Player';
@@ -19,10 +19,12 @@ import CoverMenu from '@/components/CoverMenu';
 
 export default function ProjectPage() {
   const { id } = useParams();
-  const { eng, reloadProjects } = useApp();
+  const { eng, reloadProjects, canEditArtist } = useApp();
   const [p, setP] = useState(undefined);
   const [panel, setPanel] = useState(null); // 'share' | 'edit' | 'add'
   const [renaming, setRenaming] = useState(null);
+  const dragSong = useRef(null);
+  const [dragOver, setDragOver] = useState(null);
   const [stacks, setStacks] = useState({}); // song id -> open
   const [noteCounts, setNoteCounts] = useState({});
   const toggleStack = (sid) => setStacks((x) => ({ ...x, [sid]: !x[sid] }));
@@ -63,6 +65,23 @@ export default function ProjectPage() {
   const ready = p.songs.filter((s) => s.status === 'review').length;
   const firstPlayable = p.songs.find((s) => s.versions?.length);
   const queue = p.songs.filter((s) => s.versions?.length).map((s) => s.id);
+  // artist admins can edit art, order, titles and the active version (the engineer always can)
+  const canEdit = eng || canEditArtist(p.artist);
+  const viaAdmin = !eng && canEdit;
+  const saveOrder = async (ids) => {
+    setP((x) => ({ ...x, songs: ids.map((sid) => x.songs.find((y) => y.id === sid)).filter(Boolean) }));
+    if (viaAdmin) { try { await api('/api/admin', { action: 'order', projectId: p.id, order: ids }); } catch (e) { alert(e.message); } }
+    else await Promise.all(ids.map((sid, i) => supabase().from('songs').update({ position: i }).eq('id', sid)));
+    load();
+  };
+  const onDropRow = (targetId) => {
+    const from = dragSong.current; dragSong.current = null; setDragOver(null);
+    if (!from || from === targetId) return;
+    const ids = p.songs.map((x) => x.id).filter((x) => x !== from);
+    const at = ids.indexOf(targetId);
+    ids.splice(at < 0 ? ids.length : at, 0, from);
+    saveOrder(ids);
+  };
   const playSong = (s) => {
     if (!eng && lockingInvoice(inv.list)) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; } // locked until the invoice is paid
     if (pl.current?.song?.id === s.id) return pl.toggle();
@@ -79,10 +98,10 @@ export default function ProjectPage() {
           <div className="sleevewrap">
             <div className="record"><div className="vinyl spin"><Cover as="div" seed={p.seed} path={p.cover_path} size={240} className="lbl" /></div></div>
             <div className="sleeve hascm"><Cover seed={p.seed} path={p.cover_path} size={600} alt={`${p.title} cover`} />
-              {eng && <CoverMenu table="projects" row={p} onChange={() => { load(); reloadProjects(); }} />}</div>
+              {canEdit && <CoverMenu table="projects" row={p} viaAdmin={viaAdmin} onChange={() => { load(); reloadProjects(); }} />}</div>
           </div>
           <div className="pinfo">
-            <EditableTitle value={p.title} canEdit={eng} label="project" onSave={async (t) => { await supabase().from('projects').update({ title: t }).eq('id', p.id); load(); reloadProjects(); }} />
+            <EditableTitle value={p.title} canEdit={canEdit} label="project" onSave={async (t) => { if (viaAdmin) await api('/api/admin', { action: 'title', projectId: p.id, title: t }); else await supabase().from('projects').update({ title: t }).eq('id', p.id); load(); reloadProjects(); }} />
             <p className="psub">{p.artist} · {p.type} · {p.songs.length} song{p.songs.length === 1 ? '' : 's'} · {approved} approved{p.release ? ` · out ${fmtDate(p.release)}` : ''}</p>
             <div className="prow">
               {firstPlayable && <button className="bigplay" onClick={() => (pl.current?.project?.id === p.id ? pl.toggle() : playSong(firstPlayable))} aria-label={projectPlaying ? 'Pause' : 'Play the project'}>
@@ -119,11 +138,14 @@ export default function ProjectPage() {
           )}
           {p.songs.length ? p.songs.map((s, i) => {
             const vs = [...(s.versions || [])].sort((a, b) => a.created_at.localeCompare(b.created_at));
-            const last = latestMix(vs) || vs.at(-1); // a demo only shows when there's no mix yet
+            const last = currentMix(s, vs) || vs.at(-1); // the active (or newest) mix; a demo only shows when there's no mix yet
             const sub = vs.length ? statusText(s, vs) : s.eta ? `First mix ${fmtDate(s.eta)}` : statusText(s, vs);
             const fmtx = last ? fmtShort(last) : '';
             return (
-              <div key={s.id} className="rowwrap"><div className={`row ${vs.length ? '' : 'nomix'} ${stacks[s.id] ? 'stackopen' : ''} ${pl.current?.song?.id === s.id ? 'cur' : ''} ${pl.current?.song?.id === s.id && pl.playing ? 'live' : ''}`} style={{ '--i': i }}>
+              <div key={s.id} className={`rowwrap ${dragOver === s.id ? 'dragover' : ''}`} draggable={canEdit && renaming !== s.id}
+                onDragStart={(e) => { if (!canEdit) return; dragSong.current = s.id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', s.id); }}
+                onDragOver={(e) => { if (dragSong.current) { e.preventDefault(); setDragOver(s.id); } }} onDragLeave={() => setDragOver((x) => (x === s.id ? null : x))}
+                onDrop={(e) => { if (dragSong.current) { e.preventDefault(); onDropRow(s.id); } }} onDragEnd={() => { dragSong.current = null; setDragOver(null); }}><div className={`row ${vs.length ? '' : 'nomix'} ${stacks[s.id] ? 'stackopen' : ''} ${pl.current?.song?.id === s.id ? 'cur' : ''} ${pl.current?.song?.id === s.id && pl.playing ? 'live' : ''}`} style={{ '--i': i }}>
                 <button className="rplay" onClick={() => vs.length && playSong({ ...s, versions: vs })} disabled={!vs.length} aria-label={vs.length ? `Play ${s.title}` : 'No mix yet'}>
                   <span className="num">{i + 1}</span><svg viewBox="0 0 24 24">{pl.current?.song?.id === s.id && pl.playing ? <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" /> : <path d="M7 4.5v15l13-7.5z" />}</svg>
                   <span className="eq"><span /><span /><span /></span></button>
@@ -144,7 +166,7 @@ export default function ProjectPage() {
                 {!eng && vs.length > 0 ? <button className={`vstackbtn rmeta ${stacks[s.id] ? 'on' : ''}`} onClick={() => toggleStack(s.id)} aria-expanded={!!stacks[s.id]} title="Versions"><StackIcon /><span>{vs.length}</span></button>
                   : <Link className="rmeta" href={`/s/${s.id}`} tabIndex={-1} aria-hidden="true"><span className="chev">›</span></Link>}
               </div>
-              {stacks[s.id] && <VersionStack song={s} project={p} versions={vs.map((v) => ({ ...v }))} noteCounts={noteCounts} eng={eng} queue={queue} onChange={load} />}
+              {stacks[s.id] && <VersionStack song={s} project={p} versions={vs.map((v) => ({ ...v }))} noteCounts={noteCounts} eng={eng} canEdit={canEdit} viaAdmin={viaAdmin} queue={queue} onChange={load} />}
               </div>
             );
           }) : <div className="empty-state"><strong>No songs yet</strong>{eng ? 'Add a song above, or have the client send files through the Portal.' : 'Send your files through the Portal to get started.'}</div>}

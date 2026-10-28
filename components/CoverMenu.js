@@ -1,19 +1,21 @@
 'use client';
 import { useRef, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, api } from '@/lib/supabase';
 
 /**
  * Hover menu over cover art (engineer only): shuffle a new generated cover, upload your own image, or go back to generated.
  * table: 'projects' | 'songs'; row needs id (+ project_id for songs).
  */
-export default function CoverMenu({ table, row, onChange, className = '' }) {
+export default function CoverMenu({ table, row, onChange, className = '', viaAdmin = false }) {
   const input = useRef(null);
   const [busy, setBusy] = useState('');
   const [err, setErr] = useState('');
   const projectId = table === 'projects' ? row.id : row.project_id;
 
   const update = async (patch) => {
-    const { error } = await supabase().from(table).update(patch).eq('id', row.id);
+    const { error } = viaAdmin
+      ? await api('/api/admin', { action: 'cover', table, projectId, songId: table === 'songs' ? row.id : undefined, patch }).then(() => ({ error: null }), (e) => ({ error: e }))
+      : await supabase().from(table).update(patch).eq('id', row.id);
     if (error) {
       setErr(/cover_path/.test(error.message) ? 'Run the cover update SQL in Supabase first.' : error.message);
       return false;
@@ -36,9 +38,16 @@ export default function CoverMenu({ table, row, onChange, className = '' }) {
     setErr(''); setBusy('Uploading…');
     const ext = (f.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
     const path = `${projectId}/covers/${table}-${row.id}-${Date.now()}.${ext}`;
-    const { error } = await supabase().storage.from('mixes').upload(path, f, { contentType: f.type, upsert: false });
+    let finalPath = path, error = null;
+    if (viaAdmin) {
+      try {
+        const up = await api('/api/admin', { action: 'cover-upload', table, projectId, songId: table === 'songs' ? row.id : undefined, ext });
+        finalPath = up.path;
+        ({ error } = await supabase().storage.from('mixes').uploadToSignedUrl(up.path, up.token, f, { contentType: f.type }));
+      } catch (e) { error = e; }
+    } else ({ error } = await supabase().storage.from('mixes').upload(path, f, { contentType: f.type, upsert: false }));
     if (error) { setBusy(''); return setErr(error.message); }
-    await update({ cover_path: path });
+    await update({ cover_path: finalPath });
     setBusy('');
   };
   const remove = async (e) => { e.preventDefault(); e.stopPropagation(); setErr(''); await update({ cover_path: null }); };

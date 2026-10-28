@@ -1,12 +1,12 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
+import { supabase, api } from '@/lib/supabase';
 import { usePlayer } from '@/components/Player';
 import InlineText from '@/components/InlineText';
 import QualityBadge from '@/components/QualityBadge';
 import { deliverFile } from '@/lib/deliver';
-import { orderVersions, latestMix, isDemo, shortDate, mmss } from '@/lib/format';
+import { orderVersions, latestMix, currentMix, isDemo, shortDate, mmss } from '@/lib/format';
 
 export const StackIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5 9-5z" /><path d="M3 13l9 5 9-5" /><path d="M3 17.5l9 5 9-5" opacity=".55" /></svg>
@@ -20,10 +20,10 @@ const baseName = (n) => String(n || '').replace(/\.[a-z0-9]{2,5}$/i, '').replace
  * The versions of one song, opened under its row: play any version, see notes per version,
  * and (engineer) rename on hover, add a version, or delete one.
  */
-export default function VersionStack({ song, project, versions, noteCounts = {}, eng, queue, onChange }) {
+export default function VersionStack({ song, project, versions, noteCounts = {}, eng, canEdit = eng, viaAdmin = false, queue, onChange }) {
   const pl = usePlayer();
   const list = [...orderVersions(versions)].reverse(); // newest on top, demo at the bottom
-  const latest = latestMix(versions);
+  const latest = latestMix(versions), active = currentMix(song, versions);
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState('');
   const [menu, setMenu] = useState(null);
@@ -49,6 +49,15 @@ export default function VersionStack({ song, project, versions, noteCounts = {},
     if (!t) return;
     if (versions.some((x) => x.id !== v.id && x.label.toLowerCase() === t.toLowerCase())) return setMsg(`There's already a ${t}.`);
     save(v, { label: t.slice(0, 20) }, `Renamed to ${t}.`);
+  };
+  const makeActive = async (v) => {
+    setMenu(null);
+    const next = song.active_version === v.id ? null : v.id;
+    try {
+      if (viaAdmin) await api('/api/admin', { action: 'active', songId: song.id, versionId: next });
+      else { const { error } = await supabase().from('songs').update({ active_version: next }).eq('id', song.id); if (error) throw new Error(/active_version/.test(error.message) ? 'Run supabase/011_admins.sql in Supabase first.' : error.message); }
+      setMsg(next ? `${v.label} is now the active version.` : 'Back to the newest version.'); onChange?.();
+    } catch (e) { setMsg(e.message); }
   };
   const remove = async (v) => {
     setMenu(null);
@@ -91,7 +100,7 @@ export default function VersionStack({ song, project, versions, noteCounts = {},
             <span className="vs-node" aria-hidden="true">{on && pl.playing ? <span className="eq"><span /><span /><span /></span> : null}</span>
             <span className="vs-main">
               {eng ? <InlineText value={name} onSave={(t) => save(v, { note: t || null }, 'Saved.')} width={14} label="Version name" className="vs-name" /> : <b className="vs-name">{name}</b>}
-              <small>{[isDemo(v) ? 'Demo' : v.id === latest?.id ? 'Latest' : '', song.approved_version === v.id ? 'Approved' : '', shortDate(v.created_at), v.duration ? mmss(v.duration) : ''].filter(Boolean).join(' · ')}<QualityBadge v={v} short /></small>
+              <small>{[isDemo(v) ? 'Demo' : v.id === active?.id ? (song.active_version ? 'Active' : 'Latest') : '', song.approved_version === v.id ? 'Approved' : '', shortDate(v.created_at), v.duration ? mmss(v.duration) : ''].filter(Boolean).join(' · ')}<QualityBadge v={v} short /></small>
             </span>
             <Link className={`vs-notes ${n ? '' : 'none'}`} href={`/s/${song.id}?v=${v.id}#notes`} onClick={(e) => e.stopPropagation()} title={n ? `${n} note${n > 1 ? 's' : ''}` : 'No notes yet'}><NoteIcon /><span>{n}</span></Link>
             <span className="vs-label" onClick={(e) => e.stopPropagation()}>{eng ? <InlineText value={v.label} onSave={(t) => rename(v, t)} width={3} label={`Rename ${v.label}`} className="vs-lab" /> : <span className="mono">{v.label}</span>}</span>
@@ -101,6 +110,7 @@ export default function VersionStack({ song, project, versions, noteCounts = {},
                 <div className="vs-menu" role="menu">
                   <button role="menuitem" onClick={() => { setMenu(null); play(v); }}>{on && pl.playing ? 'Pause' : 'Play'}</button>
                   <Link role="menuitem" href={`/s/${song.id}?v=${v.id}`}>Open with notes</Link>
+                  {canEdit && !isDemo(v) && <button role="menuitem" onClick={() => makeActive(v)}>{song.active_version === v.id ? 'Use newest instead' : 'Make active version'}</button>}
                   {eng && <button role="menuitem" className="danger" onClick={() => remove(v)}>Delete version</button>}
                 </div>
               )}

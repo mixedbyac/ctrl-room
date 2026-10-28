@@ -10,7 +10,7 @@ import { supabase, api } from '@/lib/supabase';
 import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
 import { artOf } from '@/lib/art';
-import { fmt, mmss, fmtDate, shortDate, ago, statusText, nextLabel, deviceName, todayISO, orderVersions, latestMix, demoOf, mixesOf, isDemo } from '@/lib/format';
+import { fmt, mmss, fmtDate, shortDate, ago, statusText, nextLabel, deviceName, todayISO, orderVersions, latestMix, currentMix, demoOf, mixesOf, isDemo } from '@/lib/format';
 import { uploadDemo } from '@/lib/demo';
 import { deliverFile } from '@/lib/deliver';
 import { describeFormat } from '@/lib/fileinfo';
@@ -24,7 +24,7 @@ const PAUSE = <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" />;
 
 export default function SongPage() {
   const { id } = useParams();
-  const { eng, email, session } = useApp();
+  const { eng, email, session, canEditArtist } = useApp();
   const [song, setSong] = useState(undefined);
   const [versions, setVersions] = useState([]);
   const [notes, setNotes] = useState([]);
@@ -60,7 +60,7 @@ export default function SongPage() {
     sb.from('songs').select('id').eq('project_id', s.project_id).order('position').then(({ data }) => setQueueIds((data || []).map((x) => x.id)));
     pl.refresh(id, list);
     if (list.length) {
-      const top = mixesOf(list).at(-1) || list[list.length - 1];
+      const top = currentMix(s, list) || list[list.length - 1];
       const asked = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('v') : null; // from a version stack link
       setVid((cur) => (cur && list.some((v) => v.id === cur) ? cur : asked && list.some((v) => v.id === asked) ? asked : top.id));
     }
@@ -126,7 +126,7 @@ export default function SongPage() {
         <div className="shero">
           <div className="bigdisc hascm">
             <Cover as="div" {...artOf(song, song.projects)} size={640} className="art spin" />
-            {eng && <CoverMenu table="songs" row={song} onChange={load} className="ondisc" />}
+            {(eng || canEditArtist(p?.artist)) && <CoverMenu table="songs" row={song} viaAdmin={!eng} onChange={load} className="ondisc" />}
             <div className="arm" aria-hidden="true"><svg viewBox="0 0 100 170">
               <circle cx="80" cy="14" r="13" fill="#1d1d20" stroke="#3a3a40" strokeWidth="2" />
               <circle cx="80" cy="14" r="5" fill="#9a9aa2" />
@@ -138,7 +138,7 @@ export default function SongPage() {
           </div>
           <div className="sinfo">
             <p className="eyebrow"><Link href={`/p/${p.id}`}>{p.title}</Link> · {p.artist}</p>
-            <SongTitle song={song} eng={eng} reload={load} />
+            <SongTitle song={song} eng={eng || canEditArtist(p?.artist)} viaAdmin={!eng} reload={load} />
             <div className="meta"><span className={`dot ${song.status}`}>{statusText(song, versions)}</span>
               {eng ? <>
                 <InlineText value={song.bpm ? String(song.bpm) : ''} placeholder="BPM" suffix=" BPM" width={4} inputMode="decimal" label="BPM"
@@ -562,14 +562,15 @@ function Listening({ plays, versions }) {
 }
 
 /* ---------- song title (editable by the engineer) ---------- */
-function SongTitle({ song, eng, reload }) {
+function SongTitle({ song, eng, viaAdmin, reload }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(song.title);
   const save = async () => {
     const t = draft.trim();
     setEditing(false);
     if (!t || t === song.title) return setDraft(song.title);
-    await supabase().from('songs').update({ title: t }).eq('id', song.id);
+    if (viaAdmin) await api('/api/admin', { action: 'title', songId: song.id, title: t }).catch(() => {});
+    else await supabase().from('songs').update({ title: t }).eq('id', song.id);
     reload();
   };
   if (!eng) return <h1 className="up">{song.title}</h1>;

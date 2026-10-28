@@ -49,6 +49,11 @@ export default function AppShell({ children }) {
     supabase().auth.mfa.getAuthenticatorAssuranceLevel().then(({ data }) => setNeedMfa(!!data && data.nextLevel === 'aal2' && data.currentLevel !== 'aal2')).catch(() => setNeedMfa(false));
   }, [session, mfaTick]);
 
+  const [adminArtists, setAdminArtists] = useState([]);
+  useEffect(() => {
+    if (!session || needMfa) { setAdminArtists([]); return; }
+    supabase().from('artist_members').select('artist, role').then(({ data }) => setAdminArtists((data || []).filter((m) => /^admin$/i.test(m.role || '')).map((m) => m.artist.toLowerCase())));
+  }, [session, needMfa]);
   useEffect(() => {
     if (!session || needMfa) { setEng(false); setProjects([]); return; }
     supabase().rpc('is_engineer').then(({ data }) => setEng(!!data));
@@ -76,7 +81,8 @@ export default function AppShell({ children }) {
   }, [eng, pathname, router]);
 
   const signOut = async () => { await supabase().auth.signOut(); router.replace('/login'); };
-  const value = { session, email: session?.user?.email || '', eng, projects, reloadProjects, signOut };
+  const canEditArtist = (artist) => eng || adminArtists.includes(String(artist || '').toLowerCase());
+  const value = { session, email: session?.user?.email || '', eng, projects, reloadProjects, signOut, canEditArtist };
 
   if (session && needMfa && !(portalHost || pathname.startsWith('/l/'))) {
     return <Ctx.Provider value={value}><MfaGate onDone={() => setMfaTick((t) => t + 1)} onSignOut={signOut} /></Ctx.Provider>;

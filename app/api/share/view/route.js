@@ -5,7 +5,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const isDemo = (v) => /^demo\b/i.test(String(v?.label || ''));
-const pickVersion = (s, vs) => vs.find((v) => v.id === s.approved_version) || vs.filter((v) => !isDemo(v)).at(-1) || vs[vs.length - 1];
+const pickVersion = (s, vs) => vs.find((v) => v.id === s.approved_version) || vs.find((v) => v.id === s.active_version) || vs.filter((v) => !isDemo(v)).at(-1) || vs[vs.length - 1];
 
 // Public: what a share link plays. Only the shared song/project, only its current mix, no notes.
 export async function GET(req) {

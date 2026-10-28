@@ -5,13 +5,11 @@ export const metadata = { title: 'How to prep your files · CTRL ROOM' };
 
 // The steps are kept as data so they're easy to edit.
 const STEPS = [
-  { t: 'Bounce every track from the start', d: 'Export each track as its own file, all starting at the very beginning of the song (bar 1, 0:00), even if the part comes in later. That keeps everything lined up.' },
-  { t: 'Use WAV files', d: '24-bit WAV at the session’s sample rate (44.1 or 48 kHz) is best. Please no MP3s for the stems.' },
-  { t: 'Turn off processing on the master', d: 'Remove any limiter, compressor or EQ on the master bus before exporting, and make sure nothing clips.' },
-  { t: 'Name files clearly', d: 'Use the instrument or part, like “Lead Vox”, “BGV Left”, “808”, “Kick”. Add the song title and BPM to the folder name, like “He Is Holy 140bpm”.' },
-  { t: 'Include a rough mix and the beat', d: 'A stereo bounce of your rough mix (it becomes the demo the mixes get compared to), plus the instrumental if you have one.' },
-  { t: 'One folder per song, then zip it', d: 'Put each song’s files in its own folder. Zip the folder (right-click › Compress on Mac, or Send to › Compressed folder on Windows). Up to 2 GB per upload.' },
-  { t: 'Add notes in the Portal', d: 'References, the vibe you want, anything that matters. You can also add a “Need it by” date.' },
+  { t: 'WAV stems, labeled', d: 'Label every stem, like Lead Vocal, BG Vocal, Inst, Kick, Snare and so on.', extra: 'Include 1 MP3 of the full reference mix (whatever MP3 version of the song you are currently listening to).' },
+  { t: 'All WAVs should be dry', d: 'No mixing or effects: no EQ, compression, etc.', extra: 'Please include Tune on vocals, or include your tune settings.' },
+  { t: 'Make sure all stems line up', d: 'All audio files, including vocals and the instrumental, should play in sync without timing issues when stacked.' },
+  { t: 'Key and BPM in the name', d: 'If possible, put the key and BPM in the folder name or the instrumental’s file name, like “Song name 80bpm A Major”. You can also send this info by messaging me directly.' },
+  { t: 'Folder or zip, then send', d: 'Place the WAV stems and the reference MP3 in a folder or zip folder and send them here, through sendfileshere.com.', link: true },
 ];
 
 export default function Prep() {
@@ -24,11 +22,11 @@ export default function Prep() {
       <section className="pr-hero">
         <p className="pr-eyebrow">Before you send</p>
         <h1 className="up">How to prep your files</h1>
-        <p className="pr-lede">A few minutes here saves a lot of back-and-forth, and gets your mix started sooner.</p>
+        <p className="pr-lede">Instructions for sending files. A few minutes here saves a lot of back-and-forth and gets your mix started sooner.</p>
       </section>
       <ol className="prepsteps">
         {STEPS.map((s, i) => (
-          <li key={s.t}><span className="prepn mono">{String(i + 1).padStart(2, '0')}</span><div><b>{s.t}</b><p>{s.d}</p></div></li>
+          <li key={s.t}><span className="prepn mono">{String(i + 1).padStart(2, '0')}</span><div><b>{s.t}</b><p>{s.d}</p>{s.extra && <p className="prepx">{s.extra}</p>}{s.link && <p><Link className="link" href="/portal">Send your files ›</Link></p>}</div></li>
         ))}
       </ol>
       <div className="prepcta"><Link className="btn primary" href="/portal">I’m ready, start a mix</Link></div>

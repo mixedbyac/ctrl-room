@@ -23,7 +23,7 @@ export default function CalendarPage() {
   const [msg, setMsg] = useState('');
 
   const load = useCallback(async () => {
-    const { data } = await supabase().from('projects').select('id,title,artist,type,release,seed,cover_path,archived, songs(id,title,status,eta,seed,cover_path,approved_version,received_at,downloaded_at,mixing_at)').eq('archived', false);
+    const { data } = await supabase().from('projects').select('id,title,artist,type,release,seed,cover_path,archived,settings, songs(id,title,status,eta,seed,cover_path,approved_version,received_at,downloaded_at,mixing_at)').eq('archived', false);
     setProjects(data || []);
   }, []);
   useEffect(() => { if (eng) load(); }, [eng, load]);
@@ -37,6 +37,7 @@ export default function CalendarPage() {
         else if (s.status !== 'approved') unscheduled.push(item);
       }
       if (p.release) (byDay[p.release] ||= []).push({ kind: 'release', id: p.id, title: p.title, p });
+      if (p.settings?.due) (byDay[p.settings.due] ||= []).unshift({ kind: 'project', id: p.id, title: p.title, p });
     }
     return { byDay, unscheduled };
   }, [projects]);
@@ -55,6 +56,16 @@ export default function CalendarPage() {
 
   const reschedule = async (item, day) => {
     setOverDay(null); setDrag(null);
+    if (item?.kind === 'project') {
+      if ((item.p.settings?.due || null) === day) return;
+      const settings = { ...(item.p.settings || {}), due: day };
+      if (!day) delete settings.due;
+      setProjects((ps) => ps.map((p) => (p.id === item.id ? { ...p, settings } : p)));
+      const { error } = await supabase().from('projects').update({ settings }).eq('id', item.id);
+      setMsg(error ? error.message : day ? `${item.title} is due ${fmtDate(day)}.` : `${item.title} has no due date now.`);
+      if (error) load();
+      return;
+    }
     if (!item || item.kind !== 'song' || item.s.eta === day) return;
     setProjects((ps) => ps.map((p) => ({ ...p, songs: (p.songs || []).map((s) => (s.id === item.id ? { ...s, eta: day } : s)) })));
     const { error } = await supabase().from('songs').update({ eta: day }).eq('id', item.id);
@@ -73,6 +84,12 @@ export default function CalendarPage() {
 
   const Chip = ({ item }) => {
     const late = item.kind === 'song' && item.s.eta && item.s.eta < today && item.s.status !== 'approved';
+    if (item.kind === 'project') {
+      return <Link className="calchip proj" href={`/p/${item.id}`} draggable
+        onDragStart={(e) => { setDrag(item); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', item.id); }}
+        onDragEnd={() => { setDrag(null); setOverDay(null); }} title={`${item.title} · ${item.p.artist} · project due`}>
+        <Cover {...artOf(null, item.p)} size={40} className="calpart" /><b>{item.title}</b><span>{item.p.artist}</span></Link>;
+    }
     return item.kind === 'release'
       ? <Link className="calchip rel" href={`/p/${item.id}`} title={`${item.p.title} release`}><span aria-hidden="true">★</span>{item.p.title}</Link>
       : <Link className={`calchip ${item.s.status} ${late ? 'late' : ''}`} href={`/s/${item.id}`} draggable
@@ -141,6 +158,24 @@ export default function CalendarPage() {
               </div>
             )) : <p className="emptyday">Nothing due in {MONTHS[cursor.m]}.</p>}
           </div>
+
+          <section className={`asec caltray ${drag && (drag.kind === 'project' ? drag.p.settings?.due : drag.s?.eta) ? 'clearzone' : ''}`}
+            onDragOver={(e) => { if (drag && (drag.kind === 'project' ? drag.p.settings?.due : drag.s?.eta)) e.preventDefault(); }}
+            onDrop={(e) => { e.preventDefault(); reschedule(drag, null); }}>
+            <h2 className="h2 up">Projects</h2>
+            <p className="muted small" style={{ margin: '0 0 10px' }}>Drag a project onto a day to set when it’s due. Drag it back here to clear the date.</p>
+            <div className="caltraylist">
+              {(projects || []).filter((p) => (p.songs || []).some((x) => x.status !== 'approved') || p.settings?.due).map((p) => (
+                <div key={p.id} className={`caltraycard ${p.settings?.due ? 'dated' : ''}`} draggable
+                  onDragStart={(e) => { setDrag({ kind: 'project', id: p.id, title: p.title, p }); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', p.id); }}
+                  onDragEnd={() => { setDrag(null); setOverDay(null); }}>
+                  <Cover {...artOf(null, p)} size={120} />
+                  <span><b>{p.title}</b><small>{p.artist}{p.settings?.due ? ` · due ${fmtDate(p.settings.due)}` : ''}</small></span>
+                  <Link className="caltrayopen" href={`/p/${p.id}`} aria-label={`Open ${p.title}`} onClick={(e) => e.stopPropagation()}>›</Link>
+                </div>
+              ))}
+            </div>
+          </section>
 
           {unscheduled.length > 0 && (
             <section className="asec calun"

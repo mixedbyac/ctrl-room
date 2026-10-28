@@ -11,7 +11,7 @@ import { useParams } from 'next/navigation';
 import { supabase, api } from '@/lib/supabase';
 import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
-import { fmtDate, shortDate, statusText, mmss, latestMix, mixesOf, currentMix } from '@/lib/format';
+import { fmtDate, shortDate, statusText, mmss, latestMix, mixesOf, currentMix, fmtBytes } from '@/lib/format';
 import { parseMixName, matchSong } from '@/lib/filename';
 import { deliverFile } from '@/lib/deliver';
 import { usePlayer } from '@/components/Player';
@@ -171,6 +171,7 @@ export default function ProjectPage() {
             );
           }) : <div className="empty-state"><strong>No songs yet</strong>{eng ? 'Add a song above, or have the client send files through the Portal.' : 'Send your files through the Portal to get started.'}</div>}
         </div>
+        {eng && <NerdStuff songs={p.songs} />}
       </section>
     </>
   );
@@ -363,15 +364,56 @@ function TrackStats({ songs, eng, onMeasured }) {
       onMeasured();
     })();
   }, [eng, todo.length]); // eslint-disable-line
-  const parts = [];
-  if (total) parts.push(`${latest.length} mix${latest.length === 1 ? '' : 'es'} · ${mmss(total)} total`);
-  if (eng && lu.length) parts.push(lu.length > 1 ? `${Math.min(...lu).toFixed(1)} to ${Math.max(...lu).toFixed(1)} LUFS · ${(Math.max(...lu) - Math.min(...lu)).toFixed(1)} LU spread` : `${lu[0].toFixed(1)} LUFS`);
-  if (eng && pk.length) parts.push(`peaks up to ${Math.max(...pk).toFixed(1)} dBFS`);
-  if (!parts.length && !busy) return null;
+  const parts = [`${songs.length} song${songs.length === 1 ? '' : 's'}`];
+  if (total) parts.push(`${mmss(total)} total`);
   return (
     <div className="tstats">
       <span className="mono">{parts.join('  ·  ')}</span>
       {eng && busy && <span className="muted small">{busy}</span>}
+    </div>
+  );
+}
+
+/** Engineer extras, tucked away: loudness spread, peaks, formats, tempo and keys across the project. */
+function NerdStuff({ songs }) {
+  const [open, setOpen] = useState(() => { try { return localStorage.getItem('ctrl-room:nerd') === '1'; } catch { return false; } });
+  const toggle = () => { setOpen(!open); try { localStorage.setItem('ctrl-room:nerd', open ? '0' : '1'); } catch {} };
+  const rows = songs.map((s) => ({ s, v: currentMix(s, s.versions || []) })).filter((x) => x.v);
+  if (!rows.length) return null;
+  const lu = rows.filter((x) => x.v.lufs != null);
+  const pk = rows.filter((x) => x.v.peak_db != null);
+  const loud = lu.length ? lu.reduce((a, b) => (b.v.lufs > a.v.lufs ? b : a)) : null;
+  const quiet = lu.length ? lu.reduce((a, b) => (b.v.lufs < a.v.lufs ? b : a)) : null;
+  const avg = lu.length ? 10 * Math.log10(lu.reduce((n, x) => n + Math.pow(10, x.v.lufs / 10), 0) / lu.length) : null;
+  const hot = pk.filter((x) => x.v.peak_db > -0.1);
+  const count = (arr) => Object.entries(arr.reduce((m, k) => (k ? { ...m, [k]: (m[k] || 0) + 1 } : m), {})).sort((a, b) => b[1] - a[1]);
+  const formats = count(rows.map((x) => [x.v.file_format, x.v.bit_depth ? `${Math.abs(x.v.bit_depth)}-bit${x.v.bit_depth < 0 ? ' float' : ''}` : '', x.v.sample_rate ? `${(x.v.sample_rate / 1000).toFixed(x.v.sample_rate % 1000 ? 1 : 0)} kHz` : ''].filter(Boolean).join(' · ')));
+  const bpms = songs.map((s) => Number(s.bpm)).filter(Boolean);
+  const keys = count(songs.map((s) => s.musical_key));
+  const size = rows.reduce((n, x) => n + (x.v.file_size || 0), 0);
+  const Stat = ({ k, v, sub }) => <div className="nerdstat"><span>{k}</span><b className="mono">{v}</b>{sub && <small>{sub}</small>}</div>;
+  return (
+    <div className="nerd">
+      <button className={`nerdbtn ${open ? 'on' : ''}`} onClick={toggle} aria-expanded={open}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 18V9M9 18V5M14 18v-6M19 18V8" /></svg>Nerd stuff<span className="vp-chev" aria-hidden="true">▾</span>
+      </button>
+      {open && (
+        <div className="nerdpanel">
+          <div className="nerdgrid">
+            {lu.length > 0 && <Stat k="Loudness range" v={lu.length > 1 ? `${quiet.v.lufs.toFixed(1)} to ${loud.v.lufs.toFixed(1)}` : lu[0].v.lufs.toFixed(1)} sub="LUFS integrated" />}
+            {lu.length > 1 && <Stat k="Spread" v={`${(loud.v.lufs - quiet.v.lufs).toFixed(1)} LU`} sub={loud.v.lufs - quiet.v.lufs > 2 ? 'Songs may feel uneven back to back' : 'Nice and even'} />}
+            {avg != null && <Stat k="Project average" v={`${avg.toFixed(1)} LUFS`} />}
+            {loud && lu.length > 1 && <Stat k="Loudest" v={loud.s.title} sub={`${loud.v.lufs.toFixed(1)} LUFS · ${loud.v.label}`} />}
+            {quiet && lu.length > 1 && <Stat k="Quietest" v={quiet.s.title} sub={`${quiet.v.lufs.toFixed(1)} LUFS · ${quiet.v.label}`} />}
+            {pk.length > 0 && <Stat k="Highest peak" v={`${Math.max(...pk.map((x) => x.v.peak_db)).toFixed(1)} dBFS`} sub={hot.length ? `${hot.length} at or near 0 dBFS: ${hot.map((x) => x.s.title).join(', ')}` : 'Nothing clipping'} />}
+            {formats.length > 0 && <Stat k="Formats" v={formats.length === 1 ? formats[0][0] : `${formats.length} kinds`} sub={formats.length > 1 ? formats.map(([f, n]) => `${n}× ${f}`).join(' · ') : 'Every song matches'} />}
+            {bpms.length > 0 && <Stat k="Tempo" v={bpms.length > 1 ? `${Math.min(...bpms)}–${Math.max(...bpms)} BPM` : `${bpms[0]} BPM`} />}
+            {keys.length > 0 && <Stat k="Keys" v={keys.length === 1 ? keys[0][0] : `${keys.length} keys`} sub={keys.length > 1 ? keys.map(([k, n]) => (n > 1 ? `${k} ×${n}` : k)).join(' · ') : ''} />}
+            {size > 0 && <Stat k="Current mixes" v={fmtBytes(size)} sub={`${rows.length} file${rows.length === 1 ? '' : 's'}`} />}
+          </div>
+          {!lu.length && <p className="muted small" style={{ margin: 0 }}>Loudness shows up once the mixes have been measured (it happens on its own in the background).</p>}
+        </div>
+      )}
     </div>
   );
 }

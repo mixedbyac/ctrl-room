@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useApp } from '@/components/AppShell';
+import PoweredBy from '@/components/PoweredBy';
 
 export default function Protect() {
   const { session } = useApp();
@@ -62,7 +63,8 @@ export default function Protect() {
         ].map(([t, d]) => <div key={t} className="ins-rule"><b>{t}</b><span>{d}</span></div>)}
       </section>
 
-      <footer className="pr-foot"><span><b>CTRL ROOM</b> · where the music lives before it’s out. · Powered by <a href="https://art-house.us" target="_blank" rel="noopener noreferrer"><b>ARTHOUSE</b></a></span><span><Link href="/portal">Start a mix</Link> · <Link href="/login">Sign in</Link></span></footer>
+      <footer className="pr-foot"><span><b>CTRL ROOM</b> · where the music lives before it’s out.</span><span><Link href="/portal">Start a mix</Link> · <Link href="/login">Sign in</Link></span></footer>
+      <PoweredBy />
     </main>
   );
 }

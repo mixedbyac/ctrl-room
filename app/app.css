@@ -702,3 +702,40 @@ body.playing .lbg { animation: breathe 9s ease-in-out infinite; }
 .prepsteps b { font-size: 18px; }
 .prepsteps p { margin: 6px 0 0; color: var(--muted); line-height: 1.6; }
 .prepcta { display: flex; }
+.prepsteps p.prepx { color: var(--ink); background: rgba(245,213,71,.07); border-left: 2px solid var(--sig); padding: 8px 12px; border-radius: 0 8px 8px 0; margin-top: 10px; }
+
+/* ARTHOUSE wordmark in Alte Haas Grotesk (drop the font files in public/fonts) */
+@font-face { font-family: 'Alte Haas Grotesk'; src: url('/fonts/AlteHaasGroteskBold.woff2') format('woff2'), url('/fonts/AlteHaasGroteskBold.ttf') format('truetype'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Alte Haas Grotesk'; src: url('/fonts/AlteHaasGroteskRegular.woff2') format('woff2'), url('/fonts/AlteHaasGroteskRegular.ttf') format('truetype'); font-weight: 400; font-display: swap; }
+.app { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
+.app > .poweredby { margin-top: auto; padding-top: 48px; }
+.poweredby { font-family: 'Alte Haas Grotesk', 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing: .08em; }
+.poweredby b, .lfoot b, .pr-foot a b { font-family: 'Alte Haas Grotesk', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 700; letter-spacing: .04em; }
+.protect > .poweredby, .prep > .poweredby { margin-top: auto; }
+/* nerd stuff */
+.nerd { margin-top: 28px; display: grid; gap: 12px; justify-items: start; }
+.nerdbtn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: var(--s1); border: 1px solid var(--line); font-size: 13.5px; font-weight: 600; color: var(--muted); }
+.nerdbtn svg { width: 16px; height: 16px; }
+.nerdbtn:hover, .nerdbtn.on { color: var(--ink); border-color: rgba(255,255,255,.22); }
+.nerdbtn .vp-chev { font-size: 11px; transition: transform .2s; }
+.nerdbtn.on .vp-chev { transform: rotate(180deg); }
+.nerdpanel { width: 100%; background: var(--s1); border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: grid; gap: 10px; animation: npfade .15s ease; }
+.nerdgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.nerdstat { display: grid; gap: 3px; padding: 12px; border-radius: 12px; background: var(--s2); min-width: 0; }
+.nerdstat span { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.nerdstat b { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nerdstat small { font-size: 12px; color: var(--muted); line-height: 1.4; }
+/* calendar: projects */
+.calchip.proj { background: rgba(255,255,255,.12); font-weight: 600; padding: 3px 6px 3px 3px; }
+.calchip.proj .calpart { width: 16px; height: 16px; border-radius: 4px; flex: none; }
+.caltray { margin-top: 28px; border-radius: 16px; transition: background .15s, box-shadow .15s; }
+.caltray.clearzone { background: rgba(255,107,107,.06); box-shadow: inset 0 0 0 1.5px rgba(255,107,107,.45); padding: 10px; }
+.caltraylist { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.caltraycard { display: grid; grid-template-columns: 44px minmax(0, 1fr) 20px; gap: 10px; align-items: center; padding: 6px 8px 6px 6px; border-radius: 12px; background: var(--s1); border: 1px solid var(--line); cursor: grab; }
+.caltraycard:active { cursor: grabbing; }
+.caltraycard img, .caltraycard > span:first-child { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; }
+.caltraycard > span:nth-child(2) { display: grid; min-width: 0; }
+.caltraycard b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.caltraycard small { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.caltraycard.dated small { color: var(--sig); }
+.caltrayopen { color: var(--muted); font-size: 20px; text-align: center; }

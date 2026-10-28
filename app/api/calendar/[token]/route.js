@@ -19,7 +19,7 @@ export async function GET(req, { params }) {
   if (!want || token !== want) return new Response('Not found', { status: 404 });
   const site = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;
   const db = admin();
-  const { data: projects } = await db.from('projects').select('id,title,artist,type,release,archived, songs(id,title,status,eta)').eq('archived', false);
+  const { data: projects } = await db.from('projects').select('id,title,artist,type,release,archived,settings, songs(id,title,status,eta)').eq('archived', false);
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
   const ev = [];
   for (const p of projects || []) {
@@ -32,6 +32,16 @@ export async function GET(req, { params }) {
         `DESCRIPTION:${esc(`${p.title} (${p.type})\n${STATUS[s.status] || ''}\n${site}/s/${s.id}`)}`,
         `URL:${site}/s/${s.id}`, 'TRANSP:TRANSPARENT', 'CATEGORIES:CTRL ROOM',
         'BEGIN:VALARM', 'TRIGGER:-PT15H', 'ACTION:DISPLAY', `DESCRIPTION:${esc(`${s.title} is due tomorrow`)}`, 'END:VALARM',
+        'END:VEVENT',
+      ]);
+    }
+    if (p.settings?.due) {
+      ev.push([
+        'BEGIN:VEVENT', `UID:project-${p.id}@ctrlroom`, `DTSTAMP:${stamp}`,
+        `DTSTART;VALUE=DATE:${day(p.settings.due)}`, `DTEND;VALUE=DATE:${nextDay(p.settings.due)}`,
+        `SUMMARY:${esc(`Project due: ${p.title} · ${p.artist}`)}`,
+        `DESCRIPTION:${esc(`${p.type}\n${site}/p/${p.id}`)}`, `URL:${site}/p/${p.id}`, 'TRANSP:TRANSPARENT',
+        'BEGIN:VALARM', 'TRIGGER:-PT15H', 'ACTION:DISPLAY', `DESCRIPTION:${esc(`${p.title} is due tomorrow`)}`, 'END:VALARM',
         'END:VEVENT',
       ]);
     }

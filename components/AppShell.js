@@ -7,6 +7,7 @@ import Cover from '@/components/Cover';
 import { PlayerProvider } from '@/components/Player';
 import { installNativeBridge, isMacApp } from '@/lib/native';
 import MfaGate from '@/components/MfaGate';
+import PoweredBy from '@/components/PoweredBy';
 import VerifyBanner from '@/components/VerifyBanner';
 import UpdateWatcher, { getSeen } from '@/components/UpdateWatcher';
 import { forRole } from '@/lib/changelog';
@@ -168,6 +169,7 @@ export default function AppShell({ children }) {
             <div className="page" style={{ paddingBottom: 0 }}><VerifyBanner email={session.user.email} onDone={() => { reloadProjects(); setMfaTick((t) => t + 1); }} /></div>
           )}
           {children}
+          <PoweredBy />
         </div>
         {session && <UpdateWatcher eng={eng} />}
       </div>

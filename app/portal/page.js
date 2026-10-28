@@ -2,7 +2,10 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { supabase, api } from '@/lib/supabase';
-import { useApp, TopBar } from '@/components/AppShell';
+import { useApp, TopBar, PORTAL_HOSTS, MAIN_SITE } from '@/components/AppShell';
+
+// on sendfileshere.com, links into the app go to the main domain
+const appBase = () => (typeof window !== 'undefined' && PORTAL_HOSTS.includes(window.location.hostname.toLowerCase()) ? MAIN_SITE : '');
 import Cover from '@/components/Cover';
 import { fmtBytes, fmtDate } from '@/lib/format';
 import { parseMixName } from '@/lib/filename';
@@ -87,7 +90,7 @@ export default function Portal() {
               <p>{result.projectTitle} has {result.songs.length} song{result.songs.length > 1 ? 's' : ''} and {result.files} file{result.files > 1 ? 's' : ''} ({fmtBytes(result.bytes)}) on the way to the studio.
                 {session ? ' Your project page shows every step from here.' : ` Sign in with ${f.email} to follow progress and hear every mix.`}{f.phone ? ` You'll get a text at ${f.phone} when a mix is ready.` : ''}</p>
               <div className="dzbtns">
-                {session ? <Link className="btn primary" href={`/p/${result.projectId}`}>Open the project</Link> : <Link className="btn primary" href={`/login?next=/p/${result.projectId}`}>Sign in to follow along</Link>}
+                {session ? <a className="btn primary" href={`${appBase()}/p/${result.projectId}`}>Open the project</a> : <a className="btn primary" href={`${appBase()}/signup?email=${encodeURIComponent(f.email)}&next=${encodeURIComponent(`/p/${result.projectId}`)}`}>Create an account to follow along</a>}
                 <button className="btn" onClick={() => { setSongs([blank()]); setState('idle'); setF({ ...f, message: '' }); }}>Send more files</button>
               </div>
             </div>

@@ -14,10 +14,10 @@ export async function POST(req) {
   const { data: p } = await db.from('projects').select('title').eq('id', up.project_id).single();
   const today = new Date().toISOString().slice(0, 10);
 
-  const songs = (up.songs || []).map((s) => {
+  const songs = await Promise.all((up.songs || []).map(async (s) => {
     const r = b.results.find((x) => x.songId === s.songId) || {};
-    return { ...s, files: Number(r.files) || 0, bytes: Number(r.bytes) || 0, folder: dropboxFolder(up.artist, p?.title, s.title) };
-  });
+    return { ...s, files: Number(r.files) || 0, bytes: Number(r.bytes) || 0, folder: await dropboxFolder(up.artist, p?.title, s.title) };
+  }));
   await db.from('uploads').update({ songs }).eq('id', up.id);
 
   let total = 0;

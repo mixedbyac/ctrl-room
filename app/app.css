@@ -251,3 +251,29 @@ body.playing .lbg { animation: breathe 9s ease-in-out infinite; }
 .tmain small { color: var(--muted); font-size: 12px; }
 .teamadd { display: flex; gap: 8px; flex-wrap: wrap; }
 .teamadd input { flex: 1 1 220px; }
+
+/* sendfileshere.com: the Portal on its own */
+.portalhost { min-height: 100vh; max-width: 1180px; margin: 0 auto; }
+.portalhost .barlogo { display: block; }
+.portalhost .barportal { display: none; }
+
+/* dropbox setup */
+.dbx { display: grid; gap: 16px; max-width: 760px; }
+.dbxsteps ol { margin: 0; padding-left: 20px; display: grid; gap: 12px; line-height: 1.55; font-size: 14px; }
+.dbxsteps code { font-family: var(--mono); font-size: 12.5px; background: var(--s2); padding: 1px 6px; border-radius: 6px; }
+.dbxsteps .share-link { margin-top: 8px; }
+.dbxcard { display: grid; gap: 16px; }
+.dbxrow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.dbxdot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
+.dbxdot.on { background: var(--ok, #34c759); box-shadow: 0 0 0 4px rgba(52,199,89,.15); }
+.dbxfolder { display: grid; gap: 6px; justify-items: start; border-top: 1px solid var(--line); padding-top: 14px; }
+.dbxpath { font-size: 15px; overflow-wrap: anywhere; }
+.dbxbrowse { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px; }
+.dbxcrumbs { font-size: 13.5px; color: var(--muted); }
+.dbxcrumbs button { color: var(--ink); font-weight: 600; }
+.dbxcrumbs button:hover { text-decoration: underline; }
+.dbxlist { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; }
+.dbxlist li + li { border-top: 1px solid var(--line); }
+.dbxlist button { width: 100%; text-align: left; padding: 10px 12px; font-size: 14px; }
+.dbxlist button:hover { background: var(--s1); }
+.dbxlist .muted { padding: 10px 12px; }

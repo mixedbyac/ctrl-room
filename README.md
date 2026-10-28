@@ -69,3 +69,16 @@ Run `supabase/004_sharing_and_artists.sql` once in the Supabase SQL editor (afte
 
 - **Share links**: the Share button on a song or project makes a listen-only link (`/l/…`). The engineer can switch sharing off per project or song, or reset a link.
 - **Artist pages**: paste a Spotify artist link to pull in the name, photo, header and monthly listeners. Optionally add `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` (from developer.spotify.com) in Vercel for genres and followers.
+
+
+## Mac app
+
+GitHub Actions builds `CTRL ROOM.app` from `mac/` on every change there and publishes `CTRL-ROOM.dmg` to the `mac-app` release. The download link is `/mac` (it redirects to the release). To sign and notarize later, set `MAC_SIGN_IDENTITY` in the build.
+
+## Portal domain (sendfileshere.com)
+
+Add the domain in Vercel (Settings › Domains). On that domain `/` shows the Portal and every other page goes to the main app domain. Other domains: set `PORTAL_DOMAINS` and `NEXT_PUBLIC_PORTAL_DOMAINS` (comma-separated). Set `NEXT_PUBLIC_PORTAL_URL=https://sendfileshere.com` so the Portal inbox copies that link.
+
+## Dropbox
+
+Open **Dropbox** from the Portal inbox and follow the steps there, then click **Connect Dropbox** and pick a folder.

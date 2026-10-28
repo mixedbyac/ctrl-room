@@ -1,0 +1,97 @@
+'use client';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { api } from '@/lib/supabase';
+import { useApp, TopBar } from '@/components/AppShell';
+
+function DropboxSetup() {
+  const { eng, session } = useApp();
+  const q = useSearchParams();
+  const [st, setSt] = useState(null);
+  const [msg, setMsg] = useState(q.get('connected') ? 'Dropbox is connected. Now pick the folder client files should go into.' : q.get('error') || '');
+  const [browse, setBrowse] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = () => api('/api/dropbox', { action: 'status' }).then(setSt).catch((e) => setMsg(e.message));
+  useEffect(() => { if (eng) load(); }, [eng]);
+  const open = async (path) => {
+    setBusy(true);
+    try { setBrowse(await api('/api/dropbox', { action: 'folders', path })); } catch (e) { setMsg(e.message); }
+    setBusy(false);
+  };
+  const connect = async () => { try { const r = await api('/api/dropbox', { action: 'connect' }); window.location.href = r.url; } catch (e) { setMsg(e.message); } };
+  const choose = async (root) => { const r = await api('/api/dropbox', { action: 'root', root }); setSt((s) => ({ ...s, root: r.root })); setBrowse(null); setMsg(`Client files will go into ${r.root || 'the top of your Dropbox'}.`); };
+  const disconnect = async () => { if (!confirm('Disconnect Dropbox? Portal uploads will stop until you connect again.')) return; await api('/api/dropbox', { action: 'disconnect' }); load(); };
+  const copy = async (t) => { try { await navigator.clipboard.writeText(t); setMsg('Copied.'); } catch {} };
+
+  if (!session) return null;
+  if (!eng) return <><TopBar crumbs={[{ label: 'Dropbox' }]} /><section className="page"><p className="muted">This page is for your engineer.</p></section></>;
+
+  const crumbs = browse ? browse.path.split('/').filter(Boolean) : [];
+  return (
+    <>
+      <TopBar crumbs={[{ label: 'Home', href: '/' }, { label: 'Portal', href: '/portal/inbox' }, { label: 'Dropbox' }]} />
+      <section className="page">
+        <div className="hhead"><h1 className="up">Dropbox</h1><p className="lede">Files clients send through the Portal land here, sorted into Artist / Project / Song. Clients never see Dropbox.</p></div>
+        {msg && <p className="toast-inline" style={{ marginBottom: 16 }}>{msg}</p>}
+        {!st ? <p className="muted">Checking…</p> : (
+          <div className="dbx">
+            {!st.hasKeys && (
+              <div className="panel dbxsteps">
+                <h3>One-time setup (about 2 minutes)</h3>
+                <ol>
+                  <li>Go to <a className="link" href="https://www.dropbox.com/developers/apps/create" target="_blank" rel="noopener noreferrer">dropbox.com/developers/apps</a> and click <b>Create app</b>. Choose <b>Scoped access</b>, then <b>Full Dropbox</b> (so you can pick any folder), and name it something like <b>CTRL ROOM Portal</b>.</li>
+                  <li>Open the <b>Permissions</b> tab, tick <b>files.metadata.read</b>, <b>files.content.write</b>, <b>files.content.read</b> and <b>account_info.read</b>, then click <b>Submit</b>.</li>
+                  <li>Open the <b>Settings</b> tab. Under <b>OAuth 2 › Redirect URIs</b>, paste this and click <b>Add</b>:
+                    <div className="share-link"><code>{st.redirect}</code><button className="btn small" onClick={() => copy(st.redirect)}>Copy</button></div></li>
+                  <li>On the same tab, copy the <b>App key</b> and <b>App secret</b>. In Vercel, open your project › <b>Settings › Environment Variables</b> and add them as <code>DROPBOX_APP_KEY</code> and <code>DROPBOX_APP_SECRET</code>.</li>
+                  <li>In Vercel, go to <b>Deployments</b> › ••• on the top one › <b>Redeploy</b>. Then come back here and click <b>Connect Dropbox</b>.</li>
+                </ol>
+              </div>
+            )}
+            <div className="panel dbxcard">
+              <div className="dbxrow">
+                <span className={`dbxdot ${st.connected ? 'on' : ''}`} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <b>{st.connected ? 'Connected' : 'Not connected'}</b>
+                  <p className="muted small" style={{ margin: 0 }}>{st.connected ? (st.account ? `${st.account.name} · ${st.account.email}` : 'Your Dropbox') : st.hasKeys ? 'Click Connect and approve in Dropbox.' : 'Finish the setup above first.'}</p>
+                </div>
+                {st.connected
+                  ? <><button className="btn small" onClick={connect}>Reconnect</button><button className="btn small quiet" onClick={disconnect}>Disconnect</button></>
+                  : <button className="btn primary" disabled={!st.hasKeys} onClick={connect}>Connect Dropbox</button>}
+              </div>
+              {st.connected && (
+                <div className="dbxfolder">
+                  <p className="muted small" style={{ margin: 0 }}>Client files go into</p>
+                  <div className="dbxpath mono">{st.root || '/'}<span className="muted">/Artist/Project/Song/</span></div>
+                  {!browse && <button className="btn small" disabled={busy} onClick={() => open(st.root || '')}>{busy ? 'Opening…' : 'Change folder'}</button>}
+                </div>
+              )}
+              {browse && (
+                <div className="dbxbrowse">
+                  <div className="dbxcrumbs">
+                    <button onClick={() => open('')}>Dropbox</button>
+                    {crumbs.map((c, i) => <span key={i}> / <button onClick={() => open('/' + crumbs.slice(0, i + 1).join('/'))}>{c}</button></span>)}
+                  </div>
+                  <ul className="dbxlist">
+                    {browse.folders.map((f) => <li key={f.path}><button onClick={() => open(f.path)}><span aria-hidden="true">📁</span> {f.name}</button></li>)}
+                    {!browse.folders.length && <li className="muted small">No folders in here.</li>}
+                  </ul>
+                  <div className="row-actions">
+                    <button className="btn small primary" onClick={() => choose(browse.path === '/' ? '' : browse.path)}>Use {browse.path === '/' ? 'the top of Dropbox' : `“${crumbs.at(-1)}”`}</button>
+                    <button className="btn small quiet" onClick={() => setBrowse(null)}>Cancel</button>
+                  </div>
+                  <p className="muted small" style={{ margin: 0 }}>Tip: make a folder like <b>Clients</b> in Dropbox first, then pick it here.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </section>
+    </>
+  );
+}
+
+export default function DropboxPage() {
+  return <Suspense fallback={null}><DropboxSetup /></Suspense>;
+}

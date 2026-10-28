@@ -13,6 +13,9 @@ const Ctx = createContext(null);
 export const useApp = () => useContext(Ctx);
 
 const PUBLIC = ['/login', '/signup', '/portal', '/l'];
+// domains that show only the Portal (sendfileshere.com)
+export const PORTAL_HOSTS = (process.env.NEXT_PUBLIC_PORTAL_DOMAINS || 'sendfileshere.com,www.sendfileshere.com').split(',').map((h) => h.trim().toLowerCase());
+export const MAIN_SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://ctrl-room-eight.vercel.app';
 
 export default function AppShell({ children }) {
   const pathname = usePathname();
@@ -20,7 +23,9 @@ export default function AppShell({ children }) {
   const [session, setSession] = useState(undefined); // undefined = still checking
   const [eng, setEng] = useState(false);
   const [projects, setProjects] = useState([]);
-  const isPublic = PUBLIC.some((p) => pathname === p || pathname.startsWith(p + '/'));
+  const [portalHost, setPortalHost] = useState(false);
+  useEffect(() => setPortalHost(PORTAL_HOSTS.includes(window.location.hostname.toLowerCase())), []);
+  const isPublic = portalHost || PUBLIC.some((p) => pathname === p || pathname.startsWith(p + '/'));
 
   useEffect(() => {
     const sb = supabase();
@@ -63,6 +68,7 @@ export default function AppShell({ children }) {
   const signOut = async () => { await supabase().auth.signOut(); router.replace('/login'); };
   const value = { session, email: session?.user?.email || '', eng, projects, reloadProjects, signOut };
 
+  if (portalHost && session !== undefined) return <Ctx.Provider value={value}><div className="portalhost">{children}</div></Ctx.Provider>;
   if (pathname === '/login' || pathname === '/signup' || pathname.startsWith('/l/')) return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
   if (session === undefined || (session === null && !isPublic)) {
     return <div className="boot"><img src="/logo.png" alt="" className="bootlogo" /></div>;

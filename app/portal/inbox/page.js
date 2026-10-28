@@ -30,7 +30,7 @@ export default function Inbox() {
     }
     load();
   };
-  const portalLink = typeof window !== 'undefined' ? `${window.location.origin}/portal` : '/portal';
+  const portalLink = process.env.NEXT_PUBLIC_PORTAL_URL || (typeof window !== 'undefined' ? `${window.location.origin}/portal` : '/portal');
 
   return (
     <>
@@ -40,7 +40,8 @@ export default function Inbox() {
           <h1 className="up">Portal inbox</h1>
           <p className="lede">Everything clients send through your Portal, filed into your Dropbox by artist, project and song.</p>
           <div className="share-link" style={{ marginTop: 14 }}><code>{portalLink}</code>
-            <button className="btn small" onClick={async () => { try { await navigator.clipboard.writeText(portalLink); } catch {} }}>Copy Portal link</button></div>
+            <button className="btn small" onClick={async () => { try { await navigator.clipboard.writeText(portalLink); } catch {} }}>Copy Portal link</button>
+            <Link className="btn small" href="/dropbox">Dropbox settings</Link></div>
         </div>
         <div className="inbox">
           {rows === null ? <p className="muted">Loading…</p> : rows.length ? rows.map((u) => (

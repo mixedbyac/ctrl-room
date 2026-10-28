@@ -1021,3 +1021,16 @@ a.driftc:hover { transform: scale(1.04); }
   .mctl .mp svg { width: 24px; height: 24px; }
   .mwave { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; flex: none; pointer-events: none; opacity: .9; }
 }
+
+/* renaming keeps the exact size of the title (no jump to a bigger font) */
+.titleedit, .titleedit.up { font: inherit !important; letter-spacing: inherit; line-height: inherit; text-transform: inherit; display: block; width: calc(100% + 14px); margin: -2px -7px; padding: 1px 6px; border-radius: 10px; }
+.rowedit { font: inherit; font-size: inherit; letter-spacing: inherit; padding: 0 6px; margin: -1px -7px; width: calc(100% + 14px); border-radius: 6px; }
+
+/* desktop: the record slides out to the LEFT, away from the title text */
+@media (min-width: 901px) {
+  .sleevewrap .sleeve { left: auto; right: 0; }
+  .sleevewrap .record, .sleevewrap:hover .record, body.playing .sleevewrap .record { right: auto; transition: left .7s cubic-bezier(.2,.8,.2,1); }
+  .sleevewrap .record { left: 17%; }
+  .sleevewrap:hover .record, body.playing .sleevewrap .record { left: 0; }
+  .sleevewrap:hover .sleeve, body.playing .sleevewrap .sleeve { transform: translateX(3%) rotate(1.5deg); }
+}

@@ -21,8 +21,7 @@ export default function ProjectMenu({ menu, onClose, onChanged, router }) {
   };
   const remove = async () => {
     onClose();
-    const typed = window.prompt(`Delete “${p.title}” for good? Every song, mix, note and file in it goes too.\n\nType DELETE to confirm.`);
-    if (typed !== 'DELETE') return;
+    if (!window.confirm(`Delete “${p.title}” for good? Every song, mix, note and file in it goes too.`)) return;
     const sb = supabase();
     // remove stored files first (mixes, demos, covers), then the project (songs, versions and notes go with it)
     try {

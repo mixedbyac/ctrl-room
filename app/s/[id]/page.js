@@ -579,9 +579,9 @@ function SongTitle({ song, eng, viaAdmin, reload }) {
   };
   if (!eng) return <h1 className="up">{song.title}</h1>;
   if (editing) {
-    return <input className="titleedit up" value={draft} autoFocus maxLength={120} aria-label="Song title"
+    return <h1 className="up"><input className="titleedit up" value={draft} autoFocus maxLength={120} aria-label="Song title"
       onChange={(e) => setDraft(e.target.value)} onBlur={save}
-      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { setDraft(song.title); setEditing(false); } }} />;
+      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { setDraft(song.title); setEditing(false); } }} /></h1>;
   }
   return (
     <h1 className="up titlewrap">{song.title}

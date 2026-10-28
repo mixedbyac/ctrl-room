@@ -13,9 +13,9 @@ export default function EditableTitle({ value, canEdit, onSave, label = 'title',
   };
   if (!canEdit) return <h1 className={`up ${className}`}>{value}</h1>;
   if (editing) {
-    return <input className={`titleedit up ${className}`} value={draft} autoFocus maxLength={120} aria-label={`Rename ${label}`}
+    return <h1 className={`up ${className}`}><input className="titleedit up" value={draft} autoFocus maxLength={120} aria-label={`Rename ${label}`}
       onChange={(e) => setDraft(e.target.value)} onBlur={save} onFocus={(e) => e.target.select()}
-      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { setDraft(value); setEditing(false); } }} />;
+      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { setDraft(value); setEditing(false); } }} /></h1>;
   }
   const start = () => { setDraft(value); setEditing(true); };
   return (

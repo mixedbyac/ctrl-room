@@ -145,7 +145,7 @@ function EngineerHome() {
             </ul>
           </section>
           <section>
-            <h2 className="h2 up" style={{ marginBottom: 12 }}>Activity</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, marginBottom: 12 }}><h2 className="h2 up" style={{ margin: 0 }}>Activity</h2><Link className="link small" href="/insights">Insights ›</Link></div>
             <ul className="nlist" style={{ overflow: 'visible' }}>
               {activity.length ? activity.map((a) => <ActivityItem key={a.kind + a.x.id} a={a} />) : <li className="emptyday">Plays, notes and sign-offs will show up here.</li>}
             </ul>
@@ -159,7 +159,7 @@ function EngineerHome() {
 
 function ActivityItem({ a }) {
   const x = a.x, song = x.songs || {};
-  const who = x.listener_email || x.author_name || x.author_email || (x.source === 'from a share link' ? 'Someone' : 'Client');
+  const who = x.listener_email || x.author_name || x.author_email || (/share link/.test(x.source || '') ? 'Someone' : 'Client');
   let text, body = null, icon = '▶';
   if (a.kind === 'play') {
     const pct = x.duration ? Math.min(100, Math.round((x.listened / x.duration) * 100)) : 0;

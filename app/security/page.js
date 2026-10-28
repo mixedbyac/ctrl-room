@@ -100,6 +100,7 @@ export default function SecurityPage() {
             <li>Share links only play the current mix, never notes or other versions, and {eng ? 'you can turn them off or reset them' : 'your engineer can turn them off'} any time.</li>
             <li>Everything travels encrypted (HTTPS), and the site blocks being embedded or scripted by other sites.</li>
           </ul>
+          <a className="link small" href="/protect">Read how CTRL ROOM protects your music ›</a>
         </div>
       </section>
     </>

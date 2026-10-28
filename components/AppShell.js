@@ -14,7 +14,7 @@ import { forRole } from '@/lib/changelog';
 const Ctx = createContext(null);
 export const useApp = () => useContext(Ctx);
 
-const PUBLIC = ['/login', '/signup', '/portal', '/l'];
+const PUBLIC = ['/login', '/signup', '/portal', '/l', '/protect'];
 // domains that show only the Portal (sendfileshere.com)
 export const PORTAL_HOSTS = (process.env.NEXT_PUBLIC_PORTAL_DOMAINS || 'sendfileshere.com,www.sendfileshere.com').split(',').map((h) => h.trim().toLowerCase());
 export const MAIN_SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://ctrl-room-eight.vercel.app';
@@ -82,7 +82,7 @@ export default function AppShell({ children }) {
     return <Ctx.Provider value={value}><MfaGate onDone={() => setMfaTick((t) => t + 1)} onSignOut={signOut} /></Ctx.Provider>;
   }
   if (portalHost && session !== undefined) return <Ctx.Provider value={value}><div className="portalhost">{children}</div></Ctx.Provider>;
-  if (pathname === '/login' || pathname === '/signup' || pathname.startsWith('/l/')) return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  if (pathname === '/login' || pathname === '/signup' || pathname === '/protect' || pathname.startsWith('/l/')) return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
   if (session === undefined || (session === null && !isPublic)) {
     return <div className="boot"><img src="/logo.png" alt="" className="bootlogo" /></div>;
   }
@@ -99,6 +99,11 @@ export default function AppShell({ children }) {
               <Link className="navitem" href="/" aria-current={pathname === '/'}>
                 <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 11l8-7 8 7v8a1 1 0 01-1 1h-4v-6H9v6H5a1 1 0 01-1-1z" /></svg></span>Home
               </Link>
+              {eng && (
+                <Link className="navitem" href="/insights" aria-current={pathname.startsWith('/insights')}>
+                  <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg></span>Insights
+                </Link>
+              )}
               {eng && (
                 <Link className="navitem" href="/calendar" aria-current={pathname.startsWith('/calendar')}>
                   <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg></span>Calendar

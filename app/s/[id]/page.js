@@ -506,7 +506,7 @@ function Listening({ plays, versions }) {
         const pct = x.duration ? Math.min(100, Math.round((x.listened / x.duration) * 100)) : 0;
         return (
           <li key={x.id} style={{ display: 'grid', gap: 6 }}>
-            <span><b>{x.listener_email || (x.source === 'from a share link' ? 'Someone' : 'Client')}</b> played <span className="mono">{label(x.version_id)}</span> · {x.device || 'Unknown device'}{x.source ? ` · ${x.source}` : ''}</span>
+            <span><b>{x.listener_email || (/share link/.test(x.source || '') ? 'Someone' : 'Client')}</b> played <span className="mono">{label(x.version_id)}</span> · {x.device || 'Unknown device'}{x.source ? ` · ${x.source}` : ''}</span>
             <span className="nlisten"><span className="nbar"><i style={{ width: `${pct}%` }} /></span><small className="mono">{mmss(x.listened)} of {mmss(x.duration)} · {pct}% · {ago(x.updated_at)}</small></span>
           </li>
         );

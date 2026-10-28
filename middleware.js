@@ -11,7 +11,7 @@ export function middleware(req) {
   if (!PORTAL_HOSTS.includes(host)) return NextResponse.next();
   const { pathname, search } = req.nextUrl;
   if (pathname === '/') return NextResponse.rewrite(new URL('/portal' + search, req.url));
-  if (pathname === '/portal' || pathname.startsWith('/api/portal') || pathname === '/manifest.webmanifest' || pathname === '/api/version') return NextResponse.next();
+  if (pathname === '/portal' || pathname === '/portal/prep' || pathname.startsWith('/api/portal') || pathname === '/manifest.webmanifest' || pathname === '/api/version') return NextResponse.next();
   return NextResponse.redirect(new URL(pathname + search, MAIN));
 }
 

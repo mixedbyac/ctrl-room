@@ -88,7 +88,7 @@ export default function AppShell({ children }) {
     return <Ctx.Provider value={value}><MfaGate onDone={() => setMfaTick((t) => t + 1)} onSignOut={signOut} /></Ctx.Provider>;
   }
   if (portalHost && session !== undefined) return <Ctx.Provider value={value}><div className="portalhost">{children}</div></Ctx.Provider>;
-  if (pathname === '/login' || pathname === '/signup' || pathname === '/protect' || pathname.startsWith('/l/')) return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  if (pathname === '/login' || pathname === '/signup' || pathname === '/protect' || pathname === '/portal/prep' || pathname.startsWith('/l/')) return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
   if (session === undefined || (session === null && !isPublic)) {
     return <div className="boot"><img src="/logo.png" alt="" className="bootlogo" /></div>;
   }

@@ -21,6 +21,7 @@ export function PlayerProvider({ eng, children }) {
   const [playing, setPlaying] = useState(false);
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [expanded, setExpanded] = useState(false);
   const curRef = useRef(null);
   curRef.current = current;
 
@@ -184,8 +185,8 @@ export function PlayerProvider({ eng, children }) {
   useEffect(() => () => { Object.values(audios.current).forEach((a) => { a.pause(); a.src = ''; }); }, []);
 
   const version = current ? current.versions.find((v) => v.id === current.versionId) : null;
-  const value = { current, version, queue, playing, time, duration: duration || version?.duration || 0, play, pause, resume, toggle, seek, switchVersion, refresh, next: () => step(1), prev: () => step(-1) };
-  return <Ctx.Provider value={value}>{children}<MiniPlayer /></Ctx.Provider>;
+  const value = { current, version, queue, playing, time, expanded, setExpanded, duration: duration || version?.duration || 0, play, pause, resume, toggle, seek, switchVersion, refresh, next: () => step(1), prev: () => step(-1) };
+  return <Ctx.Provider value={value}>{children}<MiniPlayer />{expanded && current && <NowPlaying />}</Ctx.Provider>;
 }
 
 const PLAY = <path d="M7 4.5v15l13-7.5z" />;
@@ -211,24 +212,128 @@ function MiniPlayer() {
     }
     g.fillStyle = '#f5d547'; g.fillRect(Math.round(prog * W) - dpr, 0, 2 * dpr, H);
   });
-  if (!c || !v) return null;
+  if (!c || !v || pl.expanded) return null;
   const seekAt = (e) => { const r = wrap.current.getBoundingClientRect(); pl.seek(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * pl.duration); };
   const i = pl.queue.indexOf(c.song.id);
   return (
     <div className="mini">
       <div className="minibar">
-        <Link href={`/s/${c.song.id}`} aria-label={`Open ${c.song.title}`}><Cover as="div" seed={c.song.seed} path={c.song.cover_path || c.project.cover_path} size={120} className="mart spin" /></Link>
-        <Link className="mtext" href={`/s/${c.song.id}`}>
+        <button className="mopen" onClick={() => pl.setExpanded(true)} aria-label={`Open the player for ${c.song.title}`}><Cover as="div" seed={c.song.seed} path={c.song.cover_path || c.project.cover_path} size={120} className="mart spin" /></button>
+        <button className="mtext" onClick={() => pl.setExpanded(true)}>
           <b><span id="mtitle">{c.song.title}</span>{pl.playing && <span className="eq"><span /><span /><span /></span>}</b>
           <span>{c.project.title} · {v.label}</span>
-        </Link>
+        </button>
         <div className="mwave" ref={wrap} onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); seekAt(e); }} onPointerMove={(e) => { if (e.buttons) seekAt(e); }}><canvas ref={cv} /></div>
         <span className="mtime mono">{mmss(pl.time)} / {mmss(pl.duration)}</span>
         <div className="mctl">
           <button onClick={pl.prev} aria-label="Previous song"><svg viewBox="0 0 24 24"><path d="M11 12l9-6.5v13zM2 12l9-6.5v13z" /></svg></button>
           <button className="mp" onClick={pl.toggle} aria-label={pl.playing ? 'Pause' : 'Play'}><svg viewBox="0 0 24 24">{pl.playing ? PAUSE : PLAY}</svg></button>
           <button onClick={pl.next} disabled={i < 0 || i >= pl.queue.length - 1} aria-label="Next song"><svg viewBox="0 0 24 24"><path d="M13 12L4 5.5v13zM22 12l-9-6.5v13z" /></svg></button>
+          <button onClick={() => pl.setExpanded(true)} aria-label="Open the full player" className="mexp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" /></svg></button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- full-screen Now Playing ---------- */
+function Wave({ peaks, time, duration, onSeek, height = 72 }) {
+  const cv = useRef(null), wrap = useRef(null);
+  useEffect(() => {
+    const el = cv.current; if (!el) return;
+    const r = el.getBoundingClientRect(), dpr = window.devicePixelRatio || 1, W = Math.round(r.width * dpr), H = Math.round(r.height * dpr);
+    if (!W || !H) return;
+    if (el.width !== W || el.height !== H) { el.width = W; el.height = H; }
+    const g = el.getContext('2d'); g.clearRect(0, 0, W, H);
+    const step = 3 * dpr, n = Math.floor(W / step), prog = duration ? time / duration : 0;
+    for (let i = 0; i < n; i++) {
+      let p = 0.08;
+      if (peaks?.length) { const a = Math.floor((i / n) * peaks.length), b = Math.max(a + 1, Math.floor(((i + 1) / n) * peaks.length)); p = 0; for (let j = a; j < b; j++) p = Math.max(p, peaks[j] || 0); }
+      const h = Math.max(2 * dpr, Math.min(1, p) * H * 0.96);
+      g.fillStyle = i / n < prog ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.28)';
+      g.fillRect(i * step, (H - h) / 2, 2 * dpr, h);
+    }
+    g.fillStyle = '#f5d547'; g.fillRect(Math.round(prog * W) - dpr, 0, 2 * dpr, H);
+  });
+  const at = (e) => { const r = wrap.current.getBoundingClientRect(); onSeek(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * duration); };
+  return (
+    <div ref={wrap} className="npwave" style={{ height }} onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); at(e); }} onPointerMove={(e) => { if (e.buttons) at(e); }}>
+      <canvas ref={cv} />
+    </div>
+  );
+}
+
+function NowPlaying() {
+  const pl = usePlayer();
+  const c = pl.current, v = pl.version;
+  const [upNext, setUpNext] = useState([]);
+  const close = () => pl.setExpanded(false);
+  useEffect(() => {
+    const k = (e) => {
+      if (e.key === 'Escape') close();
+      if ((e.key === 'x' || e.key === 'X') && !e.target.closest('input,textarea,select') && c.versions.length > 1) flip();
+    };
+    document.addEventListener('keydown', k);
+    document.body.style.overflow = 'hidden';
+    return () => { document.removeEventListener('keydown', k); document.body.style.overflow = ''; };
+  });
+  useEffect(() => {
+    const ids = pl.queue.length ? pl.queue : [c.song.id];
+    supabase().from('songs').select('id,title,seed,cover_path,status').in('id', ids).then(({ data }) => {
+      const byId = Object.fromEntries((data || []).map((x) => [x.id, x]));
+      setUpNext(ids.map((id) => byId[id]).filter(Boolean));
+    });
+  }, [pl.queue.join(','), c.song.id]); // eslint-disable-line
+  const vi = c.versions.findIndex((x) => x.id === c.versionId);
+  const flip = () => { const prev = c.versions[vi - 1] || c.versions[vi + 1]; if (prev) pl.switchVersion(prev.id); };
+  const coverPath = c.song.cover_path || c.project.cover_path;
+  return (
+    <div className="np" role="dialog" aria-label="Now playing">
+      <Cover as="div" seed={c.song.seed} path={coverPath} size={240} className="npbg" />
+      <div className="npinner">
+        <div className="nptop">
+          <button className="npclose" onClick={close} aria-label="Close the player"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg></button>
+          <span className="npfrom">Playing from <b>{c.project.title}</b></span>
+          <Link className="npopen" href={`/s/${c.song.id}`} onClick={close}>Notes &amp; details</Link>
+        </div>
+        <div className="npmain">
+          <div className="npdisc"><Cover as="div" seed={c.song.seed} path={coverPath} size={720} className="npart spin" /><span className="nphole" /></div>
+          <div className="npright">
+            <div>
+              <h2 className="up">{c.song.title}</h2>
+              <p className="npsub">{c.project.artist} · {c.project.title}</p>
+            </div>
+            {c.versions.length > 1 && (
+              <div className="npvers" role="group" aria-label="Versions">
+                {c.versions.map((x) => <button key={x.id} aria-pressed={x.id === c.versionId} onClick={() => pl.switchVersion(x.id)}>{x.label}</button>)}
+                <span className="nphint">Switches at the same spot · <kbd>X</kbd></span>
+              </div>
+            )}
+            <div>
+              <Wave peaks={v?.peaks} time={pl.time} duration={pl.duration} onSeek={pl.seek} />
+              <div className="nptimes mono"><span>{mmss(pl.time)}</span><span>{v?.file_format ? `${v.file_format}${v.bit_depth ? ` · ${Math.abs(v.bit_depth)}-bit` : ''}${v.sample_rate ? ` · ${(v.sample_rate / 1000).toFixed(v.sample_rate % 1000 ? 1 : 0)} kHz` : ''} · original` : 'Original file'}</span><span>{mmss(pl.duration)}</span></div>
+            </div>
+            <div className="npctl">
+              <button onClick={pl.prev} aria-label="Previous song"><svg viewBox="0 0 24 24"><path d="M11 12l9-6.5v13zM2 12l9-6.5v13z" /></svg></button>
+              <button className="npplay" onClick={pl.toggle} aria-label={pl.playing ? 'Pause' : 'Play'}><svg viewBox="0 0 24 24">{pl.playing ? PAUSE : PLAY}</svg></button>
+              <button onClick={pl.next} aria-label="Next song"><svg viewBox="0 0 24 24"><path d="M13 12L4 5.5v13zM22 12l-9-6.5v13z" /></svg></button>
+            </div>
+          </div>
+        </div>
+        {upNext.length > 1 && (
+          <div className="npqueue">
+            <p className="nplabel">Up next</p>
+            <div className="npq">
+              {upNext.map((s) => (
+                <button key={s.id} className={`npqi ${s.id === c.song.id ? 'on' : ''}`} onClick={() => (s.id === c.song.id ? pl.toggle() : pl.play({ songId: s.id, queue: pl.queue }))}>
+                  <Cover seed={s.seed} path={s.cover_path} size={120} />
+                  <span>{s.title}</span>
+                  {s.id === c.song.id && pl.playing && <span className="eq"><span /><span /><span /></span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -79,6 +79,12 @@ create table if not exists versions (
   peaks jsonb,
   peak_db real,
   rms_db real,
+  file_name text,
+  file_size bigint,
+  file_format text,
+  sample_rate int,
+  bit_depth int,
+  lossless boolean,
   created_at timestamptz not null default now()
 );
 

@@ -7,6 +7,7 @@ import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
 import { fmt, mmss, fmtDate, shortDate, ago, statusText, nextLabel, deviceName, todayISO } from '@/lib/format';
 import { deliverFile } from '@/lib/deliver';
+import { describeFormat } from '@/lib/fileinfo';
 
 const BINS = 100;
 const PLAY = <path d="M7 4.5v15l13-7.5z" />;
@@ -69,6 +70,7 @@ export default function SongPage() {
     if (!a) {
       a = new Audio();
       a.preload = 'auto';
+      a.volume = 1; // full, unchanged level — no processing anywhere in the chain
       a.src = urls[verId];
       a.addEventListener('ended', () => setPlaying(false));
       a.addEventListener('loadedmetadata', () => { if (verId === vidRef.current) setDur(a.duration || 0); });
@@ -186,7 +188,7 @@ export default function SongPage() {
           </div>
           <div className="sinfo">
             <p className="eyebrow"><Link href={`/p/${p.id}`}>{p.title}</Link> · {p.artist}</p>
-            <h1 className="up">{song.title}</h1>
+            <SongTitle song={song} eng={eng} reload={load} />
             <div className="meta"><span className={`dot ${song.status}`}>{statusText(song, versions)}</span>
               <span>{[song.bpm ? `${song.bpm} BPM` : '', hasMix ? `${versions.length} version${versions.length > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ')}</span></div>
             {hasMix && <Versions {...{ versions, vid, ab, setAb, switchTo, flip, eng, song, reload: load, setMsg }} />}
@@ -288,7 +290,8 @@ function DeliverVersion({ song, versions, onDone, setMsg }) {
     if (!f) return;
     try {
       const r = await deliverFile({ song, versions, file: f, project: song.projects, text, onStatus: setBusy });
-      setMsg(`Delivered ${f.name} as ${r.label}${r.parsed.note ? ` (${r.parsed.note})` : ''}.${text ? (r.texted ? ' Texted the client.' : ' (Text not sent — check the phone number and Twilio setup.)') : ''} Tap ✎ to rename it.`);
+      const aiffNote = r.info?.file_format === 'AIFF' ? ' Heads up: Chrome and Android can\'t play AIFF. WAV plays everywhere.' : '';
+      setMsg(`Delivered ${f.name} as ${r.label}${r.parsed.note ? ` (${r.parsed.note})` : ''}.${text ? (r.texted ? ' Texted the client.' : ' (Text not sent — check the phone number and Twilio setup.)') : ''} Tap ✎ to rename it.${aiffNote}`);
       onDone();
     } catch (err) {
       setMsg(`Couldn't deliver ${f.name}: ${err.message}`);
@@ -398,7 +401,7 @@ function Scrub({ v, notes, time, dur, seek, eng, plays }) {
           <div className={`lmbars ${mx ? '' : 'empty'}`}>{heat.map((x, i) => <i key={i} style={{ opacity: mx ? (x ? 0.18 + (0.82 * x) / mx : 0) : 1 }} />)}</div>
         </div>
       )}
-      <div className="times"><span className="mono">{fmt(time)}</span><span className="mono">{v?.peak_db != null ? `Peak ${v.peak_db} dBFS · RMS ${v.rms_db} dB` : ''}</span><span className="mono">{fmt(dur)}</span></div>
+      <div className="times"><span className="mono">{fmt(time)}</span><span className="mono fmtinfo" title="Played straight from the uploaded file: no compression, no limiting, no volume changes.">{describeFormat(v) ? <><b>{describeFormat(v)}</b> · {v.lossless === false ? 'as uploaded, no extra compression' : 'original, untouched'}</> : 'Original file, untouched'}{v?.peak_db != null ? ` · Peak ${v.peak_db} dBFS` : ''}</span><span className="mono">{fmt(dur)}</span></div>
     </div>
   );
 }
@@ -593,5 +596,29 @@ function Listening({ plays, versions }) {
         );
       }) : <li><span className="muted">No plays yet. You'll see each listen here: who, which version, what device, and how much they heard.</span></li>}
     </ul>
+  );
+}
+
+/* ---------- song title (editable by the engineer) ---------- */
+function SongTitle({ song, eng, reload }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(song.title);
+  const save = async () => {
+    const t = draft.trim();
+    setEditing(false);
+    if (!t || t === song.title) return setDraft(song.title);
+    await supabase().from('songs').update({ title: t }).eq('id', song.id);
+    reload();
+  };
+  if (!eng) return <h1 className="up">{song.title}</h1>;
+  if (editing) {
+    return <input className="titleedit up" value={draft} autoFocus maxLength={120} aria-label="Song title"
+      onChange={(e) => setDraft(e.target.value)} onBlur={save}
+      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { setDraft(song.title); setEditing(false); } }} />;
+  }
+  return (
+    <h1 className="up titlewrap">{song.title}
+      <button className="titlepen" onClick={() => { setDraft(song.title); setEditing(true); }} aria-label="Rename song" title="Rename song">✎</button>
+    </h1>
   );
 }

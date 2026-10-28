@@ -8,6 +8,7 @@ import { PlayerProvider } from '@/components/Player';
 import { installNativeBridge, isMacApp } from '@/lib/native';
 import MfaGate from '@/components/MfaGate';
 import PoweredBy from '@/components/PoweredBy';
+import TabBar from '@/components/TabBar';
 import VerifyBanner from '@/components/VerifyBanner';
 import UpdateWatcher, { getSeen } from '@/components/UpdateWatcher';
 import { forRole } from '@/lib/changelog';
@@ -172,6 +173,7 @@ export default function AppShell({ children }) {
           <PoweredBy />
         </div>
         {session && <UpdateWatcher eng={eng} />}
+        {session && <TabBar eng={eng} projects={projects} email={session.user.email} signOut={signOut} unseen={unseen} />}
       </div>
       </PlayerProvider>
     </Ctx.Provider>

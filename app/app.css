@@ -827,3 +827,54 @@ body.playing .lbg { animation: breathe 9s ease-in-out infinite; }
 .vstack.standalone::before { left: 25px; top: 44px; }
 .vs-title { margin: 0 0 4px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .vstack.standalone .vs-add { display: none; } /* the song page has its own Deliver button */
+
+/* ---------- phones: bottom tabs + general polish ---------- */
+.tabbar, .moresheet { display: none; }
+@media (max-width: 900px) {
+  html { -webkit-text-size-adjust: 100%; }
+  body { overflow-x: hidden; }
+  .tabbar { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; position: fixed; left: 0; right: 0; bottom: 0; z-index: 19;
+    padding: 6px max(8px, env(safe-area-inset-left, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-right, 0px));
+    background: rgba(14,14,16,.88); backdrop-filter: blur(20px) saturate(1.4); -webkit-backdrop-filter: blur(20px) saturate(1.4); border-top: 1px solid rgba(255,255,255,.08); }
+  .tab { position: relative; display: grid; justify-items: center; gap: 3px; padding: 6px 0 4px; font-size: 10.5px; font-weight: 600; color: var(--muted); -webkit-tap-highlight-color: transparent; }
+  .tab svg { width: 24px; height: 24px; }
+  .tab.on { color: var(--ink); }
+  .tab.on svg { color: var(--sig); }
+  .tabdot { position: absolute; top: 4px; right: calc(50% - 16px); width: 7px; height: 7px; border-radius: 50%; background: var(--sig); }
+  /* the mini player sits just above the tabs; pages leave room for both */
+  .mini { bottom: calc(58px + env(safe-area-inset-bottom, 0px)); padding-bottom: 8px; }
+  .app { padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px)); }
+  .dropnote { bottom: calc(140px + env(safe-area-inset-bottom, 0px)) !important; }
+  .bar .barportal { display: none !important; }
+  .bar { padding-top: calc(12px + env(safe-area-inset-top, 0px)); padding-bottom: 10px; }
+  /* no zooming into fields on iPhone, and finger-sized controls */
+  input, textarea, select { font-size: 16px !important; }
+  .btn { min-height: 40px; }
+  .btn.small { min-height: 36px; }
+  .gear { padding: 8px 13px; }
+  .page { padding-bottom: 8px; }
+  .hhead h1, .page > h1 { font-size: clamp(34px, 9vw, 48px); }
+  .panel { padding: 16px; border-radius: 16px; }
+  .tabs { overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button { flex: none; }
+  .phero .row-actions, .sinfo .row-actions { gap: 6px; }
+  .poweredby { margin-bottom: 0; }
+
+  .moresheet { display: block; position: fixed; inset: 0; z-index: 30; }
+  .morescrim { position: absolute; inset: 0; background: rgba(0,0,0,.5); animation: npfade .2s ease; }
+  .morepanel { position: absolute; left: 0; right: 0; bottom: 0; max-height: 82dvh; overflow-y: auto; background: #151517; border-radius: 22px 22px 0 0; border-top: 1px solid var(--line);
+    padding: 8px 18px calc(18px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; animation: npsheet .28s cubic-bezier(.2,.8,.2,1); }
+  .moregrab { width: 40px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.2); justify-self: center; margin-bottom: 4px; }
+  .moregrid { display: grid; gap: 2px; }
+  .moregrid a { position: relative; padding: 13px 4px; font-size: 16px; font-weight: 600; color: var(--ink); border-bottom: 1px solid var(--line); }
+  .moregrid .tabdot { top: 50%; right: 8px; transform: translateY(-50%); }
+  .morelabel { margin: 4px 0 0; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .moreprojects { display: grid; gap: 4px; }
+  .moreprojects a { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 12px; align-items: center; padding: 6px 4px; color: var(--ink); }
+  .moreprojects img, .moreprojects a > span:first-child { width: 40px; height: 40px; border-radius: 8px; }
+  .moreprojects b { display: block; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .moreprojects small { color: var(--muted); font-size: 12.5px; }
+  .morefoot { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+}
+@keyframes npsheet { from { transform: translateY(100%); } }

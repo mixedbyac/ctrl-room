@@ -1,5 +1,6 @@
 'use client';
 import QualityBadge from '@/components/QualityBadge';
+import VersionStack, { StackIcon } from '@/components/VersionStack';
 import { InvoicePanel, InvoiceNotice, useInvoices, lockingInvoice } from '@/components/Invoices';
 import ShareButton from '@/components/ShareButton';
 import EditableTitle from '@/components/EditableTitle';
@@ -22,6 +23,9 @@ export default function ProjectPage() {
   const [p, setP] = useState(undefined);
   const [panel, setPanel] = useState(null); // 'share' | 'edit' | 'add'
   const [renaming, setRenaming] = useState(null);
+  const [stacks, setStacks] = useState({}); // song id -> open
+  const [noteCounts, setNoteCounts] = useState({});
+  const toggleStack = (sid) => setStacks((x) => ({ ...x, [sid]: !x[sid] }));
   const renameSong = async (song, raw) => {
     setRenaming(null);
     const t = String(raw || '').trim();
@@ -34,11 +38,18 @@ export default function ProjectPage() {
 
   const load = useCallback(async () => {
     const sb = supabase();
-    const cols = 'id,label,created_at,storage_path,file_name,duration,lufs,peak_db,rms_db,file_format,sample_rate,bit_depth,file_size,lossless';
+    const cols = 'id,label,note,created_at,storage_path,file_name,duration,lufs,peak_db,rms_db,file_format,sample_rate,bit_depth,file_size,lossless';
     let { data, error } = await sb.from('projects').select(`*, songs(*, versions(${cols}))`).eq('id', id).single();
     if (error && /column/i.test(error.message)) ({ data } = await sb.from('projects').select('*, songs(*, versions(*))').eq('id', id).single()); // older database
     if (data) data.songs = (data.songs || []).sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at));
     setP(data || null);
+    const ids = (data?.songs || []).map((x) => x.id);
+    if (ids.length) {
+      sb.from('notes').select('version_id').in('song_id', ids).then(({ data: ns }) => {
+        const c = {}; (ns || []).forEach((n) => { if (n.version_id) c[n.version_id] = (c[n.version_id] || 0) + 1; });
+        setNoteCounts(c);
+      });
+    }
   }, [id]);
   useEffect(() => { load(); }, [load]);
 
@@ -112,7 +123,7 @@ export default function ProjectPage() {
             const sub = vs.length ? statusText(s, vs) : s.eta ? `First mix ${fmtDate(s.eta)}` : statusText(s, vs);
             const fmtx = last ? fmtShort(last) : '';
             return (
-              <div key={s.id} className={`row ${vs.length ? '' : 'nomix'} ${pl.current?.song?.id === s.id ? 'cur' : ''} ${pl.current?.song?.id === s.id && pl.playing ? 'live' : ''}`} style={{ '--i': i }}>
+              <div key={s.id} className="rowwrap"><div className={`row ${vs.length ? '' : 'nomix'} ${stacks[s.id] ? 'stackopen' : ''} ${pl.current?.song?.id === s.id ? 'cur' : ''} ${pl.current?.song?.id === s.id && pl.playing ? 'live' : ''}`} style={{ '--i': i }}>
                 <button className="rplay" onClick={() => vs.length && playSong({ ...s, versions: vs })} disabled={!vs.length} aria-label={vs.length ? `Play ${s.title}` : 'No mix yet'}>
                   <span className="num">{i + 1}</span><svg viewBox="0 0 24 24">{pl.current?.song?.id === s.id && pl.playing ? <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" /> : <path d="M7 4.5v15l13-7.5z" />}</svg>
                   <span className="eq"><span /><span /><span /></span></button>
@@ -120,7 +131,7 @@ export default function ProjectPage() {
                   ? <input className="rowedit up" defaultValue={s.title} autoFocus maxLength={120} aria-label="Rename song" onClick={(e) => e.preventDefault()} onFocus={(e) => e.target.select()}
                       onBlur={(e) => renameSong(s, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } if (e.key === 'Escape') { e.currentTarget.value = s.title; e.currentTarget.blur(); } }} />
                   : <span className="t up">{s.title}</span>}<span className="rsub"><span className={`dot ${s.status}`}>{sub}</span>{last ? <span>· {shortDate(last.created_at)}</span> : null}</span></Link>
-                {eng && <span className="cell">{last ? <span className="vtag">{last.label}</span> : <span className="dim">—</span>}</span>}
+                {eng && <span className="cell">{vs.length ? <button className={`vstackbtn ${stacks[s.id] ? 'on' : ''}`} onClick={() => toggleStack(s.id)} aria-expanded={!!stacks[s.id]} title={`${vs.length} version${vs.length > 1 ? 's' : ''}`}><StackIcon /><span>{last?.label}</span></button> : <span className="dim">—</span>}</span>}
                 <span className="cell mono c-len">{last?.duration ? mmss(last.duration) : <span className="dim">—</span>}</span>
                 {eng && <>
                   <span className="cell mono" title={last?.lufs != null ? `${last.lufs} LUFS integrated` : 'Not measured yet'}>{last?.lufs != null ? last.lufs.toFixed(1) : <span className="dim">—</span>}</span>
@@ -130,7 +141,10 @@ export default function ProjectPage() {
                   <span className="cell c-key">{s.musical_key || <span className="dim">—</span>}</span>
                   <button className="rpen" onClick={() => setRenaming(s.id)} disabled={renaming === s.id} aria-label={`Rename ${s.title}`} title="Rename">✎</button>
                 </>}
-                <Link className="rmeta" href={`/s/${s.id}`} tabIndex={-1} aria-hidden="true">{!eng && last ? <span className="vtag">{last.label}</span> : null}<span className="chev">›</span></Link>
+                {!eng && vs.length > 0 ? <button className={`vstackbtn rmeta ${stacks[s.id] ? 'on' : ''}`} onClick={() => toggleStack(s.id)} aria-expanded={!!stacks[s.id]} title="Versions"><StackIcon /><span>{vs.length}</span></button>
+                  : <Link className="rmeta" href={`/s/${s.id}`} tabIndex={-1} aria-hidden="true"><span className="chev">›</span></Link>}
+              </div>
+              {stacks[s.id] && <VersionStack song={s} project={p} versions={vs.map((v) => ({ ...v }))} noteCounts={noteCounts} eng={eng} queue={queue} onChange={load} />}
               </div>
             );
           }) : <div className="empty-state"><strong>No songs yet</strong>{eng ? 'Add a song above, or have the client send files through the Portal.' : 'Send your files through the Portal to get started.'}</div>}

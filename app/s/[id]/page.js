@@ -1,5 +1,6 @@
 'use client';
 import QualityBadge from '@/components/QualityBadge';
+import InlineText from '@/components/InlineText';
 import { InvoiceNotice, useInvoices, lockingInvoice } from '@/components/Invoices';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -55,7 +56,8 @@ export default function SongPage() {
     pl.refresh(id, list);
     if (list.length) {
       const top = mixesOf(list).at(-1) || list[list.length - 1];
-      setVid((cur) => (cur && list.some((v) => v.id === cur) ? cur : top.id));
+      const asked = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('v') : null; // from a version stack link
+      setVid((cur) => (cur && list.some((v) => v.id === cur) ? cur : asked && list.some((v) => v.id === asked) ? asked : top.id));
     }
   }, [id]);
   useEffect(() => { load(); }, [load]);
@@ -594,22 +596,6 @@ function MiniWave({ peaks, progress = 0, active = false, w = 150, h = 30 }) {
   return <canvas ref={cv} className="miniwave" style={{ width: w, height: h }} aria-hidden="true" />;
 }
 
-/** Text that looks like plain text but is editable on hover (engineer). Enter or clicking away saves, Esc cancels. */
-function InlineText({ value, onSave, placeholder = '', suffix = '', width = 6, inputMode, label, className = '' }) {
-  const [draft, setDraft] = useState(value || '');
-  const [focus, setFocus] = useState(false);
-  useEffect(() => { if (!focus) setDraft(value || ''); }, [value, focus]);
-  const commit = async () => { setFocus(false); const t = draft.trim(); if (t !== (value || '')) await onSave(t); };
-  return (
-    <span className={`inl ${className} ${!value ? 'empty' : ''}`} title={`Click to edit ${label || ''}`.trim()}>
-      <input value={focus ? draft : (draft || '')} placeholder={placeholder} inputMode={inputMode} aria-label={label} size={Math.max(width, (draft || placeholder).length)}
-        onFocus={(e) => { setFocus(true); setTimeout(() => e.target.select(), 0); }} onChange={(e) => setDraft(e.target.value)} onBlur={commit}
-        onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}
-        onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { setDraft(value || ''); setFocus(false); e.currentTarget.blur(); } }} />
-      {value && suffix && !focus && <span className="inl-suf">{suffix}</span>}
-    </span>
-  );
-}
 
 function VersionPicker({ versions, vid, switchTo, eng, song, reload, setMsg, time, dur }) {
   const [open, setOpen] = useState(false);

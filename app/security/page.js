@@ -91,6 +91,7 @@ export default function SecurityPage() {
                   <li className="when"><small>Last checked {new Date(health.at).toLocaleString()}</small></li></ul>}
           </div>
         )}
+        {eng && <LoginCovers />}
         <div className="panel secpanel">
           <b>How your music is protected</b>
           <ul className="seclist">
@@ -104,5 +105,27 @@ export default function SecurityPage() {
         </div>
       </section>
     </>
+  );
+}
+
+function LoginCovers() {
+  const [url, setUrl] = useState('');
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+  const save = async (clear = false) => {
+    setBusy(true); setMsg('');
+    try { const r = await api('/api/covers', { url: clear ? '' : url }); setMsg(clear ? 'Back to generated covers.' : `Using ${r.covers} covers from that playlist. Open the sign-in page to see them.`); if (clear) setUrl(''); }
+    catch (e) { setMsg(e.message); }
+    setBusy(false);
+  };
+  return (
+    <div className="panel secpanel">
+      <b>Sign-in page covers</b>
+      <span className="muted small">Paste a public Apple Music playlist. Its cover art drifts quietly behind the sign-in page, and each cover links to the album. It refreshes once a day.</span>
+      <div className="aerow"><input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://music.apple.com/us/playlist/…" />
+        <button className="btn small primary" disabled={busy || !url.trim()} onClick={() => save(false)}>{busy ? 'Loading…' : 'Use playlist'}</button>
+        <button className="btn small quiet" disabled={busy} onClick={() => save(true)}>Clear</button></div>
+      {msg && <p className="toast-inline" style={{ margin: 0 }}>{msg}</p>}
+    </div>
   );
 }

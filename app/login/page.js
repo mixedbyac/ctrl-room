@@ -1,5 +1,6 @@
 'use client';
 import PoweredBy from '@/components/PoweredBy';
+import CoverDrift from '@/components/CoverDrift';
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -57,6 +58,7 @@ function Login() {
 
   return (
     <div className="login">
+      <CoverDrift />
       <div className="logincard">
         <img src="/logo.png" alt="" className="loginlogo" />
         <h1 className="up">CTRL ROOM</h1>

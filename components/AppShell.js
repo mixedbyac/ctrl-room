@@ -5,6 +5,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Cover from '@/components/Cover';
 import { PlayerProvider } from '@/components/Player';
+import UpdateWatcher, { getSeen } from '@/components/UpdateWatcher';
+import { forRole } from '@/lib/changelog';
 
 const Ctx = createContext(null);
 export const useApp = () => useContext(Ctx);
@@ -40,6 +42,14 @@ export default function AppShell({ children }) {
   useEffect(() => {
     if (session === null && !isPublic) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
   }, [session, isPublic, pathname, router]);
+
+  const [unseen, setUnseen] = useState(false);
+  useEffect(() => {
+    const check = () => { const l = forRole(eng); setUnseen(!!l[0] && getSeen() !== null && getSeen() !== l[0].id); };
+    check();
+    window.addEventListener('ctrl-room:seen', check);
+    return () => window.removeEventListener('ctrl-room:seen', check);
+  }, [eng]);
 
   const signOut = async () => { await supabase().auth.signOut(); router.replace('/login'); };
   const value = { session, email: session?.user?.email || '', eng, projects, reloadProjects, signOut };
@@ -86,6 +96,12 @@ export default function AppShell({ children }) {
               <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V4M7 9l5-5 5 5M4 15v4a1 1 0 001 1h14a1 1 0 001-1v-4" /></svg></span>Portal
             </Link>
           </div>
+          {session && (
+            <Link className="navitem" href="/whats-new" aria-current={pathname === '/whats-new'}>
+              <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l2.4 5.6L20 10l-4.5 3.9L17 20l-5-3-5 3 1.5-6.1L4 10l5.6-1.4z" /></svg></span>What’s new
+              {unseen && <span className="newdot" aria-label="New" />}
+            </Link>
+          )}
           <div className="sidefoot">
             {session ? (
               <>
@@ -98,6 +114,7 @@ export default function AppShell({ children }) {
           </div>
         </aside>
         <div className="app">{children}</div>
+        {session && <UpdateWatcher eng={eng} />}
       </div>
       </PlayerProvider>
     </Ctx.Provider>

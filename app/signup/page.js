@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useApp } from '@/components/AppShell';
 import SpotifyField from '@/components/SpotifyField';
+import { markEntering } from '@/components/EnterAnimation';
 
 function Signup() {
   const router = useRouter();
@@ -32,6 +33,7 @@ function Signup() {
       if (!r.ok) throw new Error(j.error || 'Couldn’t create your account. Try again.');
       const { error } = await supabase().auth.signInWithPassword({ email: f.email.trim().toLowerCase(), password: f.password });
       if (error) throw new Error('Your account is ready. Sign in with your email and password.');
+      markEntering();
       router.replace(next);
     } catch (er) { setErr(er.message); setBusy(false); }
   };

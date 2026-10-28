@@ -1,6 +1,7 @@
 'use client';
 import PoweredBy from '@/components/PoweredBy';
 import CoverDrift from '@/components/CoverDrift';
+import { markEntering } from '@/components/EnterAnimation';
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -42,6 +43,7 @@ function Login() {
     const { error } = await supabase().auth.verifyOtp({ email: email.trim(), token: code.trim(), type: 'email' });
     setBusy(false);
     if (error) return setErr("That code didn't work. Check the latest email, or send a new one.");
+    markEntering();
     router.replace(next);
   };
 
@@ -53,6 +55,7 @@ function Login() {
     const { error } = await supabase().auth.signInWithPassword({ email: email.trim(), password: pw });
     setBusy(false);
     if (error) return setErr("That email and password don't match.");
+    markEntering();
     router.replace(next);
   };
 
@@ -94,8 +97,8 @@ function Login() {
         {err && <p className="ferr">{err}</p>}
         <p className="muted small authswitch"><Link className="link" href="/protect">How your music is protected</Link></p>
         <p className="muted small authswitch">New here? <Link className="link" href={`/signup${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`}>Create an account</Link></p>
-        <PoweredBy />
       </div>
+      <PoweredBy className="pinned" />
     </div>
   );
 }

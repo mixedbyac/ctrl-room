@@ -1,3 +1,8 @@
 export default function PoweredBy({ className = '' }) {
-  return <p className={`poweredby ${className}`}>Powered by <a href="https://art-house.us" target="_blank" rel="noopener noreferrer"><b>ARTHOUSE</b></a></p>;
+  return (
+    <a className={`poweredby ${className}`} href="https://art-house.us" target="_blank" rel="noopener noreferrer" aria-label="Powered by arthouse">
+      <span>Powered by</span>
+      <img src="/arthouse.png" alt="arthouse" width="600" height="114" />
+    </a>
+  );
 }

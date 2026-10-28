@@ -9,6 +9,7 @@ import { installNativeBridge, isMacApp } from '@/lib/native';
 import MfaGate from '@/components/MfaGate';
 import PoweredBy from '@/components/PoweredBy';
 import TabBar from '@/components/TabBar';
+import EnterAnimation from '@/components/EnterAnimation';
 import VerifyBanner from '@/components/VerifyBanner';
 import UpdateWatcher, { getSeen } from '@/components/UpdateWatcher';
 import { forRole } from '@/lib/changelog';
@@ -89,7 +90,7 @@ export default function AppShell({ children }) {
   if (session && needMfa && !(portalHost || pathname.startsWith('/l/'))) {
     return <Ctx.Provider value={value}><MfaGate onDone={() => setMfaTick((t) => t + 1)} onSignOut={signOut} /></Ctx.Provider>;
   }
-  if (portalHost && session !== undefined) return <Ctx.Provider value={value}><div className="portalhost">{children}</div></Ctx.Provider>;
+  if (portalHost && session !== undefined) return <Ctx.Provider value={value}><div className="portalhost">{children}<PoweredBy /></div></Ctx.Provider>;
   if (pathname === '/login' || pathname === '/signup' || pathname === '/protect' || pathname === '/portal/prep' || pathname.startsWith('/l/')) return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
   if (session === undefined || (session === null && !isPublic)) {
     return <div className="boot"><img src="/logo.png" alt="" className="bootlogo" /></div>;
@@ -172,6 +173,7 @@ export default function AppShell({ children }) {
           {children}
           <PoweredBy />
         </div>
+        <EnterAnimation active={!!session && !needMfa} />
         {session && <UpdateWatcher eng={eng} />}
         {session && <TabBar eng={eng} projects={projects} email={session.user.email} signOut={signOut} unseen={unseen} />}
       </div>

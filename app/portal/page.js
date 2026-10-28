@@ -1,6 +1,5 @@
 'use client';
 import InlineText from '@/components/InlineText';
-import PoweredBy from '@/components/PoweredBy';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { supabase, api } from '@/lib/supabase';
@@ -240,7 +239,6 @@ export default function Portal() {
             <p className="fine">Up to 2 GB per upload.</p>
           </aside>
         </div>
-        <PoweredBy />
       </section>
     </>
   );

@@ -129,7 +129,13 @@ export default function SongPage() {
             <p className="eyebrow"><Link href={`/p/${p.id}`}>{p.title}</Link> · {p.artist}</p>
             <SongTitle song={song} eng={eng} reload={load} />
             <div className="meta"><span className={`dot ${song.status}`}>{statusText(song, versions)}</span>
-              <span>{[song.bpm ? `${song.bpm} BPM` : '', mixesOf(versions).length ? `${mixesOf(versions).length} version${mixesOf(versions).length > 1 ? 's' : ''}${demoOf(versions) ? ' + demo' : ''}` : demoOf(versions) ? 'Demo only' : ''].filter(Boolean).join(' · ')}</span></div>
+              {eng ? <>
+                <InlineText value={song.bpm ? String(song.bpm) : ''} placeholder="BPM" suffix=" BPM" width={4} inputMode="decimal" label="BPM"
+                  onSave={async (t) => { const n = Number(String(t).replace(',', '.')); if (t && !(n > 20 && n < 400)) return setMsg('BPM should be a number like 92 or 140.'); await supabase().from('songs').update({ bpm: t ? Math.round(n * 10) / 10 : null }).eq('id', song.id); load(); }} />
+                <InlineText value={song.musical_key || ''} placeholder="Key" width={8} label="Key"
+                  onSave={async (t) => { await supabase().from('songs').update({ musical_key: t || null }).eq('id', song.id); load(); }} />
+              </> : [song.bpm ? `${song.bpm} BPM` : '', song.musical_key].filter(Boolean).map((x) => <span key={x}>{x}</span>)}
+              <span>{[mixesOf(versions).length ? `${mixesOf(versions).length} version${mixesOf(versions).length > 1 ? 's' : ''}${demoOf(versions) ? ' + demo' : ''}` : demoOf(versions) ? 'Demo only' : ''].filter(Boolean).join(' · ')}</span></div>
             {hasMix && <div className="shbar"><ShareButton kind="song" id={song.id} eng={eng} title={song.title} /></div>}
             {v?.note && <p className="vnote">{v.label}: {v.note}</p>}
             {eng && <DeliverVersion song={song} versions={versions} onDone={load} setMsg={setMsg} />}
@@ -140,10 +146,8 @@ export default function SongPage() {
         </div>
 
         {hasMix ? (
-          <>
-            <VersionPicker {...{ versions, vid, switchTo, eng, song, reload: load, setMsg, time, dur: dur || v?.duration || 0, playing }} />
-            <Scrub {...{ v, notes, time, dur: dur || v?.duration || 0, seek, eng, plays }} />
-          </>
+          <Scrub {...{ v, notes, time, dur: dur || v?.duration || 0, seek, eng, plays }}
+            header={<VersionPicker {...{ versions, vid, switchTo, eng, song, reload: load, setMsg, time, dur: dur || v?.duration || 0 }} />} />
         ) : (
           <div className="nomix"><strong className="up">No mix yet</strong>{song.eta ? `The first mix is expected ${fmtDate(song.eta)}.` : 'The first mix will show up here.'}{p.phone ? " You'll get a text the moment it's ready." : ''}</div>
         )}
@@ -256,7 +260,7 @@ function Decision({ eng, song, v, versions, notes, reload, setMsg, setTab }) {
 }
 
 /* ---------- waveform + markers ---------- */
-function Scrub({ v, notes, time, dur, seek, eng, plays }) {
+function Scrub({ v, notes, time, dur, seek, eng, plays, header = null }) {
   const cv = useRef(null), wrap = useRef(null);
   const [hover, setHover] = useState(null);
   const drag = useRef(false);
@@ -280,15 +284,9 @@ function Scrub({ v, notes, time, dur, seek, eng, plays }) {
   });
   const xToT = (e) => { const r = wrap.current.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * dur; };
   const vNotes = notes.filter((n) => n.version_id === v?.id && n.t != null).sort((a, b) => a.t - b.t);
-  const heat = useMemo(() => {
-    if (!eng || !v) return null;
-    const h = new Array(BINS).fill(0);
-    plays.filter((x) => x.version_id === v.id && x.bins).forEach((x) => x.bins.split(',').forEach((n, i) => { h[i] += Number(n) || 0; }));
-    return h;
-  }, [eng, plays, v]);
-  const mx = heat ? Math.max(...heat) : 0;
   return (
     <div className="scrub">
+      {header}
       <div className="wave" ref={wrap}
         onPointerDown={(e) => { drag.current = true; e.currentTarget.setPointerCapture(e.pointerId); seek(xToT(e)); }}
         onPointerMove={(e) => { const r = wrap.current.getBoundingClientRect(); setHover(Math.max(0, Math.min(r.width, e.clientX - r.left))); if (drag.current) seek(xToT(e)); }}
@@ -302,12 +300,6 @@ function Scrub({ v, notes, time, dur, seek, eng, plays }) {
           <button key={n.id} className={`mk ${n.resolved ? 'done' : ''}`} style={{ left: `${(n.t / dur) * 100}%` }} title={`${fmt(n.t)} · ${n.body}`} onClick={() => seek(n.t)} aria-label={`Note ${i + 1} at ${fmt(n.t)}`}>{i + 1}</button>
         ))}
       </div>
-      {heat && (
-        <div className="listenmap">
-          <div className="lmlabel"><b>Listen map</b><span>{mx ? `Heard ${Math.round((heat.filter((x) => x > 0).length / BINS) * 100)}% of ${v.label}` : `The client hasn't played ${v.label} yet.`}</span></div>
-          <div className={`lmbars ${mx ? '' : 'empty'}`}>{heat.map((x, i) => <i key={i} style={{ opacity: mx ? (x ? 0.18 + (0.82 * x) / mx : 0) : 1 }} />)}</div>
-        </div>
-      )}
       <div className="times"><span className="mono">{fmt(time)}</span><span className="mono fmtinfo" title="Played straight from the uploaded file: no compression, no limiting, no volume changes.">{describeFormat(v) ? <><b>{describeFormat(v)}</b> · {v.lossless === false ? 'as uploaded, no extra compression' : 'original, untouched'}</> : 'Original file, untouched'}{v?.peak_db != null ? ` · Peak ${v.peak_db} dBFS` : ''}</span><span className="mono">{fmt(dur)}</span></div>
     </div>
   );
@@ -491,7 +483,24 @@ function About({ song, eng, reload }) {
 /* ---------- listening (engineer) ---------- */
 function Listening({ plays, versions }) {
   const label = (id) => versions.find((x) => x.id === id)?.label || '';
+  // listen map per version: which parts of the song the client actually heard
+  const maps = [...versions].reverse().map((ver) => {
+    const h = new Array(BINS).fill(0);
+    plays.filter((x) => x.version_id === ver.id && x.bins).forEach((x) => x.bins.split(',').forEach((n, i) => { h[i] += Number(n) || 0; }));
+    return { ver, h, mx: Math.max(...h) };
+  }).filter((m) => m.mx > 0);
   return (
+    <>
+    {maps.length > 0 && (
+      <div className="lmaps">
+        {maps.map(({ ver, h, mx }) => (
+          <div key={ver.id} className="listenmap">
+            <div className="lmlabel"><b>{ver.label}</b><span>Heard {Math.round((h.filter((x) => x > 0).length / BINS) * 100)}% · brighter = played more</span></div>
+            <div className="lmbars">{h.map((x, i) => <i key={i} style={{ opacity: x ? 0.18 + (0.82 * x) / mx : 0.06 }} />)}</div>
+          </div>
+        ))}
+      </div>
+    )}
     <ul className="act">
       {plays.length ? plays.map((x) => {
         const pct = x.duration ? Math.min(100, Math.round((x.listened / x.duration) * 100)) : 0;
@@ -503,6 +512,7 @@ function Listening({ plays, versions }) {
         );
       }) : <li><span className="muted">No plays yet. You'll see each listen here: who, which version, what device, and how much they heard.</span></li>}
     </ul>
+    </>
   );
 }
 
@@ -575,10 +585,25 @@ function MiniWave({ peaks, progress = 0, active = false, w = 150, h = 30 }) {
   return <canvas ref={cv} className="miniwave" style={{ width: w, height: h }} aria-hidden="true" />;
 }
 
+/** Text that looks like plain text but is editable on hover (engineer). Enter or clicking away saves, Esc cancels. */
+function InlineText({ value, onSave, placeholder = '', suffix = '', width = 6, inputMode, label, className = '' }) {
+  const [draft, setDraft] = useState(value || '');
+  const [focus, setFocus] = useState(false);
+  useEffect(() => { if (!focus) setDraft(value || ''); }, [value, focus]);
+  const commit = async () => { setFocus(false); const t = draft.trim(); if (t !== (value || '')) await onSave(t); };
+  return (
+    <span className={`inl ${className} ${!value ? 'empty' : ''}`} title={`Click to edit ${label || ''}`.trim()}>
+      <input value={focus ? draft : (draft || '')} placeholder={placeholder} inputMode={inputMode} aria-label={label} size={Math.max(width, (draft || placeholder).length)}
+        onFocus={(e) => { setFocus(true); setTimeout(() => e.target.select(), 0); }} onChange={(e) => setDraft(e.target.value)} onBlur={commit}
+        onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}
+        onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { setDraft(value || ''); setFocus(false); e.currentTarget.blur(); } }} />
+      {value && suffix && !focus && <span className="inl-suf">{suffix}</span>}
+    </span>
+  );
+}
+
 function VersionPicker({ versions, vid, switchTo, eng, song, reload, setMsg, time, dur }) {
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [draft, setDraft] = useState('');
   const box = useRef(null);
   const cur = versions.find((x) => x.id === vid) || versions.at(-1);
   const latest = latestMix(versions);
@@ -589,45 +614,44 @@ function VersionPicker({ versions, vid, switchTo, eng, song, reload, setMsg, tim
     document.addEventListener('pointerdown', off); document.addEventListener('keydown', esc);
     return () => { document.removeEventListener('pointerdown', off); document.removeEventListener('keydown', esc); };
   }, [open]);
-  const rename = async (ver) => {
-    const nl = draft.trim(); setEditing(null);
-    if (!nl || nl === ver.label) return;
+  const rename = async (ver, nl) => {
+    if (!nl) return;
     if (versions.some((x) => x.id !== ver.id && x.label.toLowerCase() === nl.toLowerCase())) return setMsg(`There's already a version called ${nl}.`);
-    const { error } = await supabase().from('versions').update({ label: nl }).eq('id', ver.id);
+    const { error } = await supabase().from('versions').update({ label: nl.slice(0, 20) }).eq('id', ver.id);
     setMsg(error ? error.message : `Renamed ${ver.label} to ${nl}.`);
     reload();
   };
   const tags = (x) => [isDemo(x) ? 'Demo' : '', x.id === latest?.id ? 'Latest' : '', song.approved_version === x.id ? 'Approved' : ''].filter(Boolean);
   const prog = dur ? time / dur : 0;
+  // (a plain function, not a component, so the box keeps focus while the player ticks)
+  const name = (x) => (eng
+    ? <InlineText key={`n-${x.id}`} value={x.label} onSave={(t) => rename(x, t)} width={3} label={`Name of ${x.label}`} className="vp-inl" />
+    : <b>{x.label}</b>);
   if (!cur) return null;
   return (
     <div className="vpick2" ref={box}>
-      <button className={`vp-trigger ${open ? 'open' : ''}`} onClick={() => setOpen(!open)} aria-haspopup="listbox" aria-expanded={open}>
-        <span className="vp-lab"><b>{cur.label}</b>{tags(cur).map((t) => <i key={t} className={`vp-tag ${t.toLowerCase()}`}>{t}</i>)}</span>
-        <MiniWave peaks={cur.peaks} progress={prog} active w={180} h={26} />
-        <span className="vp-count">{versions.length} version{versions.length === 1 ? '' : 's'}</span>
-        <svg className="vp-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
-      </button>
+      <div className={`vp-trigger ${open ? 'open' : ''}`}>
+        <span className="vp-lab">{name(cur)}{tags(cur).map((t) => <i key={t} className={`vp-tag ${t.toLowerCase()}`}>{t}</i>)}</span>
+        <button className="vp-open" onClick={() => setOpen(!open)} aria-haspopup="listbox" aria-expanded={open} aria-label="Choose a version">
+          <MiniWave peaks={cur.peaks} progress={prog} active w={180} h={24} />
+          <span className="vp-count">{versions.length} version{versions.length === 1 ? '' : 's'}</span>
+          <svg className="vp-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+        </button>
+      </div>
       {open && (
         <ul className="vp-list" role="listbox" aria-label="Versions">
           {[...versions].reverse().map((x) => (
-            <li key={x.id} role="option" aria-selected={x.id === vid} className={`${x.id === vid ? 'on' : ''} ${isDemo(x) ? 'demo' : ''}`}>
-              <button className="vp-row" onClick={() => { switchTo(x.id); setOpen(false); }}>
-                <span className="vp-name">
-                  {editing === x.id
-                    ? <input className="vrename" value={draft} maxLength={14} autoFocus aria-label={`Rename ${x.label}`} onClick={(e) => e.stopPropagation()}
-                        onChange={(e) => setDraft(e.target.value)} onBlur={() => rename(x)}
-                        onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditing(null); }} />
-                    : <b>{x.label}</b>}
-                  {tags(x).map((t) => <i key={t} className={`vp-tag ${t.toLowerCase()}`}>{t}</i>)}
-                  <small>{[shortDate(x.created_at), x.duration ? mmss(x.duration) : '', eng && x.lufs != null ? `${x.lufs.toFixed(1)} LUFS` : '', x.note].filter(Boolean).join(' · ')}</small>
-                </span>
-                <MiniWave peaks={x.peaks} progress={x.id === vid ? prog : 0} active={x.id === vid} />
-              </button>
-              {eng && editing !== x.id && <button className="vedit" title="Rename" aria-label={`Rename ${x.label}`} onClick={() => { setDraft(x.label); setEditing(x.id); }}>✎</button>}
+            <li key={x.id} role="option" aria-selected={x.id === vid} className={`${x.id === vid ? 'on' : ''} ${isDemo(x) ? 'demo' : ''}`}
+              onClick={() => { switchTo(x.id); setOpen(false); }}>
+              <span className="vp-name">
+                {name(x)}
+                {tags(x).map((t) => <i key={t} className={`vp-tag ${t.toLowerCase()}`}>{t}</i>)}
+                <small>{[shortDate(x.created_at), x.duration ? mmss(x.duration) : '', eng && x.lufs != null ? `${x.lufs.toFixed(1)} LUFS` : '', x.note].filter(Boolean).join(' · ')}</small>
+              </span>
+              <MiniWave peaks={x.peaks} progress={x.id === vid ? prog : 0} active={x.id === vid} />
             </li>
           ))}
-          <li className="vp-hint">Switching keeps your spot in the song. Press <kbd>X</kbd> to jump back to the last one.</li>
+          <li className="vp-hint">{eng ? 'Hover a name and click to rename it. ' : ''}Switching keeps your spot. <kbd>X</kbd> jumps back.</li>
         </ul>
       )}
     </div>

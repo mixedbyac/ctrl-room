@@ -8,12 +8,15 @@ import Cover from '@/components/Cover';
 import { fmtDate, shortDate, statusText } from '@/lib/format';
 import { parseMixName, matchSong } from '@/lib/filename';
 import { deliverFile } from '@/lib/deliver';
+import { usePlayer } from '@/components/Player';
+import CoverMenu from '@/components/CoverMenu';
 
 export default function ProjectPage() {
   const { id } = useParams();
   const { eng, reloadProjects } = useApp();
   const [p, setP] = useState(undefined);
   const [panel, setPanel] = useState(null); // 'share' | 'edit' | 'add'
+  const pl = usePlayer();
 
   const load = useCallback(async () => {
     const { data } = await supabase().from('projects').select('*, songs(*, versions(id,label,created_at))').eq('id', id).single();
@@ -31,6 +34,12 @@ export default function ProjectPage() {
   const approved = p.songs.filter((s) => s.status === 'approved').length;
   const ready = p.songs.filter((s) => s.status === 'review').length;
   const firstPlayable = p.songs.find((s) => s.versions?.length);
+  const queue = p.songs.filter((s) => s.versions?.length).map((s) => s.id);
+  const playSong = (s) => {
+    if (pl.current?.song?.id === s.id) return pl.toggle();
+    pl.play({ songId: s.id, project: p, queue });
+  };
+  const projectPlaying = pl.playing && pl.current?.project?.id === p.id;
   const crumbs = eng ? [{ label: 'Home', href: '/' }, { label: p.title }] : [{ label: 'Projects', href: '/' }, { label: p.title }];
 
   return (
@@ -39,14 +48,16 @@ export default function ProjectPage() {
       <section className="page">
         <div className="phero">
           <div className="sleevewrap">
-            <div className="record"><div className="vinyl"><Cover as="div" seed={p.seed} size={240} className="lbl" /></div></div>
-            <div className="sleeve"><Cover seed={p.seed} size={600} alt={`${p.title} cover`} /></div>
+            <div className="record"><div className="vinyl spin"><Cover as="div" seed={p.seed} path={p.cover_path} size={240} className="lbl" /></div></div>
+            <div className="sleeve hascm"><Cover seed={p.seed} path={p.cover_path} size={600} alt={`${p.title} cover`} />
+              {eng && <CoverMenu table="projects" row={p} onChange={() => { load(); reloadProjects(); }} />}</div>
           </div>
           <div className="pinfo">
             <h1 className="up">{p.title}</h1>
             <p className="psub">{p.artist} · {p.type} · {p.songs.length} song{p.songs.length === 1 ? '' : 's'} · {approved} approved{p.release ? ` · out ${fmtDate(p.release)}` : ''}</p>
             <div className="prow">
-              {firstPlayable && <Link className="bigplay" href={`/s/${firstPlayable.id}`} aria-label="Open the first mix"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z" /></svg></Link>}
+              {firstPlayable && <button className="bigplay" onClick={() => (pl.current?.project?.id === p.id ? pl.toggle() : playSong(firstPlayable))} aria-label={projectPlaying ? 'Pause' : 'Play the project'}>
+                <svg viewBox="0 0 24 24">{projectPlaying ? <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" /> : <path d="M7 4.5v15l13-7.5z" />}</svg></button>}
               {!eng && <span className="chipnote">{ready ? `${ready} mix${ready > 1 ? 'es' : ''} waiting on you` : "You're all caught up"}</span>}
               {eng && <>
                 <button className="gear" onClick={() => setPanel(panel === 'share' ? null : 'share')}>Share with client</button>
@@ -69,11 +80,13 @@ export default function ProjectPage() {
             const last = vs.at(-1);
             const sub = vs.length ? statusText(s, vs) : s.eta ? `First mix ${fmtDate(s.eta)}` : statusText(s, vs);
             return (
-              <Link key={s.id} href={`/s/${s.id}`} className={`row ${vs.length ? '' : 'nomix'}`} style={{ '--i': i }}>
-                <span className="rplay"><span className="num">{i + 1}</span><svg viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z" /></svg></span>
-                <span className="ropen"><span className="t up">{s.title}</span><span className="rsub"><span className={`dot ${s.status}`}>{sub}</span>{last ? <span>· {shortDate(last.created_at)}</span> : null}</span></span>
-                <span className="rmeta">{last ? <span className="vtag">{last.label}</span> : null}<span className="chev" aria-hidden="true">›</span></span>
-              </Link>
+              <div key={s.id} className={`row ${vs.length ? '' : 'nomix'} ${pl.current?.song?.id === s.id ? 'cur' : ''} ${pl.current?.song?.id === s.id && pl.playing ? 'live' : ''}`} style={{ '--i': i }}>
+                <button className="rplay" onClick={() => vs.length && playSong({ ...s, versions: vs })} disabled={!vs.length} aria-label={vs.length ? `Play ${s.title}` : 'No mix yet'}>
+                  <span className="num">{i + 1}</span><svg viewBox="0 0 24 24">{pl.current?.song?.id === s.id && pl.playing ? <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" /> : <path d="M7 4.5v15l13-7.5z" />}</svg>
+                  <span className="eq"><span /><span /><span /></span></button>
+                <Link className="ropen" href={`/s/${s.id}`}><span className="t up">{s.title}</span><span className="rsub"><span className={`dot ${s.status}`}>{sub}</span>{last ? <span>· {shortDate(last.created_at)}</span> : null}</span></Link>
+                <Link className="rmeta" href={`/s/${s.id}`} tabIndex={-1} aria-hidden="true">{last ? <span className="vtag">{last.label}</span> : null}<span className="chev">›</span></Link>
+              </div>
             );
           }) : <div className="empty-state"><strong>No songs yet</strong>{eng ? 'Add a song above, or have the client send files through the Portal.' : 'Send your files through the Portal to get started.'}</div>}
         </div>

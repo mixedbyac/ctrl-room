@@ -116,7 +116,7 @@ function EngineerHome() {
                 const next = (p.songs || []).filter((s) => s.eta && s.status !== 'approved').map((s) => s.eta).sort()[0];
                 return (
                   <Link key={p.id} className="pcard" href={`/p/${p.id}`}>
-                    <span className="pc-art"><span className="pc-rec" /><Cover seed={p.seed} size={360} /></span>
+                    <span className="pc-art"><span className="pc-rec" /><Cover seed={p.seed} path={p.cover_path} size={360} /></span>
                     <b className="up">{p.title}</b>
                     <span className="pc-sub">{p.artist} · {p.type}</span>
                     <span className="pc-bar"><i style={{ width: `${n ? (ap / n) * 100 : 0}%` }} /></span>

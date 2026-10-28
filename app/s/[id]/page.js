@@ -8,6 +8,8 @@ import Cover from '@/components/Cover';
 import { fmt, mmss, fmtDate, shortDate, ago, statusText, nextLabel, deviceName, todayISO } from '@/lib/format';
 import { deliverFile } from '@/lib/deliver';
 import { describeFormat } from '@/lib/fileinfo';
+import { usePlayer } from '@/components/Player';
+import CoverMenu from '@/components/CoverMenu';
 
 const BINS = 100;
 const PLAY = <path d="M7 4.5v15l13-7.5z" />;
@@ -21,17 +23,18 @@ export default function SongPage() {
   const [notes, setNotes] = useState([]);
   const [updates, setUpdates] = useState([]);
   const [plays, setPlays] = useState([]);
-  const [urls, setUrls] = useState({});
   const [vid, setVid] = useState(null);
   const [ab, setAb] = useState({ a: null, b: null });
   const [tab, setTab] = useState('notes');
   const [msg, setMsg] = useState('');
 
-  // playback
-  const audios = useRef({});
-  const [playing, setPlaying] = useState(false);
-  const [time, setTime] = useState(0);
-  const [dur, setDur] = useState(0);
+  // playback goes through the app-wide player, so it keeps going when you leave this page
+  const pl = usePlayer();
+  const isCur = pl.current?.song?.id === id;
+  const playing = isCur && pl.playing;
+  const time = isCur ? pl.time : 0;
+  const dur = isCur ? pl.duration : 0;
+  const [queueIds, setQueueIds] = useState([]);
 
   const load = useCallback(async () => {
     const sb = supabase();
@@ -44,11 +47,9 @@ export default function SongPage() {
     ]);
     setSong(s); setVersions(vs || []); setNotes(ns || []); setUpdates(us || []);
     const list = vs || [];
+    sb.from('songs').select('id').eq('project_id', s.project_id).order('position').then(({ data }) => setQueueIds((data || []).map((x) => x.id)));
+    pl.refresh(id, list);
     if (list.length) {
-      const { data: signed } = await sb.storage.from('mixes').createSignedUrls(list.map((v) => v.storage_path), 6 * 3600);
-      const map = {};
-      (signed || []).forEach((x, i) => { if (x.signedUrl) map[list[i].id] = x.signedUrl; });
-      setUrls(map);
       setVid((cur) => (cur && list.some((v) => v.id === cur) ? cur : list[list.length - 1].id));
       setAb((cur) => (cur.a && cur.b && list.some((v) => v.id === cur.a) && list.some((v) => v.id === cur.b) ? cur
         : { a: list[Math.max(0, list.length - 2)].id, b: list[list.length - 1].id }));
@@ -63,89 +64,22 @@ export default function SongPage() {
   const v = versions.find((x) => x.id === vid) || null;
   const p = song?.projects;
 
-  /* ---------- audio ---------- */
-  const audioFor = useCallback((verId) => {
-    if (!urls[verId]) return null;
-    let a = audios.current[verId];
-    if (!a) {
-      a = new Audio();
-      a.preload = 'auto';
-      a.volume = 1; // full, unchanged level — no processing anywhere in the chain
-      a.src = urls[verId];
-      a.addEventListener('ended', () => setPlaying(false));
-      a.addEventListener('loadedmetadata', () => { if (verId === vidRef.current) setDur(a.duration || 0); });
-      audios.current[verId] = a;
-    }
-    return a;
-  }, [urls]);
-  const vidRef = useRef(vid);
-  useEffect(() => { vidRef.current = vid; const a = vid && audioFor(vid); if (a) setDur(a.duration || v?.duration || 0); }, [vid, audioFor, v]);
-  useEffect(() => () => { Object.values(audios.current).forEach((a) => { a.pause(); a.src = ''; }); document.body.classList.remove('playing'); }, []);
-  useEffect(() => { document.body.classList.toggle('playing', playing); }, [playing]);
-
-  const cur = () => (vid ? audioFor(vid) : null);
-  const play = () => { const a = cur(); if (!a) return; a.play().then(() => setPlaying(true)).catch(() => setMsg("Couldn't start playback. Tap play again.")); };
-  const pause = () => { const a = cur(); if (a) a.pause(); setPlaying(false); };
-  const toggle = () => (playing ? pause() : play());
-  const seek = (t) => { const a = cur(); if (a) { a.currentTime = Math.max(0, Math.min(t, a.duration || t)); setTime(a.currentTime); } };
+  /* ---------- controls (app-wide player) ---------- */
+  useEffect(() => { if (isCur && pl.current.versionId !== vid) setVid(pl.current.versionId); }, [isCur, pl.current?.versionId]); // eslint-disable-line
+  const start = (at = 0, versionId = vid) => pl.play({ song, project: p, versions, versionId, at, queue: queueIds.length ? queueIds : [id] });
+  const toggle = () => (isCur ? pl.toggle() : start(0));
+  const seek = (t) => (isCur ? pl.seek(t) : start(t));
   const switchTo = (newId) => {
     if (!newId || newId === vid) return;
-    const a = cur(), t = a ? a.currentTime : 0, was = playing;
-    if (a) a.pause();
     setVid(newId);
-    const b = audioFor(newId);
-    if (b) {
-      const go = () => { try { b.currentTime = Math.min(t, b.duration || t); } catch {} if (was) b.play().catch(() => {}); };
-      if (b.readyState >= 1) go(); else b.addEventListener('loadedmetadata', go, { once: true });
-    }
+    if (isCur) pl.switchVersion(newId);
     document.querySelector('.bigdisc')?.animate?.([{ transform: 'rotate(0)' }, { transform: 'rotate(-28deg)' }, { transform: 'rotate(8deg)' }, { transform: 'rotate(0)' }], { duration: 550, easing: 'cubic-bezier(.3,.7,.3,1)' });
   };
   const flip = () => { if (ab.a && ab.b) switchTo(vid === ab.b ? ab.a : ab.b); };
 
-  /* ---------- frame loop: time, turntable, listen tracking ---------- */
-  const track = useRef(null);
-  const rot = useRef({ angle: 0, vel: 0, last: 0 });
-  useEffect(() => {
-    let raf;
-    const loop = (ts) => {
-      const r = rot.current, dt = Math.min(0.05, (ts - (r.last || ts)) / 1000); r.last = ts;
-      const a = vid ? audios.current[vid] : null;
-      if (a && playing) setTime(a.currentTime);
-      const target = playing ? 1 : 0;
-      r.vel += (target - r.vel) * (target > r.vel ? 2.2 : 1.1) * dt;
-      if (Math.abs(r.vel) > 0.001) { r.angle = (r.angle + r.vel * 200 * dt) % 360; document.body.style.setProperty('--rot', r.angle.toFixed(2) + 'deg'); }
-      if (!eng && a && playing && a.duration) listen(a);
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  });
-
-  function listen(a) {
-    let t = track.current;
-    if (!t || t.vid !== vid) {
-      t = track.current = { vid, bins: new Uint8Array(BINS), last: null, rowId: null, creating: false, savedAt: 0 };
-    }
-    const d = a.duration, pos = a.currentTime, b = Math.min(BINS - 1, Math.floor((pos / d) * BINS));
-    if (t.last != null && pos >= t.last && pos - t.last < 1) t.bins[b] = Math.min(255, t.bins[b] + (t.lastBin !== b ? 1 : 0));
-    t.lastBin = b; t.last = pos;
-    const covered = t.bins.reduce((n, x) => n + (x ? 1 : 0), 0), listened = (covered / BINS) * d;
-    const now = Date.now();
-    if (!t.rowId && !t.creating) {
-      t.creating = true;
-      const from = new URLSearchParams(window.location.search).get('from');
-      supabase().from('plays').insert({ song_id: id, version_id: vid, device: deviceName(), source: from === 'text' ? 'from your text' : 'in Ctrl Room', duration: d, listened: 0 })
-        .select('id').single().then(({ data }) => { if (data) t.rowId = data.id; t.creating = false; });
-    } else if (t.rowId && now - t.savedAt > 5000) {
-      t.savedAt = now;
-      supabase().from('plays').update({ listened, duration: d, bins: Array.from(t.bins).join(','), updated_at: new Date().toISOString() }).eq('id', t.rowId).then(() => {});
-    }
-  }
-
   useEffect(() => {
     const k = (e) => {
       if (e.target.closest('textarea,input,select,[contenteditable]')) return;
-      if (e.code === 'Space' && !e.target.closest('button')) { e.preventDefault(); toggle(); }
       if ((e.key === 'x' || e.key === 'X') && !e.metaKey && !e.ctrlKey) flip();
     };
     document.addEventListener('keydown', k);
@@ -175,8 +109,9 @@ export default function SongPage() {
       <TopBar crumbs={crumbs} />
       <section className="page">
         <div className="shero">
-          <div className="bigdisc">
-            <Cover as="div" seed={song.seed} size={640} className="art spin" />
+          <div className="bigdisc hascm">
+            <Cover as="div" seed={song.seed} path={song.cover_path} size={640} className="art spin" />
+            {eng && <CoverMenu table="songs" row={song} onChange={load} className="ondisc" />}
             <div className="arm" aria-hidden="true"><svg viewBox="0 0 100 170">
               <circle cx="80" cy="14" r="13" fill="#1d1d20" stroke="#3a3a40" strokeWidth="2" />
               <circle cx="80" cy="14" r="5" fill="#9a9aa2" />
@@ -184,7 +119,7 @@ export default function SongPage() {
               <rect x="30" y="136" width="22" height="30" rx="4" fill="#ececef" transform="rotate(28 41 151)" />
               <rect x="34" y="150" width="6" height="8" rx="1.5" fill="#f5d547" transform="rotate(28 41 151)" />
             </svg></div>
-            <button className="hub" onClick={toggle} disabled={!v || !urls[v.id]} aria-label={playing ? 'Pause' : 'Play'}><svg viewBox="0 0 24 24">{playing ? PAUSE : PLAY}</svg></button>
+            <button className="hub" onClick={toggle} disabled={!v} aria-label={playing ? 'Pause' : 'Play'}><svg viewBox="0 0 24 24">{playing ? PAUSE : PLAY}</svg></button>
           </div>
           <div className="sinfo">
             <p className="eyebrow"><Link href={`/p/${p.id}`}>{p.title}</Link> · {p.artist}</p>

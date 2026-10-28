@@ -32,6 +32,7 @@ create table if not exists projects (
   client_email text,
   phone text,
   settings jsonb not null default '{}'::jsonb,
+  cover_path text,
   archived boolean not null default false,
   created_at timestamptz not null default now()
 );
@@ -66,6 +67,7 @@ create table if not exists songs (
   mixing_at date,
   files_summary text,
   seed bigint not null default floor(random() * 1000000000),
+  cover_path text,
   created_at timestamptz not null default now()
 );
 

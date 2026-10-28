@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Cover from '@/components/Cover';
+import { PlayerProvider } from '@/components/Player';
 
 const Ctx = createContext(null);
 export const useApp = () => useContext(Ctx);
@@ -26,7 +27,7 @@ export default function AppShell({ children }) {
   }, []);
 
   const reloadProjects = useCallback(async () => {
-    const { data } = await supabase().from('projects').select('id,title,artist,seed,archived').order('created_at', { ascending: false });
+    const { data } = await supabase().from('projects').select('*').order('created_at', { ascending: false });
     setProjects(data || []);
   }, []);
 
@@ -51,6 +52,7 @@ export default function AppShell({ children }) {
   const live = projects.filter((p) => !p.archived);
   return (
     <Ctx.Provider value={value}>
+      <PlayerProvider eng={eng}>
       <div className="frame">
         <aside className="side">
           <Link href="/" className="word"><img className="logo" src="/logo.png" alt="" /><span className="wtxt">Ctrl Room</span></Link>
@@ -72,7 +74,7 @@ export default function AppShell({ children }) {
               <div style={{ display: 'grid', gap: 2 }}>
                 {live.map((p) => (
                   <Link key={p.id} className="navitem" href={`/p/${p.id}`} aria-current={pathname.startsWith(`/p/${p.id}`)}>
-                    <Cover seed={p.seed} size={64} />{p.title}
+                    <Cover seed={p.seed} path={p.cover_path} size={64} />{p.title}
                   </Link>
                 ))}
               </div>
@@ -97,6 +99,7 @@ export default function AppShell({ children }) {
         </aside>
         <div className="app">{children}</div>
       </div>
+      </PlayerProvider>
     </Ctx.Provider>
   );
 }

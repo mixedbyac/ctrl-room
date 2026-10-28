@@ -206,7 +206,14 @@ export function TopBar({ crumbs = [], right = null }) {
   const { eng, session } = useApp();
   return (
     <div className="bar">
-      <Link href="/"><img className="barlogo" src="/logo.png" alt="CTRL ROOM" /></Link>
+      {(() => {
+        // phones: a simple Back to wherever you came from (the last linked crumb), else the logo
+        const back = [...crumbs].slice(0, -1).reverse().find((c) => c.href);
+        return back
+          ? <Link className="barback" href={back.href} aria-label={`Back to ${back.label}`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg><span>{back.label}</span></Link>
+          : null;
+      })()}
+      <Link href="/" className="barlogowrap"><img className="barlogo" src="/logo.png" alt="CTRL ROOM" /></Link>
       <div className="crumbs">
         {crumbs.map((c, i) => (
           <span key={i} style={{ display: 'contents' }}>

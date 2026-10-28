@@ -949,3 +949,45 @@ a.driftc:hover { transform: scale(1.04); }
 .ctxtitle { margin: 2px 10px 6px; font-size: 11px; font-weight: 700; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
 .navtoggle { background: none; border: 0; cursor: pointer; text-align: left; width: 100%; }
 .navitem.archived { opacity: .55; }
+
+/* fix: pages fill the width again (the footer layout made them shrink to their content) */
+.app > *:not(.poweredby) { width: 100%; box-sizing: border-box; }
+.app > .page, .app > section.page { margin-left: auto; margin-right: auto; }
+.barback { display: none; }
+
+@media (max-width: 900px) {
+  /* top bar: Back + nothing else cluttering */
+  .bar { gap: 8px; }
+  .bar .crumbs { display: none; }
+  .barback { display: inline-flex; align-items: center; gap: 2px; font-size: 16px; font-weight: 600; color: var(--sig); min-width: 0; max-width: 70vw; padding: 6px 4px 6px 0; }
+  .barback svg { width: 24px; height: 24px; flex: none; }
+  .barback span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .barback ~ .barlogowrap { display: none; }
+
+  /* projects: swipe through them */
+  .shelf { display: flex !important; overflow-x: auto; scroll-snap-type: x mandatory; gap: 14px !important; margin: 0 -16px; padding: 2px 16px 10px; scrollbar-width: none; overscroll-behavior-x: contain; }
+  .shelf::-webkit-scrollbar { display: none; }
+  .shelf > * { flex: 0 0 44vw; max-width: 220px; scroll-snap-align: start; }
+
+  /* song page: simple, still cover, the essentials */
+  .shero { gap: 18px; padding-top: 0; }
+  .bigdisc { max-width: min(78vw, 320px) !important; border-radius: 14px !important; }
+  .bigdisc .art { border-radius: 14px !important; animation: none !important; }
+  .bigdisc .art::before, .bigdisc::after { display: none !important; }
+  .arm { display: none !important; }
+  .bigdisc .hub { inset: auto 12px 12px auto !important; width: 56px !important; height: 56px !important; }
+  .sinfo { gap: 10px; text-align: left; }
+  .sinfo h1, .sinfo .titlewrap { font-size: clamp(30px, 9vw, 42px) !important; }
+  .sinfo .eyebrow { font-size: 13px; }
+  .sinfo .deliverbox .muted { display: none; }
+  .shbar { order: 9; }
+  .stabs { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
+  .stabs::-webkit-scrollbar { display: none; }
+  .stabs button { flex: none; }
+  .vstack.standalone { padding: 8px 8px 10px 10px; }
+
+  /* artist page fills the screen */
+  .adetail { width: 100%; }
+  .aprof { border-radius: 18px; min-height: 240px; }
+  .arows .arow { padding-right: 4px; }
+}

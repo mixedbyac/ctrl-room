@@ -229,6 +229,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             NSWorkspace.shared.open(url); return decisionHandler(.cancel)
         }
         let external = (scheme == "http" || scheme == "https") && url.host != HOME.host && action.targetFrame?.isMainFrame != false
+        // sign-ins for other services (Dropbox) happen in the regular browser, where you're already signed in
+        if external && (url.host ?? "").hasSuffix("dropbox.com") {
+            NSWorkspace.shared.open(url); return decisionHandler(.cancel)
+        }
         if external && action.navigationType == .linkActivated {
             NSWorkspace.shared.open(url); return decisionHandler(.cancel)
         }

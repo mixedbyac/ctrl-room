@@ -1,4 +1,4 @@
-import { userFrom, isEngineer, getConfig, setConfig, forgetDropboxToken, forgetPathRoot, dropboxApi, dropboxRoot, json, fail, newToken } from '@/lib/server';
+import { userFrom, isEngineer, getConfig, setConfig, forgetDropboxToken, forgetPathRoot, dropboxApi, dropboxRoot, json, fail, signState } from '@/lib/server';
 
 export const runtime = 'nodejs';
 
@@ -14,8 +14,7 @@ export async function POST(req) {
 
   if (b.action === 'connect') {
     if (!hasKeys) return fail('Add DROPBOX_APP_KEY and DROPBOX_APP_SECRET in Vercel first.', 400);
-    const state = newToken() + newToken();
-    await setConfig('dropbox_state', `${state}.${Date.now()}`);
+    const state = signState();
     const u = new URL('https://www.dropbox.com/oauth2/authorize');
     u.search = new URLSearchParams({ client_id: process.env.DROPBOX_APP_KEY, response_type: 'code', token_access_type: 'offline', redirect_uri: redirect, state, force_reapprove: 'true', force_reauthentication: 'true' }).toString(); // always ask which account (personal or business)
     return json({ url: u.toString() });

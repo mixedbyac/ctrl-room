@@ -1,4 +1,4 @@
-import { getConfig, setConfig, forgetDropboxToken, forgetPathRoot, dropboxApi } from '@/lib/server';
+import { setConfig, forgetDropboxToken, forgetPathRoot, dropboxApi, checkState } from '@/lib/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -10,10 +10,8 @@ export async function GET(req) {
   const back = (q) => Response.redirect(`${site}/dropbox?${q}`, 302);
   if (url.searchParams.get('error')) return back('error=' + encodeURIComponent(url.searchParams.get('error_description') || 'You cancelled.'));
   const code = url.searchParams.get('code'), state = url.searchParams.get('state');
-  const saved = (await getConfig('dropbox_state')) || '';
-  const [want, at] = saved.split('.');
-  if (!code || !state || state !== want || Date.now() - Number(at) > 15 * 60 * 1000) return back('error=' + encodeURIComponent('That sign-in expired. Try Connect Dropbox again.'));
-  await setConfig('dropbox_state', null);
+  if (!code) return back('error=' + encodeURIComponent('Dropbox didn’t send a sign-in code. Try Connect Dropbox again.'));
+  if (!checkState(state)) return back('error=' + encodeURIComponent('That sign-in link was too old. Click Connect Dropbox again and finish within the hour.'));
 
   const res = await fetch('https://api.dropboxapi.com/oauth2/token', {
     method: 'POST',

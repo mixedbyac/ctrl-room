@@ -1,4 +1,5 @@
 'use client';
+import QualityBadge from '@/components/QualityBadge';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
@@ -250,7 +251,7 @@ function MiniPlayer() {
         <button className="mopen" onClick={() => pl.setExpanded(!pl.expanded)} aria-label={`Open the player for ${c.song.title}`}><Cover as="div" {...artOf(c.song, c.project)} size={120} className="mart spin" /></button>
         <button className="mtext" onClick={() => pl.setExpanded(!pl.expanded)}>
           <b><span id="mtitle">{c.song.title}</span>{pl.playing && <span className="eq"><span /><span /><span /></span>}</b>
-          <span>{c.project.title} · {v.label}</span>
+          <span>{c.project.title} · {v.label}<QualityBadge v={v} short /></span>
         </button>
         <div className="mwave" ref={wrap} onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); seekAt(e); }} onPointerMove={(e) => { if (e.buttons) seekAt(e); }}><canvas ref={cv} /></div>
         <span className="mtime mono">{mmss(pl.time)} / {mmss(pl.duration)}</span>
@@ -329,6 +330,7 @@ function NowPlaying() {
         <div className="nphead">
           <h2 className="up">{c.song.title}</h2>
           <p className="npsub">{c.project.artist} · {c.project.title}</p>
+          <div className="npqual"><QualityBadge v={v} size="lg" detail /></div>
         </div>
         {c.versions.length > 1 && (
           <div className="npvers" role="group" aria-label="Versions">
@@ -338,7 +340,7 @@ function NowPlaying() {
         )}
         <div>
           <Wave peaks={v?.peaks} time={pl.time} duration={pl.duration} onSeek={pl.seek} height={52} />
-          <div className="nptimes mono"><span>{mmss(pl.time)}</span><span>{v?.file_format ? `${v.file_format}${v.bit_depth ? ` · ${Math.abs(v.bit_depth)}-bit` : ''}${v.sample_rate ? ` · ${(v.sample_rate / 1000).toFixed(v.sample_rate % 1000 ? 1 : 0)} kHz` : ''}` : 'Original file'}</span><span>{mmss(pl.duration)}</span></div>
+          <div className="nptimes mono"><span>{mmss(pl.time)}</span><span>{v?.file_format ? `${v.file_format} · as delivered` : 'Original file'}</span><span>{mmss(pl.duration)}</span></div>
         </div>
         <div className="npctl">
           <button onClick={pl.prev} aria-label="Previous song"><svg viewBox="0 0 24 24"><path d="M11 12l9-6.5v13zM2 12l9-6.5v13z" /></svg></button>

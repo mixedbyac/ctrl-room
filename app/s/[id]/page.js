@@ -1,4 +1,5 @@
 'use client';
+import QualityBadge from '@/components/QualityBadge';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -181,7 +182,7 @@ function DeliverVersion({ song, versions, onDone, setMsg }) {
       .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
     if (!files.length) return setMsg('Drop WAV, AIFF, FLAC, MP3 or M4A files.');
     const done = [], failed = [];
-    let current = versions, texted = false, aiff = false;
+    let current = versions, texted = false, aiff = false; const lossy = [];
     for (let i = 0; i < files.length; i++) {
       const f = files[i], last = i === files.length - 1;
       try {
@@ -189,6 +190,7 @@ function DeliverVersion({ song, versions, onDone, setMsg }) {
         done.push(`${r.label}${r.parsed.note ? ` (${r.parsed.note})` : ''}`);
         if (last) texted = r.texted;
         if (r.info?.file_format === 'AIFF') aiff = true;
+        if (r.info?.lossless === false) lossy.push(f.name);
         const { data } = await supabase().from('versions').select('id,label,created_at').eq('song_id', song.id).order('created_at');
         current = data || current;
       } catch (err) { failed.push(`${f.name}: ${err.message}`); }
@@ -199,6 +201,7 @@ function DeliverVersion({ song, versions, onDone, setMsg }) {
       done.length && text ? (texted ? 'Texted the client.' : '(Text not sent. Check the phone number and Twilio setup.)') : '',
       done.length ? 'Tap ✎ to rename a version.' : '',
       aiff ? 'Heads up: Chrome and Android can’t play AIFF. WAV plays everywhere.' : '',
+      lossy.length ? `${lossy.join(', ')} ${lossy.length > 1 ? 'are' : 'is'} compressed, not lossless. Send a WAV, AIFF or FLAC for the Lossless badge.` : '',
       failed.length ? `Couldn’t deliver ${failed.join('; ')}` : '',
     ].filter(Boolean).join(' '));
     if (done.length) onDone();
@@ -300,7 +303,7 @@ function Scrub({ v, notes, time, dur, seek, eng, plays, header = null }) {
           <button key={n.id} className={`mk ${n.resolved ? 'done' : ''}`} style={{ left: `${(n.t / dur) * 100}%` }} title={`${fmt(n.t)} · ${n.body}`} onClick={() => seek(n.t)} aria-label={`Note ${i + 1} at ${fmt(n.t)}`}>{i + 1}</button>
         ))}
       </div>
-      <div className="times"><span className="mono">{fmt(time)}</span><span className="mono fmtinfo" title="Played straight from the uploaded file: no compression, no limiting, no volume changes.">{describeFormat(v) ? <><b>{describeFormat(v)}</b> · {v.lossless === false ? 'as uploaded, no extra compression' : 'original, untouched'}</> : 'Original file, untouched'}{v?.peak_db != null ? ` · Peak ${v.peak_db} dBFS` : ''}</span><span className="mono">{fmt(dur)}</span></div>
+      <div className="times"><span className="mono">{fmt(time)}</span><span className="mono fmtinfo" title="Played straight from the uploaded file: no compression, no limiting, no volume changes."><QualityBadge v={v} size="md" showLossy />{" "}{describeFormat(v) ? <><b>{describeFormat(v)}</b> · {v.lossless === false ? 'as uploaded, no extra compression' : 'original, untouched'}</> : 'Original file, untouched'}{v?.peak_db != null ? ` · Peak ${v.peak_db} dBFS` : ''}</span><span className="mono">{fmt(dur)}</span></div>
     </div>
   );
 }
@@ -631,7 +634,7 @@ function VersionPicker({ versions, vid, switchTo, eng, song, reload, setMsg, tim
   return (
     <div className="vpick2" ref={box}>
       <div className={`vp-trigger ${open ? 'open' : ''}`}>
-        <span className="vp-lab">{name(cur)}{tags(cur).map((t) => <i key={t} className={`vp-tag ${t.toLowerCase()}`}>{t}</i>)}</span>
+        <span className="vp-lab">{name(cur)}{tags(cur).map((t) => <i key={t} className={`vp-tag ${t.toLowerCase()}`}>{t}</i>)}<QualityBadge v={cur} short /></span>
         <button className="vp-open" onClick={() => setOpen(!open)} aria-haspopup="listbox" aria-expanded={open} aria-label="Choose a version">
           <MiniWave peaks={cur.peaks} progress={prog} active w={180} h={24} />
           <span className="vp-count">{versions.length} version{versions.length === 1 ? '' : 's'}</span>
@@ -646,6 +649,7 @@ function VersionPicker({ versions, vid, switchTo, eng, song, reload, setMsg, tim
               <span className="vp-name">
                 {name(x)}
                 {tags(x).map((t) => <i key={t} className={`vp-tag ${t.toLowerCase()}`}>{t}</i>)}
+                <QualityBadge v={x} short />
                 <small>{[shortDate(x.created_at), x.duration ? mmss(x.duration) : '', eng && x.lufs != null ? `${x.lufs.toFixed(1)} LUFS` : '', x.note].filter(Boolean).join(' · ')}</small>
               </span>
               <MiniWave peaks={x.peaks} progress={x.id === vid ? prog : 0} active={x.id === vid} />

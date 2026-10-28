@@ -1,4 +1,5 @@
 'use client';
+import QualityBadge from '@/components/QualityBadge';
 import ShareButton from '@/components/ShareButton';
 import EditableTitle from '@/components/EditableTitle';
 import { measureVersion, needsMeasure } from '@/lib/measure';
@@ -31,7 +32,7 @@ export default function ProjectPage() {
 
   const load = useCallback(async () => {
     const sb = supabase();
-    const cols = 'id,label,created_at,storage_path,file_name,duration,lufs,peak_db,rms_db,file_format,sample_rate,bit_depth,file_size';
+    const cols = 'id,label,created_at,storage_path,file_name,duration,lufs,peak_db,rms_db,file_format,sample_rate,bit_depth,file_size,lossless';
     let { data, error } = await sb.from('projects').select(`*, songs(*, versions(${cols}))`).eq('id', id).single();
     if (error && /column/i.test(error.message)) ({ data } = await sb.from('projects').select('*, songs(*, versions(*))').eq('id', id).single()); // older database
     if (data) data.songs = (data.songs || []).sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at));
@@ -118,7 +119,7 @@ export default function ProjectPage() {
                 {eng && <>
                   <span className="cell mono" title={last?.lufs != null ? `${last.lufs} LUFS integrated` : 'Not measured yet'}>{last?.lufs != null ? last.lufs.toFixed(1) : <span className="dim">—</span>}</span>
                   <span className={`cell mono ${last?.peak_db != null && last.peak_db > -0.1 ? 'hot' : ''}`} title={last?.peak_db != null ? `${last.peak_db} dBFS sample peak` : ''}>{last?.peak_db != null ? last.peak_db.toFixed(1) : <span className="dim">—</span>}</span>
-                  <span className="cell mono c-fmt" title={last?.file_name || ''}>{fmtx || <span className="dim">—</span>}</span>
+                  <span className="cell mono c-fmt" title={[last?.file_name, fmtx].filter(Boolean).join(' · ')}>{last && (last.file_format || last.lossless != null) ? <QualityBadge v={last} short showLossy /> : <span className="dim">—</span>}</span>
                   <span className="cell mono c-bpm">{s.bpm || <span className="dim">—</span>}</span>
                   <span className="cell c-key">{s.musical_key || <span className="dim">—</span>}</span>
                   <button className="rpen" onClick={() => setRenaming(s.id)} disabled={renaming === s.id} aria-label={`Rename ${s.title}`} title="Rename">✎</button>

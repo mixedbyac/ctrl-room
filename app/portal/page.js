@@ -1,4 +1,5 @@
 'use client';
+import InlineText from '@/components/InlineText';
 import PoweredBy from '@/components/PoweredBy';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -26,6 +27,15 @@ export default function Portal() {
   const [mode, setMode] = useState('new');
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 1e9));
   const [songs, setSongs] = useState([blank()]);
+  // a different nudge in the message box each time (and every few seconds while it's empty)
+  const PROMPTS = ['I’d love this style…', 'Notes for the mix…', 'Make it feel like…', 'Anything you love about the rough?', 'Vibes, references, the sound in your head…', 'What should we not lose?', 'Loud and wide, or warm and intimate?', 'A song it should sit next to…'];
+  const [prompt, setPrompt] = useState(PROMPTS[0]);
+  useEffect(() => {
+    let i = Math.floor(Math.random() * PROMPTS.length);
+    setPrompt(PROMPTS[i]);
+    const t = setInterval(() => { i = (i + 1) % PROMPTS.length; setPrompt(PROMPTS[i]); }, 4500);
+    return () => clearInterval(t);
+  }, []); // eslint-disable-line
   const [state, setState] = useState('idle'); // idle | sending | done
   const [progress, setProgress] = useState({ sent: 0, total: 0, file: '' });
   const [err, setErr] = useState('');
@@ -86,7 +96,8 @@ export default function Portal() {
     if (!f.name.trim()) return setErr('Add your name so I know who sent it.');
     if (!f.artist.trim()) return setErr('Add the artist name.');
     if (!/^\S+@\S+\.\S+$/.test(f.email.trim())) return setErr('Add an email address. You sign in with it to follow along.');
-    if (songs.some((s) => !s.title.trim())) return setErr('Every song needs a title.');
+    // songs without a detectable name still go through, as "Song 2" and so on
+    songs.forEach((s, i) => { if (!s.title.trim()) s.title = `Song ${i + 1}`; });
     if (bytes > LIMIT_SEND) return setErr(`That’s ${fmtBytes(bytes)}. Each upload can be up to 2 GB, so send the rest in a second upload.`);
     if (!fileCount) return setErr('Add files for at least one song. Drop them on the song they belong to.');
 
@@ -206,7 +217,7 @@ export default function Portal() {
 
             <fieldset className="sec" disabled={sending}>
               <legend><span className="n">3</span>Anything else?</legend>
-              <div className="fld"><textarea aria-label="Message" value={f.message} onChange={set('message')} placeholder="Deadlines, vibe, things you love about the rough mix…" /></div>
+              <div className="fld"><textarea aria-label="Message" value={f.message} onChange={set('message')} placeholder={prompt} /></div>
             </fieldset>
           </form>
 
@@ -283,20 +294,13 @@ function SongCard({ s, n, canRemove, onChange, onRemove, artist }) {
   return (
     <div className="songcard">
       <div className="sc-h"><b>SONG {String(n).padStart(2, '0')}</b>{canRemove && <button type="button" onClick={onRemove}>Remove</button>}</div>
-      <div className="three">
-        <div className="fld"><label htmlFor={`t-${s.k}`}>Title{auto.title && <span className="autotag">from files</span>}</label><input id={`t-${s.k}`} value={s.title} onChange={(e) => onChange({ title: e.target.value, auto: { ...auto, title: false } })} /></div>
-        <div className="fld"><label htmlFor={`b-${s.k}`}>BPM{auto.bpm && <span className="autotag">{auto.bpm === 'audio' ? 'detected' : 'from name'}</span>}</label><input id={`b-${s.k}`} inputMode="decimal" value={s.bpm} placeholder={listening ? 'Listening…' : ''} onChange={(e) => onChange({ bpm: e.target.value, auto: { ...auto, bpm: false } })} /></div>
-        <div className="fld"><label htmlFor={`k-${s.k}`}>Key{auto.key && <span className="autotag">{auto.key === 'audio' ? 'detected' : 'from name'}</span>}</label><input id={`k-${s.k}`} value={s.key} placeholder={listening ? 'Listening…' : ''} onChange={(e) => onChange({ key: e.target.value, auto: { ...auto, key: false } })} /></div>
-      </div>
-      <div className="fld"><label htmlFor={`r-${s.k}`}>Reference <span className="opt">a link or a song you want it to feel like</span></label><input id={`r-${s.k}`} value={s.ref} onChange={(e) => onChange({ ref: e.target.value })} /></div>
-      <div className="fld"><label htmlFor={`n-${s.k}`}>Notes for this song</label><textarea id={`n-${s.k}`} rows={2} value={s.notes} onChange={(e) => onChange({ notes: e.target.value })} placeholder="What matters most in this mix?" /></div>
-      <div className={`minidrop ${hot ? 'hot' : ''}`}
+      <div className={`minidrop bigdrop ${hot ? 'hot' : ''} ${s.files.length ? 'has' : ''}`}
         onDragOver={(e) => { e.preventDefault(); setHot(true); }} onDragLeave={() => setHot(false)}
         onDrop={async (e) => { e.preventDefault(); e.stopPropagation(); setHot(false); const { files: fl, folders } = await filesFromDrop(e.dataTransfer); add([...fl, ...folders.flatMap((x) => x.files)]); }}>
         <span className="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V4M7 9l5-5 5 5M4 15v4a1 1 0 001 1h14a1 1 0 001-1v-4" /></svg></span>
         <span className="mt"><b>{s.files.length ? `${s.files.length} file${s.files.length > 1 ? 's' : ''} · ${fmtBytes(total)}` : (hot ? "Drop it like it's hot" : "Drop this song's files here")}</b>
-          <span>{s.files.length ? describeFiles(s.files) : 'Stems, session, zip, or rough mix. The name, BPM and key fill in from them.'}</span>
-          {listening && <span className="listening">Listening for tempo and key…</span>}</span>
+          <span>{s.files.length ? describeFiles(s.files) : 'WAV stems + your reference MP3, as a folder or zip. The song name, BPM and key come from your reference.'}</span>
+          {listening && <span className="listening">Listening to your reference for tempo and key…</span>}</span>
         <span className="mb">
           <button type="button" className="clr" style={{ color: 'var(--ink)', background: 'var(--s2)' }} onClick={() => files.current?.click()}>Files</button>
           <button type="button" className="clr" style={{ color: 'var(--ink)', background: 'var(--s2)' }} onClick={() => folder.current?.click()}>Folder</button>
@@ -305,6 +309,15 @@ function SongCard({ s, n, canRemove, onChange, onRemove, artist }) {
         <input ref={files} className="vh" type="file" multiple onChange={(e) => { add(e.target.files); e.target.value = ''; }} />
         <input ref={folder} className="vh" type="file" multiple webkitdirectory="" directory="" onChange={(e) => { add(e.target.files); e.target.value = ''; }} />
       </div>
+      {(s.title || s.bpm || s.key || listening) && (
+        <div className="detected">
+          <span className="det-l">{listening ? 'Reading your reference…' : 'From your files'}</span>
+          <span className="det-chip t"><InlineText value={s.title} placeholder="Song name" width={10} label="Song name" onSave={(t) => onChange({ title: t, auto: { ...auto, title: false } })} /></span>
+          <span className="det-chip"><InlineText value={s.bpm ? String(s.bpm) : ''} placeholder={listening ? '…' : 'BPM'} suffix=" BPM" width={3} inputMode="decimal" label="BPM" onSave={(t) => onChange({ bpm: t, auto: { ...auto, bpm: false } })} /></span>
+          <span className="det-chip"><InlineText value={s.key || ''} placeholder={listening ? '…' : 'Key'} width={6} label="Key" onSave={(t) => onChange({ key: t, auto: { ...auto, key: false } })} /></span>
+          <span className="det-hint">Tap to fix</span>
+        </div>
+      )}
     </div>
   );
 }

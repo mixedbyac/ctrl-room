@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { supabase, api } from '@/lib/supabase';
 import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
+import { artOf } from '@/lib/art';
 import { todayISO, addDaysISO, fmtDate, statusText } from '@/lib/format';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -147,7 +148,7 @@ export default function CalendarPage() {
               <h2 className="h2 up">No due date</h2>
               <p className="muted small" style={{ margin: '0 0 10px' }}>Drag one onto a day to schedule it. Drag a scheduled song here to clear its date.</p>
               <div className="calunlist">{unscheduled.map((it) => (
-                <div key={it.id} className="calunitem"><Cover seed={it.s.seed} path={it.s.cover_path || it.p.cover_path} size={80} /><Chip item={it} /></div>
+                <div key={it.id} className="calunitem"><Cover {...artOf(it.s, it.p)} size={80} /><Chip item={it} /></div>
               ))}</div>
             </section>
           )}

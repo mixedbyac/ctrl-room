@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
+import { artOf } from '@/lib/art';
 import QuickDrop from '@/components/QuickDrop';
 import { fmtDate, todayISO, addDaysISO, statusText, ago, mmss, fmtBytes } from '@/lib/format';
 
@@ -34,9 +35,9 @@ function EngineerHome() {
     const sb = supabase();
     loadProjects();
     Promise.all([
-      sb.from('plays').select('*, songs(title,seed,project_id), versions(label)').order('updated_at', { ascending: false }).limit(15),
-      sb.from('notes').select('*, songs(title,seed), versions(label)').eq('from_client', true).order('created_at', { ascending: false }).limit(15),
-      sb.from('updates').select('*, songs(title,seed)').eq('from_client', true).order('created_at', { ascending: false }).limit(15),
+      sb.from('plays').select('*, songs(title,seed,cover_path,project_id,projects(seed,cover_path)), versions(label)').order('updated_at', { ascending: false }).limit(15),
+      sb.from('notes').select('*, songs(title,seed,cover_path,projects(seed,cover_path)), versions(label)').eq('from_client', true).order('created_at', { ascending: false }).limit(15),
+      sb.from('updates').select('*, songs(title,seed,cover_path,projects(seed,cover_path))').eq('from_client', true).order('created_at', { ascending: false }).limit(15),
       sb.from('uploads').select('id', { count: 'exact', head: true }).is('downloaded_at', null),
     ]).then(([pl, no, up, fr]) => {
       const items = [
@@ -94,7 +95,7 @@ function EngineerHome() {
           <div className="duelist">
             {list.length ? list.map(({ p, s }) => (
               <Link key={s.id} className="due" href={`/s/${s.id}`}>
-                <Cover seed={s.seed} size={120} />
+                <Cover {...artOf(s, p)} size={120} />
                 <span className="dt"><b className="up">{s.title}</b><span>{p.title} · {p.artist}</span></span>
                 <span className="dw">
                   <span className={`dot ${s.status}`}>{s.eta < today ? `Overdue · ${fmtDate(s.eta)}` : s.versions?.length ? `v${s.versions.length + 1}` : 'First mix'}</span>
@@ -137,7 +138,7 @@ function EngineerHome() {
               {waiting.length ? waiting.map(({ p, s }) => {
                 const last = [...(s.versions || [])].sort((a, b) => a.created_at.localeCompare(b.created_at)).at(-1);
                 return (
-                  <li key={s.id}><Link className="mini-row" href={`/s/${s.id}`}><Cover seed={s.seed} size={80} />
+                  <li key={s.id}><Link className="mini-row" href={`/s/${s.id}`}><Cover {...artOf(s, p)} size={80} />
                     <span><b>{s.title}</b><small>{p.artist}{last ? ` · ${last.label} sent ${fmtDate(last.created_at)}` : ''}</small></span></Link></li>
                 );
               }) : <li className="emptyday">No one owes you a listen right now.</li>}
@@ -177,7 +178,7 @@ function ActivityItem({ a }) {
   return (
     <li>
       <Link className={`nitem k-${kind}`} href={`/s/${x.song_id}`}>
-        <Cover as="div" seed={song.seed} size={84} className="nart"><i>{icon}</i></Cover>
+        <Cover as="div" {...artOf(song, song.projects)} size={84} className="nart"><i>{icon}</i></Cover>
         <span className="nmain"><span className="ntext">{text}</span>{body}<span className="nwhen">{ago(a.at)}</span></span>
       </Link>
     </li>
@@ -220,7 +221,7 @@ function NewProject({ onDone }) {
 function ClientHome() {
   const [projects, setProjects] = useState(null);
   useEffect(() => {
-    supabase().from('projects').select('*, songs(id,title,status,seed,eta,approved_version,received_at,downloaded_at,mixing_at)').eq('archived', false).order('created_at', { ascending: false })
+    supabase().from('projects').select('*, songs(id,title,status,seed,cover_path,eta,approved_version,received_at,downloaded_at,mixing_at)').eq('archived', false).order('created_at', { ascending: false })
       .then(({ data }) => setProjects(data || []));
   }, []);
   if (!projects) return <><TopBar crumbs={[{ label: 'Home' }]} /><section className="page"><p className="muted">Loading…</p></section></>;
@@ -235,7 +236,7 @@ function ClientHome() {
               const n = p.songs?.length || 0, rv = (p.songs || []).filter((s) => s.status === 'review').length;
               return (
                 <Link key={p.id} className="pcard" href={`/p/${p.id}`}>
-                  <span className="pc-art"><span className="pc-rec" /><Cover seed={p.seed} size={360} /></span>
+                  <span className="pc-art"><span className="pc-rec" /><Cover seed={p.seed} path={p.cover_path} size={360} /></span>
                   <b className="up">{p.title}</b>
                   <span className="pc-sub">{p.artist} · {n} song{n === 1 ? '' : 's'}</span>
                   <span className="pc-sub" style={{ color: rv ? 'var(--sig)' : undefined }}>{rv ? `${rv} mix${rv > 1 ? 'es' : ''} ready for you` : 'In the works'}</span>

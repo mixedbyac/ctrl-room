@@ -13,7 +13,9 @@ async function coverUrl(path) {
 }
 
 /** Cover art: your uploaded image when there is one (`path`), otherwise generated from `seed`. */
-export default function Cover({ seed, path, size = 480, className, alt = '', as = 'img', children, style }) {
+export default function Cover({ seed: seedIn, path: pathIn, size = 480, className, alt = '', as = 'img', children, style }) {
+  const gen = typeof pathIn === 'string' && pathIn.startsWith('gen:');
+  const seed = gen ? Number(pathIn.slice(4)) || seedIn : seedIn, path = gen ? null : pathIn;
   const [src, setSrc] = useState('');
   useEffect(() => {
     let live = true;

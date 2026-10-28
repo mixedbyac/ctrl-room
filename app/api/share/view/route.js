@@ -32,12 +32,16 @@ export async function GET(req) {
     const v = pickVersion(s, vs);
     const { data: u } = await db.storage.from('mixes').createSignedUrl(v.storage_path, 60 * 60 * 6);
     if (!u?.signedUrl) continue;
+    // same artwork rule as the app: the project's cover unless the song has its own
+    const own = s.cover_path, gen = own && own.startsWith('gen:');
+    const artPath = gen ? null : own || project.cover_path || null;
+    const artSeed = gen ? Number(own.slice(4)) || s.seed : own ? s.seed : project.seed;
     let cover = null;
-    if (s.cover_path || project.cover_path) {
-      const { data: c } = await db.storage.from('mixes').createSignedUrl(s.cover_path || project.cover_path, 60 * 60 * 6);
+    if (artPath) {
+      const { data: c } = await db.storage.from('mixes').createSignedUrl(artPath, 60 * 60 * 6);
       cover = c?.signedUrl || null;
     }
-    list.push({ id: s.id, title: s.title, seed: s.seed, cover, approved: s.status === 'approved',
+    list.push({ id: s.id, title: s.title, seed: artSeed, cover, approved: s.status === 'approved',
       version: { id: v.id, label: v.label, duration: v.duration, peaks: v.peaks, url: u.signedUrl, file_format: v.file_format, bit_depth: v.bit_depth, sample_rate: v.sample_rate } });
   }
   let pcover = null;

@@ -12,7 +12,7 @@ export default function Inbox() {
   const [view, setView] = useState('inbox');
   const [msg, setMsg] = useState('');
   const load = useCallback(async () => {
-    const { data } = await supabase().from('uploads').select('*, projects(id,title,seed,artist)').order('created_at', { ascending: false }).limit(100);
+    const { data } = await supabase().from('uploads').select('*, projects(id,title,seed,artist,cover_path)').order('created_at', { ascending: false }).limit(100);
     setRows(data || []);
   }, []);
   useEffect(() => { if (eng) load(); }, [eng, load]);
@@ -61,7 +61,7 @@ export default function Inbox() {
           {msg && <p className="toast-inline">{msg}</p>}
           {rows === null ? <p className="muted">Loading…</p> : shown.length ? shown.map((u) => (
             <article key={u.id} className="ucard">
-              <Cover seed={u.projects?.seed} size={120} />
+              <Cover seed={u.projects?.seed} path={u.projects?.cover_path} size={120} />
               <div style={{ minWidth: 0 }}>
                 <h3 className="up">{u.projects?.title || 'Project'}{!u.downloaded_at && <span className="new">NEW</span>}</h3>
                 <div className="m">{u.name} · {u.artist}{u.phone ? ` · ${u.phone}` : ''} · {u.email} · {ago(u.created_at)}</div>

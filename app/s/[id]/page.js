@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { supabase, api } from '@/lib/supabase';
 import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
+import { artOf } from '@/lib/art';
 import { fmt, mmss, fmtDate, shortDate, ago, statusText, nextLabel, deviceName, todayISO } from '@/lib/format';
 import { deliverFile } from '@/lib/deliver';
 import { describeFormat } from '@/lib/fileinfo';
@@ -111,7 +112,7 @@ export default function SongPage() {
       <section className="page">
         <div className="shero">
           <div className="bigdisc hascm">
-            <Cover as="div" seed={song.seed} path={song.cover_path} size={640} className="art spin" />
+            <Cover as="div" {...artOf(song, song.projects)} size={640} className="art spin" />
             {eng && <CoverMenu table="songs" row={song} onChange={load} className="ondisc" />}
             <div className="arm" aria-hidden="true"><svg viewBox="0 0 100 170">
               <circle cx="80" cy="14" r="13" fill="#1d1d20" stroke="#3a3a40" strokeWidth="2" />

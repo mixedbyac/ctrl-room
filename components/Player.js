@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import Cover from '@/components/Cover';
 import { mmss, deviceName } from '@/lib/format';
+import { artOf } from '@/lib/art';
 
 /*
   One player for the whole app. It lives above the pages, so music keeps playing while you move around.
@@ -22,6 +23,22 @@ export function PlayerProvider({ eng, children }) {
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [expanded, setExpanded] = useState(false);
+  // when a cover changes anywhere, the mini player and Now Playing change with it
+  useEffect(() => {
+    const on = (e) => {
+      const { table, id, patch } = e.detail || {};
+      setCurrent((c) => {
+        if (!c) return c;
+        let next = c;
+        if (table === 'songs' && c.song?.id === id) next = { ...c, song: { ...c.song, ...patch } };
+        if (table === 'projects' && c.project?.id === id) next = { ...c, project: { ...c.project, ...patch } };
+        if (next !== c) curRef.current = next;
+        return next;
+      });
+    };
+    window.addEventListener('ctrl-room:cover', on);
+    return () => window.removeEventListener('ctrl-room:cover', on);
+  }, []);
   const curRef = useRef(null);
   curRef.current = current;
 
@@ -218,7 +235,7 @@ function MiniPlayer() {
   return (
     <div className="mini">
       <div className="minibar">
-        <button className="mopen" onClick={() => pl.setExpanded(!pl.expanded)} aria-label={`Open the player for ${c.song.title}`}><Cover as="div" seed={c.song.seed} path={c.song.cover_path || c.project.cover_path} size={120} className="mart spin" /></button>
+        <button className="mopen" onClick={() => pl.setExpanded(!pl.expanded)} aria-label={`Open the player for ${c.song.title}`}><Cover as="div" {...artOf(c.song, c.project)} size={120} className="mart spin" /></button>
         <button className="mtext" onClick={() => pl.setExpanded(!pl.expanded)}>
           <b><span id="mtitle">{c.song.title}</span>{pl.playing && <span className="eq"><span /><span /><span /></span>}</b>
           <span>{c.project.title} · {v.label}</span>
@@ -285,19 +302,18 @@ function NowPlaying() {
   }, [pl.queue.join(','), c.song.id]); // eslint-disable-line
   const vi = c.versions.findIndex((x) => x.id === c.versionId);
   const flip = () => { const prev = c.versions[vi - 1] || c.versions[vi + 1]; if (prev) pl.switchVersion(prev.id); };
-  const coverPath = c.song.cover_path || c.project.cover_path;
   return (
     <>
     <div className="npscrim" onClick={close} aria-hidden="true" />
     <div className="np" role="dialog" aria-label="Now playing">
-      <Cover as="div" seed={c.song.seed} path={coverPath} size={240} className="npbg" />
+      <Cover as="div" {...artOf(c.song, c.project)} size={240} className="npbg" />
       <div className="npinner">
         <div className="nptop">
           <span className="npfrom">Playing from <b>{c.project.title}</b></span>
           <Link className="npopen" href={`/s/${c.song.id}`} onClick={close}>Notes &amp; details</Link>
           <button className="npclose" onClick={close} aria-label="Close the player"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg></button>
         </div>
-        <div className="npdisc"><Cover as="div" seed={c.song.seed} path={coverPath} size={640} className="npart spin" /><span className="nphole" /></div>
+        <div className="npdisc"><Cover as="div" {...artOf(c.song, c.project)} size={640} className="npart spin" /><span className="nphole" /></div>
         <div className="nphead">
           <h2 className="up">{c.song.title}</h2>
           <p className="npsub">{c.project.artist} · {c.project.title}</p>
@@ -324,7 +340,7 @@ function NowPlaying() {
               {upNext.map((s, n) => (
                 <button key={s.id} className={`npqi ${s.id === c.song.id ? 'on' : ''}`} onClick={() => (s.id === c.song.id ? pl.toggle() : pl.play({ songId: s.id, queue: pl.queue }))}>
                   <span className="npqn mono">{n + 1}</span>
-                  <Cover seed={s.seed} path={s.cover_path} size={80} />
+                  <Cover {...artOf(s, c.project)} size={80} />
                   <span className="npqt">{s.title}</span>
                   {s.id === c.song.id && pl.playing && <span className="eq"><span /><span /><span /></span>}
                 </button>

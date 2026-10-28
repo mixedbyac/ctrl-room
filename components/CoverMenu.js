@@ -18,10 +18,16 @@ export default function CoverMenu({ table, row, onChange, className = '' }) {
       setErr(/cover_path/.test(error.message) ? 'Run the cover update SQL in Supabase first.' : error.message);
       return false;
     }
+    window.dispatchEvent(new CustomEvent('ctrl-room:cover', { detail: { table, id: row.id, patch } }));
     onChange?.();
     return true;
   };
-  const shuffle = async (e) => { e.preventDefault(); e.stopPropagation(); setErr(''); await update({ seed: Math.floor(Math.random() * 1e9), ...(row.cover_path ? { cover_path: null } : {}) }); };
+  const shuffle = async (e) => {
+    e.preventDefault(); e.stopPropagation(); setErr('');
+    const seed = Math.floor(Math.random() * 1e9);
+    // a project's new cover flows to all its songs; a song shuffle gives just that song its own cover
+    await update(table === 'songs' ? { cover_path: `gen:${seed}` } : { seed, ...(row.cover_path ? { cover_path: null } : {}) });
+  };
   const upload = async (e) => {
     const f = e.target.files?.[0]; e.target.value = '';
     if (!f) return;
@@ -47,7 +53,7 @@ export default function CoverMenu({ table, row, onChange, className = '' }) {
           <button type="button" onClick={(e) => { e.preventDefault(); input.current?.click(); }} title="Use your own artwork">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="9" cy="9" r="2" /><path d="M21 15l-5-5L5 21" /></svg>Upload image
           </button>
-          {row.cover_path && <button type="button" onClick={remove} title="Go back to a generated cover">Remove image</button>}
+          {row.cover_path && <button type="button" onClick={remove} title={table === 'songs' ? 'Use the project’s cover again' : 'Go back to a generated cover'}>{table === 'songs' ? 'Use project cover' : 'Remove image'}</button>}
         </>
       )}
       {err && <span className="cmerr">{err}</span>}

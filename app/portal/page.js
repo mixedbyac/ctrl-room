@@ -130,7 +130,7 @@ export default function Portal() {
         <TopBar crumbs={[{ label: 'Portal' }]} />
         <section className="page portal">
           <div className="setdone">
-            <Cover seed={mode === 'new' ? seed : project?.seed} size={400} />
+            <Cover seed={mode === 'new' ? seed : project?.seed} path={mode === 'new' ? null : project?.cover_path} size={400} />
             <div>
               <h2 className="up">You're set up</h2>
               <p>{result.projectTitle} has {result.songs.length} song{result.songs.length > 1 ? 's' : ''} and {result.files} file{result.files > 1 ? 's' : ''} ({fmtBytes(result.bytes)}) in the CTRL ROOM.
@@ -200,7 +200,7 @@ export default function Portal() {
 
           <aside className="summary">
             <div className="sumart">
-              <Cover seed={mode === 'new' ? seed : project?.seed} size={480} alt="Project cover" />
+              <Cover seed={mode === 'new' ? seed : project?.seed} path={mode === 'new' ? null : project?.cover_path} size={480} alt="Project cover" />
               {mode === 'new' && !sending && <button type="button" className="shuf" onClick={() => setSeed(Math.floor(Math.random() * 1e9))}>Shuffle cover</button>}
             </div>
             <div><p className="sumt up">{mode === 'new' ? (autoTitle || 'Your mix') : project?.title}</p>

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
-import { hashStr } from '@/lib/art';
+import { hashStr, artOf } from '@/lib/art';
 import { fmtDate, todayISO, statusText, shortDate } from '@/lib/format';
 import { ArtistHero, ArtistAvatar } from '@/components/ArtistProfile';
 import ArtistTeam from '@/components/ArtistTeam';
@@ -74,7 +74,7 @@ function Artists() {
           </div>
           <section className="asec"><h2 className="h2 up">Working on</h2><div className="duelist">
             {st.live.length ? [...st.live].sort((x, y) => (x.s.eta || '9').localeCompare(y.s.eta || '9')).map(({ p, s }) => (
-              <Link key={s.id} className="due" href={`/s/${s.id}`}><Cover seed={s.seed} size={120} />
+              <Link key={s.id} className="due" href={`/s/${s.id}`}><Cover {...artOf(s, p)} size={120} />
                 <span className="dt"><b className="up">{s.title}</b><span>{p.title} · {p.type}</span></span>
                 <span className="dw"><span className={`dot ${s.status}`}>{statusText(s, s.versions)}</span><span className="dsub">{s.eta ? `Due ${s.eta === today ? 'today' : fmtDate(s.eta)}` : 'No due date'}</span></span>
                 <span className="chev" aria-hidden="true">›</span></Link>
@@ -88,7 +88,7 @@ function Artists() {
           </div></section>
           {eng && <ArtistTeam artist={artist.name} projects={artist.projects} />}
           {st.done.length > 0 && <section className="asec"><h2 className="h2 up">Finished</h2><ul className="mlist">
-            {st.done.map(({ p, s }) => <li key={s.id}><Link className="mini-row" href={`/s/${s.id}`}><Cover seed={s.seed} size={80} /><span><b>{s.title}</b><small>{p.title} · approved {shortDate(s.approved_at)}</small></span></Link></li>)}
+            {st.done.map(({ p, s }) => <li key={s.id}><Link className="mini-row" href={`/s/${s.id}`}><Cover {...artOf(s, p)} size={80} /><span><b>{s.title}</b><small>{p.title} · approved {shortDate(s.approved_at)}</small></span></Link></li>)}
           </ul></section>}
         </div></section>
       </>

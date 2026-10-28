@@ -159,7 +159,7 @@ export default function SharedListen() {
               {ar.spotify_url && <a className="spbtn" href={ar.spotify_url} target="_blank" rel="noopener noreferrer"><SpotifyMark />Listen on Spotify</a>}</div>
           </section>
         )}
-        <p className="lfoot">Shared privately with CTRL ROOM. Please don’t repost unreleased music.<br />Powered by <b>ARTHOUSE</b></p>
+        <p className="lfoot">Shared privately with CTRL ROOM. Please don’t repost unreleased music.<br />Powered by <a href="https://art-house.us" target="_blank" rel="noopener noreferrer"><b>ARTHOUSE</b></a></p>
       </div>
     </main>
   );

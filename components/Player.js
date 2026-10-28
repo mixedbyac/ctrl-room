@@ -212,14 +212,14 @@ function MiniPlayer() {
     }
     g.fillStyle = '#f5d547'; g.fillRect(Math.round(prog * W) - dpr, 0, 2 * dpr, H);
   });
-  if (!c || !v || pl.expanded) return null;
+  if (!c || !v) return null;
   const seekAt = (e) => { const r = wrap.current.getBoundingClientRect(); pl.seek(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * pl.duration); };
   const i = pl.queue.indexOf(c.song.id);
   return (
     <div className="mini">
       <div className="minibar">
-        <button className="mopen" onClick={() => pl.setExpanded(true)} aria-label={`Open the player for ${c.song.title}`}><Cover as="div" seed={c.song.seed} path={c.song.cover_path || c.project.cover_path} size={120} className="mart spin" /></button>
-        <button className="mtext" onClick={() => pl.setExpanded(true)}>
+        <button className="mopen" onClick={() => pl.setExpanded(!pl.expanded)} aria-label={`Open the player for ${c.song.title}`}><Cover as="div" seed={c.song.seed} path={c.song.cover_path || c.project.cover_path} size={120} className="mart spin" /></button>
+        <button className="mtext" onClick={() => pl.setExpanded(!pl.expanded)}>
           <b><span id="mtitle">{c.song.title}</span>{pl.playing && <span className="eq"><span /><span /><span /></span>}</b>
           <span>{c.project.title} · {v.label}</span>
         </button>
@@ -229,7 +229,7 @@ function MiniPlayer() {
           <button onClick={pl.prev} aria-label="Previous song"><svg viewBox="0 0 24 24"><path d="M11 12l9-6.5v13zM2 12l9-6.5v13z" /></svg></button>
           <button className="mp" onClick={pl.toggle} aria-label={pl.playing ? 'Pause' : 'Play'}><svg viewBox="0 0 24 24">{pl.playing ? PAUSE : PLAY}</svg></button>
           <button onClick={pl.next} disabled={i < 0 || i >= pl.queue.length - 1} aria-label="Next song"><svg viewBox="0 0 24 24"><path d="M13 12L4 5.5v13zM22 12l-9-6.5v13z" /></svg></button>
-          <button onClick={() => pl.setExpanded(true)} aria-label="Open the full player" className="mexp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" /></svg></button>
+          <button onClick={() => pl.setExpanded(!pl.expanded)} aria-label={pl.expanded ? 'Close the player' : 'Open the player'} aria-expanded={pl.expanded} className={`mexp ${pl.expanded ? 'on' : ''}`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 15l6-6 6 6" /></svg></button>
         </div>
       </div>
     </div>
@@ -274,8 +274,7 @@ function NowPlaying() {
       if ((e.key === 'x' || e.key === 'X') && !e.target.closest('input,textarea,select') && c.versions.length > 1) flip();
     };
     document.addEventListener('keydown', k);
-    document.body.style.overflow = 'hidden';
-    return () => { document.removeEventListener('keydown', k); document.body.style.overflow = ''; };
+    return () => document.removeEventListener('keydown', k);
   });
   useEffect(() => {
     const ids = pl.queue.length ? pl.queue : [c.song.id];
@@ -288,46 +287,45 @@ function NowPlaying() {
   const flip = () => { const prev = c.versions[vi - 1] || c.versions[vi + 1]; if (prev) pl.switchVersion(prev.id); };
   const coverPath = c.song.cover_path || c.project.cover_path;
   return (
+    <>
+    <div className="npscrim" onClick={close} aria-hidden="true" />
     <div className="np" role="dialog" aria-label="Now playing">
       <Cover as="div" seed={c.song.seed} path={coverPath} size={240} className="npbg" />
       <div className="npinner">
         <div className="nptop">
-          <button className="npclose" onClick={close} aria-label="Close the player"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg></button>
           <span className="npfrom">Playing from <b>{c.project.title}</b></span>
           <Link className="npopen" href={`/s/${c.song.id}`} onClick={close}>Notes &amp; details</Link>
+          <button className="npclose" onClick={close} aria-label="Close the player"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg></button>
         </div>
-        <div className="npmain">
-          <div className="npdisc"><Cover as="div" seed={c.song.seed} path={coverPath} size={720} className="npart spin" /><span className="nphole" /></div>
-          <div className="npright">
-            <div>
-              <h2 className="up">{c.song.title}</h2>
-              <p className="npsub">{c.project.artist} · {c.project.title}</p>
-            </div>
-            {c.versions.length > 1 && (
-              <div className="npvers" role="group" aria-label="Versions">
-                {c.versions.map((x) => <button key={x.id} aria-pressed={x.id === c.versionId} onClick={() => pl.switchVersion(x.id)}>{x.label}</button>)}
-                <span className="nphint">Switches at the same spot · <kbd>X</kbd></span>
-              </div>
-            )}
-            <div>
-              <Wave peaks={v?.peaks} time={pl.time} duration={pl.duration} onSeek={pl.seek} />
-              <div className="nptimes mono"><span>{mmss(pl.time)}</span><span>{v?.file_format ? `${v.file_format}${v.bit_depth ? ` · ${Math.abs(v.bit_depth)}-bit` : ''}${v.sample_rate ? ` · ${(v.sample_rate / 1000).toFixed(v.sample_rate % 1000 ? 1 : 0)} kHz` : ''} · original` : 'Original file'}</span><span>{mmss(pl.duration)}</span></div>
-            </div>
-            <div className="npctl">
-              <button onClick={pl.prev} aria-label="Previous song"><svg viewBox="0 0 24 24"><path d="M11 12l9-6.5v13zM2 12l9-6.5v13z" /></svg></button>
-              <button className="npplay" onClick={pl.toggle} aria-label={pl.playing ? 'Pause' : 'Play'}><svg viewBox="0 0 24 24">{pl.playing ? PAUSE : PLAY}</svg></button>
-              <button onClick={pl.next} aria-label="Next song"><svg viewBox="0 0 24 24"><path d="M13 12L4 5.5v13zM22 12l-9-6.5v13z" /></svg></button>
-            </div>
+        <div className="npdisc"><Cover as="div" seed={c.song.seed} path={coverPath} size={640} className="npart spin" /><span className="nphole" /></div>
+        <div className="nphead">
+          <h2 className="up">{c.song.title}</h2>
+          <p className="npsub">{c.project.artist} · {c.project.title}</p>
+        </div>
+        {c.versions.length > 1 && (
+          <div className="npvers" role="group" aria-label="Versions">
+            {c.versions.map((x) => <button key={x.id} aria-pressed={x.id === c.versionId} onClick={() => pl.switchVersion(x.id)}>{x.label}</button>)}
+            <span className="nphint"><kbd>X</kbd> to A/B</span>
           </div>
+        )}
+        <div>
+          <Wave peaks={v?.peaks} time={pl.time} duration={pl.duration} onSeek={pl.seek} height={52} />
+          <div className="nptimes mono"><span>{mmss(pl.time)}</span><span>{v?.file_format ? `${v.file_format}${v.bit_depth ? ` · ${Math.abs(v.bit_depth)}-bit` : ''}${v.sample_rate ? ` · ${(v.sample_rate / 1000).toFixed(v.sample_rate % 1000 ? 1 : 0)} kHz` : ''}` : 'Original file'}</span><span>{mmss(pl.duration)}</span></div>
+        </div>
+        <div className="npctl">
+          <button onClick={pl.prev} aria-label="Previous song"><svg viewBox="0 0 24 24"><path d="M11 12l9-6.5v13zM2 12l9-6.5v13z" /></svg></button>
+          <button className="npplay" onClick={pl.toggle} aria-label={pl.playing ? 'Pause' : 'Play'}><svg viewBox="0 0 24 24">{pl.playing ? PAUSE : PLAY}</svg></button>
+          <button onClick={pl.next} aria-label="Next song"><svg viewBox="0 0 24 24"><path d="M13 12L4 5.5v13zM22 12l-9-6.5v13z" /></svg></button>
         </div>
         {upNext.length > 1 && (
           <div className="npqueue">
             <p className="nplabel">Up next</p>
             <div className="npq">
-              {upNext.map((s) => (
+              {upNext.map((s, n) => (
                 <button key={s.id} className={`npqi ${s.id === c.song.id ? 'on' : ''}`} onClick={() => (s.id === c.song.id ? pl.toggle() : pl.play({ songId: s.id, queue: pl.queue }))}>
-                  <Cover seed={s.seed} path={s.cover_path} size={120} />
-                  <span>{s.title}</span>
+                  <span className="npqn mono">{n + 1}</span>
+                  <Cover seed={s.seed} path={s.cover_path} size={80} />
+                  <span className="npqt">{s.title}</span>
                   {s.id === c.song.id && pl.playing && <span className="eq"><span /><span /><span /></span>}
                 </button>
               ))}
@@ -336,5 +334,6 @@ function NowPlaying() {
         )}
       </div>
     </div>
+    </>
   );
 }

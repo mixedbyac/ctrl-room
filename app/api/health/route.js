@@ -41,6 +41,17 @@ export async function GET(req) {
       await sendText(process.env.ENGINEER_PHONE, `CTRL ROOM daily check: ${bad} not working. Open CTRL ROOM › Security for details.`).catch(() => {});
     }
   }
+  // ?counts=1 : how much is in the database (numbers only) and which Supabase project the site uses
+  if (new URL(req.url).searchParams.get('counts')) {
+    const count = async (t) => { const { count: n, error } = await db.from(t).select('id', { head: true, count: 'exact' }); return error ? `error: ${error.message}` : n; };
+    const { data: eng } = await db.from('app_config').select('value').eq('key', 'engineer_email').maybeSingle();
+    const mask = (e) => (e ? e.replace(/^(.).*(@.*)$/, '$1…$2') : 'not set');
+    return Response.json({
+      supabase_project: (process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/^https:\/\/|\.supabase\.co.*$/g, ''),
+      projects: await count('projects'), songs: await count('songs'), versions: await count('versions'),
+      engineer: mask(eng?.value),
+    }, { headers: { 'Cache-Control': 'no-store' } });
+  }
   // public callers only learn up/down, never details
   return Response.json(isCron ? result : { ok, at: result.at }, { status: ok ? 200 : 503, headers: { 'Cache-Control': 'no-store' } });
 }

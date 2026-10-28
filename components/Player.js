@@ -215,7 +215,7 @@ export function PlayerProvider({ eng, children }) {
   useEffect(() => () => { Object.values(audios.current).forEach((a) => { a.pause(); a.src = ''; }); }, []);
 
   const version = current ? current.versions.find((v) => v.id === current.versionId) : null;
-  const value = { current, version, queue, playing, time, expanded, setExpanded, duration: duration || version?.duration || 0, play, pause, resume, toggle, seek, switchVersion, refresh, next: () => step(1), prev: () => step(-1) };
+  const value = { eng, current, version, queue, playing, time, expanded, setExpanded, duration: duration || version?.duration || 0, play, pause, resume, toggle, seek, switchVersion, refresh, next: () => step(1), prev: () => step(-1) };
   return <Ctx.Provider value={value}>{children}<MiniPlayer />{expanded && current && <NowPlaying />}</Ctx.Provider>;
 }
 
@@ -298,6 +298,24 @@ function NowPlaying() {
   const c = pl.current, v = pl.version;
   const [upNext, setUpNext] = useState([]);
   const close = () => pl.setExpanded(false);
+  // quick comment at the exact moment (phone friendly)
+  const [composing, setComposing] = useState(false);
+  const [pinAt, setPinAt] = useState(0);
+  const [text, setText] = useState('');
+  const [posting, setPosting] = useState(false);
+  const [posted, setPosted] = useState('');
+  const postComment = async () => {
+    if (!text.trim()) return;
+    setPosting(true);
+    const sb = supabase();
+    const { data: sess } = await sb.auth.getSession();
+    const name = sess.session?.user?.user_metadata?.name || null;
+    const { error } = await sb.from('notes').insert({ song_id: c.song.id, version_id: c.versionId, t: Math.round(pinAt * 10) / 10, body: text.trim(), author_name: pl.eng ? (name ? `${name} (Engineer)` : 'Engineer') : name, from_client: !pl.eng });
+    setPosting(false);
+    if (error) { setPosted(error.message); return; }
+    setComposing(false); setText(''); setPosted(`Comment added at ${mmss(pinAt)} on ${pl.version?.label || 'this mix'}.`);
+    setTimeout(() => setPosted(''), 3500);
+  };
   useEffect(() => {
     const k = (e) => {
       if (e.key === 'Escape') close();
@@ -327,9 +345,16 @@ function NowPlaying() {
           <button className="npclose" onClick={close} aria-label="Close the player"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg></button>
         </div>
         <div className="npdisc"><Cover as="div" {...artOf(c.song, c.project)} size={640} className="npart spin" /><span className="nphole" /></div>
+        <Cover as="div" {...artOf(c.song, c.project)} size={900} className="npsquare" />
         <div className="nphead">
-          <h2 className="up">{c.song.title}</h2>
-          <p className="npsub">{c.project.artist} · {c.project.title}</p>
+          <div className="nphead-t">
+            <h2 className="up">{c.song.title}</h2>
+            <p className="npsub">{c.project.artist} · {c.project.title}</p>
+          </div>
+          <button className="npcomment" onClick={() => { setPinAt(pl.time); setComposing(true); }} aria-label="Add a comment at this moment">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-7l-4 3v-3H5a1 1 0 01-1-1V6a1 1 0 011-1z" /><path d="M12 8.5v4M10 10.5h4" /></svg>
+            <span>Comment</span>
+          </button>
           <div className="npqual"><QualityBadge v={v} size="lg" detail /></div>
         </div>
         {c.versions.length > 1 && (
@@ -340,13 +365,27 @@ function NowPlaying() {
         )}
         <div>
           <Wave peaks={v?.peaks} time={pl.time} duration={pl.duration} onSeek={pl.seek} height={52} />
-          <div className="nptimes mono"><span>{mmss(pl.time)}</span><span>{v?.file_format ? `${v.file_format} · as delivered` : 'Original file'}</span><span>{mmss(pl.duration)}</span></div>
+          <div className="nptimes mono"><span>{mmss(pl.time)}</span><span className="npfmt">{v?.file_format ? `${v.file_format} · as delivered` : 'Original file'}</span><span className="npdur">{mmss(pl.duration)}</span><span className="npleft">-{mmss(Math.max(0, pl.duration - pl.time))}</span></div>
         </div>
         <div className="npctl">
-          <button onClick={pl.prev} aria-label="Previous song"><svg viewBox="0 0 24 24"><path d="M11 12l9-6.5v13zM2 12l9-6.5v13z" /></svg></button>
+          <button className="npskip" onClick={() => pl.seek(Math.max(0, pl.time - 15))} aria-label="Back 15 seconds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 103-6.7L3 8" /><path d="M3 3v5h5" /><text x="12" y="15.5" textAnchor="middle" fontSize="7.5" fontWeight="700" fill="currentColor" stroke="none">15</text></svg></button>
+          <button onClick={pl.prev} aria-label="Previous song (or back to the start)"><svg viewBox="0 0 24 24"><path d="M11 12l9-6.5v13zM2 12l9-6.5v13z" /></svg></button>
           <button className="npplay" onClick={pl.toggle} aria-label={pl.playing ? 'Pause' : 'Play'}><svg viewBox="0 0 24 24">{pl.playing ? PAUSE : PLAY}</svg></button>
           <button onClick={pl.next} aria-label="Next song"><svg viewBox="0 0 24 24"><path d="M13 12L4 5.5v13zM22 12l-9-6.5v13z" /></svg></button>
+          <button className="npskip" onClick={() => pl.seek(Math.min(pl.duration || 0, pl.time + 15))} aria-label="Forward 15 seconds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 11-3-6.7L21 8" /><path d="M21 3v5h-5" /><text x="12" y="15.5" textAnchor="middle" fontSize="7.5" fontWeight="700" fill="currentColor" stroke="none">15</text></svg></button>
         </div>
+        {composing && (
+          <div className="npcompose" role="dialog" aria-label="Add a comment">
+            <div className="npcompose-h">
+              <button className="ctime" onClick={() => setPinAt(pl.time)} title="Use the current time">At {mmss(pinAt)}</button>
+              <span className="muted small">Tap the time to move it to now</span>
+              <button className="npclose" onClick={() => { setComposing(false); setText(''); }} aria-label="Cancel">✕</button>
+            </div>
+            <textarea autoFocus rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="What do you hear here? Like “vocal a touch louder”" aria-label="Comment" />
+            <button className="btn primary" disabled={!text.trim() || posting} onClick={postComment}>{posting ? 'Posting…' : `Post at ${mmss(pinAt)}`}</button>
+          </div>
+        )}
+        {posted && <p className="npposted" role="status">{posted}</p>}
         {upNext.length > 1 && (
           <div className="npqueue">
             <p className="nplabel">Up next</p>

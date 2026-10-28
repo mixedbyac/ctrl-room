@@ -209,5 +209,5 @@ create policy mixes_delete on storage.objects for delete
 
 -- ---------- who you are ----------
 -- Replace with the email you sign in with:
-insert into app_config (key, value) values ('engineer_email', 'you@example.com')
+insert into app_config (key, value) values ('engineer_email', 'me@musicbyac.us')
 on conflict (key) do update set value = excluded.value;

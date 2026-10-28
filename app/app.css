@@ -363,3 +363,10 @@ body.playing .lbg { animation: breathe 9s ease-in-out infinite; }
   .calgrid { display: none; }
   .calagenda { display: block; }
 }
+
+/* demo baseline */
+.vnode.demo .vdot { background: transparent !important; box-shadow: inset 0 0 0 2px var(--muted); }
+.vnode.demo.cur .vdot { box-shadow: inset 0 0 0 2px var(--sig), 0 0 0 4px rgba(245,213,71,.18); }
+.vnode.demo .vlab > button:first-child { font-style: italic; }
+.vnode.demo::after { content: ""; }
+.cmpdemo { margin: 4px 0 2px; }

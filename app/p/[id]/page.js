@@ -9,7 +9,7 @@ import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
-import { fmtDate, shortDate, statusText, mmss } from '@/lib/format';
+import { fmtDate, shortDate, statusText, mmss, latestMix, mixesOf } from '@/lib/format';
 import { parseMixName, matchSong } from '@/lib/filename';
 import { deliverFile } from '@/lib/deliver';
 import { usePlayer } from '@/components/Player';
@@ -102,7 +102,7 @@ export default function ProjectPage() {
           )}
           {p.songs.length ? p.songs.map((s, i) => {
             const vs = [...(s.versions || [])].sort((a, b) => a.created_at.localeCompare(b.created_at));
-            const last = vs.at(-1);
+            const last = latestMix(vs) || vs.at(-1); // a demo only shows when there's no mix yet
             const sub = vs.length ? statusText(s, vs) : s.eta ? `First mix ${fmtDate(s.eta)}` : statusText(s, vs);
             const fmtx = last ? fmtShort(last) : '';
             return (
@@ -299,7 +299,7 @@ const fmtShort = (v) => {
 /** Totals across the project's current mixes, plus a one-click loudness measure for mixes uploaded before LUFS existed. */
 function TrackStats({ songs, eng, onMeasured }) {
   const [busy, setBusy] = useState('');
-  const latest = songs.map((s) => [...(s.versions || [])].sort((a, b) => a.created_at.localeCompare(b.created_at)).at(-1)).filter(Boolean);
+  const latest = songs.map((s) => latestMix(s.versions || [])).filter(Boolean);
   const total = latest.reduce((n, v) => n + (v.duration || 0), 0);
   const lu = latest.map((v) => v.lufs).filter((x) => x != null);
   const pk = latest.map((v) => v.peak_db).filter((x) => x != null);

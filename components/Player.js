@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import Cover from '@/components/Cover';
-import { mmss, deviceName } from '@/lib/format';
+import { mmss, deviceName, orderVersions, latestMix } from '@/lib/format';
 import { artOf } from '@/lib/art';
 
 /*
@@ -88,9 +88,10 @@ export function PlayerProvider({ eng, children }) {
       const { data } = await sb.from('versions').select('*').eq('song_id', id).order('created_at');
       vs = data || [];
     }
+    vs = orderVersions(vs);
     if (!vs.length) return;
     await signed(vs.map((v) => v.storage_path));
-    const v = vs.find((x) => x.id === versionId) || vs[vs.length - 1];
+    const v = vs.find((x) => x.id === versionId) || latestMix(vs) || vs[vs.length - 1];
     stopAll();
     const next = { song: s, project: p, versions: vs, versionId: v.id };
     curRef.current = next;

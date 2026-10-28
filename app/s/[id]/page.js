@@ -6,7 +6,8 @@ import { supabase, api } from '@/lib/supabase';
 import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
 import { artOf } from '@/lib/art';
-import { fmt, mmss, fmtDate, shortDate, ago, statusText, nextLabel, deviceName, todayISO } from '@/lib/format';
+import { fmt, mmss, fmtDate, shortDate, ago, statusText, nextLabel, deviceName, todayISO, orderVersions, latestMix, demoOf, mixesOf, isDemo } from '@/lib/format';
+import { uploadDemo } from '@/lib/demo';
 import { deliverFile } from '@/lib/deliver';
 import { describeFormat } from '@/lib/fileinfo';
 import { usePlayer } from '@/components/Player';
@@ -47,14 +48,16 @@ export default function SongPage() {
       sb.from('notes').select('*').eq('song_id', id).order('created_at'),
       sb.from('updates').select('*').eq('song_id', id).order('created_at', { ascending: false }),
     ]);
-    setSong(s); setVersions(vs || []); setNotes(ns || []); setUpdates(us || []);
-    const list = vs || [];
+    const list = orderVersions(vs || []);
+    setSong(s); setVersions(list); setNotes(ns || []); setUpdates(us || []);
     sb.from('songs').select('id').eq('project_id', s.project_id).order('position').then(({ data }) => setQueueIds((data || []).map((x) => x.id)));
     pl.refresh(id, list);
     if (list.length) {
-      setVid((cur) => (cur && list.some((v) => v.id === cur) ? cur : list[list.length - 1].id));
+      const mixes = mixesOf(list), top = mixes.at(-1) || list[list.length - 1], demo = demoOf(list);
+      setVid((cur) => (cur && list.some((v) => v.id === cur) ? cur : top.id));
+      // A/B starts as the demo vs the latest mix when there's a demo, else the last two mixes
       setAb((cur) => (cur.a && cur.b && list.some((v) => v.id === cur.a) && list.some((v) => v.id === cur.b) ? cur
-        : { a: list[Math.max(0, list.length - 2)].id, b: list[list.length - 1].id }));
+        : demo && mixes.length ? { a: demo.id, b: top.id } : { a: list[Math.max(0, list.length - 2)].id, b: top.id }));
     }
   }, [id]);
   useEffect(() => { load(); }, [load]);
@@ -127,13 +130,14 @@ export default function SongPage() {
             <p className="eyebrow"><Link href={`/p/${p.id}`}>{p.title}</Link> · {p.artist}</p>
             <SongTitle song={song} eng={eng} reload={load} />
             <div className="meta"><span className={`dot ${song.status}`}>{statusText(song, versions)}</span>
-              <span>{[song.bpm ? `${song.bpm} BPM` : '', hasMix ? `${versions.length} version${versions.length > 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ')}</span></div>
+              <span>{[song.bpm ? `${song.bpm} BPM` : '', mixesOf(versions).length ? `${mixesOf(versions).length} version${mixesOf(versions).length > 1 ? 's' : ''}${demoOf(versions) ? ' + demo' : ''}` : demoOf(versions) ? 'Demo only' : ''].filter(Boolean).join(' · ')}</span></div>
             {hasMix && <div className="shbar"><ShareButton kind="song" id={song.id} eng={eng} title={song.title} /></div>}
             {hasMix && <Versions {...{ versions, vid, ab, setAb, switchTo, flip, eng, song, reload: load, setMsg }} />}
             {v?.note && <p className="vnote">{v.label}: {v.note}</p>}
             {eng && <DeliverVersion song={song} versions={versions} onDone={load} setMsg={setMsg} />}
+            {!demoOf(versions) && <AddDemo song={song} eng={eng} onDone={load} setMsg={setMsg} />}
             {msg && <p className="upmsg">{msg}</p>}
-            {hasMix && <Decision {...{ eng, song, v, versions, notes, reload: load, setMsg, setTab }} />}
+            {mixesOf(versions).length > 0 && <Decision {...{ eng, song, v, versions, notes, reload: load, setMsg, setTab }} />}
           </div>
         </div>
 
@@ -185,7 +189,7 @@ function Versions({ versions, vid, ab, setAb, switchTo, flip, eng, song, reload,
     <div className="vblock">
       <div className="vtrack">
         {versions.map((x, i) => (
-          <div key={x.id} className={`vnode ${x.id === vid ? 'cur' : ''} ${i < vi ? 'past' : ''} ${song.approved_version === x.id ? 'ok' : ''}`}>
+          <div key={x.id} className={`vnode ${x.id === vid ? 'cur' : ''} ${i < vi ? 'past' : ''} ${song.approved_version === x.id ? 'ok' : ''} ${isDemo(x) ? 'demo' : ''}`}>
             <button className="vpick" onClick={() => switchTo(x.id)} aria-pressed={x.id === vid} aria-label={`Play ${x.label}`}><span className="vdot" /></button>
             <span className="vlab">
               {editing === x.id ? (
@@ -204,6 +208,9 @@ function Versions({ versions, vid, ab, setAb, switchTo, flip, eng, song, reload,
           </div>
         ))}
       </div>
+      {demoOf(versions) && mixesOf(versions).length > 0 && !(ab.a === demoOf(versions).id || ab.b === demoOf(versions).id) && (
+        <button className="btn small cmpdemo" onClick={() => { const d = demoOf(versions), m = latestMix(versions); setAb({ a: d.id, b: m.id }); if (vid !== d.id && vid !== m.id) switchTo(m.id); }}>Compare to demo</button>
+      )}
       {versions.length > 1 && (
         <div className="abbar">
           <div className={`abslot a ${side === 'a' ? 'on' : ''}`}><span className="abletter">A</span>
@@ -271,9 +278,12 @@ function Decision({ eng, song, v, versions, notes, reload, setMsg, setTab }) {
   const sb = supabase();
   if (eng) {
     const ap = versions.find((x) => x.id === song.approved_version);
-    return <div className="decision"><span className="grow">{song.status === 'approved' ? <><b>{ap?.label} is signed off.</b> You're clear to print final masters.</> : song.status === 'changes' ? <><b>The client asked for changes.</b> Their notes are in the Notes tab.</> : `Waiting on the client to review ${versions.at(-1).label}.`}</span></div>;
+    return <div className="decision"><span className="grow">{song.status === 'approved' ? <><b>{ap?.label} is signed off.</b> You're clear to print final masters.</> : song.status === 'changes' ? <><b>The client asked for changes.</b> Their notes are in the Notes tab.</> : `Waiting on the client to review ${latestMix(versions)?.label}.`}</span></div>;
   }
-  const latest = versions.at(-1);
+  const latest = latestMix(versions);
+  if (isDemo(v)) {
+    return <div className="decision"><span className="grow"><b>This is the demo,</b> the starting point. Flip to {latest?.label || 'a mix'} to hear how far it’s come.</span></div>;
+  }
   if (song.status === 'approved' && song.approved_version === v.id) {
     return <div className="decision"><span className="grow"><span className="dot approved">You approved {v.label}.</span> Your engineer has been notified.</span>
       <button className="btn quiet" onClick={async () => { await sb.rpc('undo_approval', { p_song: song.id }); reload(); }}>Undo</button></div>;
@@ -421,13 +431,13 @@ function Notes({ notes, v, versions, time, playing, seek, setVid, eng, email, so
 /* ---------- progress ---------- */
 function Progress({ song, versions, eng, reload }) {
   const sb = supabase();
-  const first = versions[0], last = versions.at(-1);
+  const mixes = mixesOf(versions), first = mixes[0], last = mixes.at(-1);
   const steps = [
     ['Files received', song.received_at], ['Files downloaded', song.downloaded_at], ['Mixing', song.mixing_at],
-    [last && versions.length > 1 ? `Delivered ${last.label}` : 'Mix delivered', last?.created_at], ['Approved', song.status === 'approved' ? song.approved_at : null],
+    [last && mixes.length > 1 ? `Delivered ${last.label}` : 'Mix delivered', last?.created_at], ['Approved', song.status === 'approved' ? song.approved_at : null],
   ];
   const cur = steps.findIndex((s) => !s[1]);
-  const next = versions.length ? `v${versions.length + 1}` : 'First mix';
+  const next = mixes.length ? nextLabel(versions) : 'First mix';
   const mark = async (field, text) => {
     await sb.from('songs').update({ [field]: todayISO(), ...(field === 'mixing_at' ? { status: song.status === 'approved' ? song.status : song.status } : {}) }).eq('id', song.id);
     let texted = false;
@@ -577,5 +587,30 @@ function SongTitle({ song, eng, reload }) {
     <h1 className="up titlewrap">{song.title}
       <button className="titlepen" onClick={() => { setDraft(song.title); setEditing(true); }} aria-label="Rename song" title="Rename song">✎</button>
     </h1>
+  );
+}
+
+/* ---------- demo: the baseline every mix gets compared to ---------- */
+function AddDemo({ song, eng, onDone, setMsg }) {
+  const [busy, setBusy] = useState('');
+  const [hot, setHot] = useState(false);
+  const id = `demo-${song.id}`;
+  const go = async (file) => {
+    if (!file) return;
+    if (!/\.(wav|aiff?|mp3|m4a|flac)$/i.test(file.name)) return setMsg('Pick a WAV, AIFF, FLAC, MP3 or M4A file for the demo.');
+    try {
+      const r = await uploadDemo({ songId: song.id, file, onStatus: setBusy });
+      setMsg(`Added ${file.name} as the ${r.label}. Use “Compare to demo” to A/B it against any mix.`);
+      onDone();
+    } catch (e) { setMsg(e.message); }
+    setBusy('');
+  };
+  return (
+    <div className={`row-actions deliverbox ${hot ? 'hot' : ''}`} onDragOver={(e) => { e.preventDefault(); setHot(true); }} onDragLeave={() => setHot(false)}
+      onDrop={(e) => { e.preventDefault(); setHot(false); if (!busy) go(e.dataTransfer?.files?.[0]); }}>
+      <label className="btn small quiet" htmlFor={id} style={{ cursor: 'pointer' }}>{busy || (hot ? 'Drop the demo' : '+ Add demo')}</label>
+      <input id={id} className="vh" type="file" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.flac" disabled={!!busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; go(f); }} />
+      <span className="muted small">{eng ? 'The rough or demo the mixes get compared to.' : 'Got a rough or demo? Add it so you can compare every mix to it.'}</span>
+    </div>
   );
 }

@@ -11,7 +11,8 @@ import { fmtBytes, fmtDate, todayISO } from '@/lib/format';
 import SpotifyField from '@/components/SpotifyField';
 import DropAnywhere from '@/components/DropAnywhere';
 import { filesFromDrop } from '@/lib/dropfiles';
-import { analyseSong, describeFiles, hintsFromName, pickListenFile, titleSource } from '@/lib/detect';
+import { analyseSong, describeFiles, hintsFromName, pickListenFile, titleSource, fileKind, isAudio } from '@/lib/detect';
+import { uploadDemo } from '@/lib/demo';
 import { parseMixName } from '@/lib/filename';
 
 const LIMIT_SEND = 2 * 1024 * 1024 * 1024; // 2 GB per upload
@@ -114,6 +115,13 @@ export default function Portal() {
           sent += file.size; nb += file.size;
         }
         results.push({ songId: match.songId, files: s.files.length, bytes: nb });
+        // a rough mix (or a lone audio file) also becomes the song's Demo in the app, so every mix can be compared to it
+        const audio = s.files.filter((x) => isAudio(x.name));
+        const demo = audio.find((x) => fileKind(x.webkitRelativePath || x.name) === 'Rough mix')
+          || (audio.length === 1 && ['Audio', 'Beat'].includes(fileKind(audio[0].name)) ? audio[0] : null);
+        if (demo && demo.size <= 45 * 1024 * 1024) {
+          try { setProgress((pr) => ({ ...pr, file: `${demo.name} (demo)` })); await uploadDemo({ songId: match.songId, file: demo, uploadId: r.uploadId }); } catch { /* the files still went to Dropbox */ }
+        }
       }
       await api('/api/portal/done', { uploadId: r.uploadId, results });
       setResult({ ...r, files: fileCount, bytes });

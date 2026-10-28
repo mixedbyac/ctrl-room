@@ -7,7 +7,7 @@ import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
 import { artOf } from '@/lib/art';
 import QuickDrop from '@/components/QuickDrop';
-import { fmtDate, todayISO, addDaysISO, statusText, ago, mmss, fmtBytes } from '@/lib/format';
+import { fmtDate, todayISO, addDaysISO, statusText, ago, mmss, fmtBytes, latestMix, mixesOf, nextLabel } from '@/lib/format';
 
 export default function HomePage() {
   const { eng, session } = useApp();
@@ -98,7 +98,7 @@ function EngineerHome() {
                 <Cover {...artOf(s, p)} size={120} />
                 <span className="dt"><b className="up">{s.title}</b><span>{p.title} · {p.artist}</span></span>
                 <span className="dw">
-                  <span className={`dot ${s.status}`}>{s.eta < today ? `Overdue · ${fmtDate(s.eta)}` : s.versions?.length ? `v${s.versions.length + 1}` : 'First mix'}</span>
+                  <span className={`dot ${s.status}`}>{s.eta < today ? `Overdue · ${fmtDate(s.eta)}` : mixesOf(s.versions).length ? nextLabel(s.versions) : 'First mix'}</span>
                   <span className="dsub">{statusText(s, s.versions)}</span>
                 </span>
                 <span className="chev" aria-hidden="true">›</span>
@@ -136,7 +136,7 @@ function EngineerHome() {
             <h2 className="h2 up" style={{ marginBottom: 12 }}>Waiting on clients</h2>
             <ul className="mlist">
               {waiting.length ? waiting.map(({ p, s }) => {
-                const last = [...(s.versions || [])].sort((a, b) => a.created_at.localeCompare(b.created_at)).at(-1);
+                const last = latestMix(s.versions || []);
                 return (
                   <li key={s.id}><Link className="mini-row" href={`/s/${s.id}`}><Cover {...artOf(s, p)} size={80} />
                     <span><b>{s.title}</b><small>{p.artist}{last ? ` · ${last.label} sent ${fmtDate(last.created_at)}` : ''}</small></span></Link></li>

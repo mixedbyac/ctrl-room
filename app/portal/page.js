@@ -9,6 +9,8 @@ const appBase = () => (typeof window !== 'undefined' && PORTAL_HOSTS.includes(wi
 import Cover from '@/components/Cover';
 import { fmtBytes, fmtDate, todayISO } from '@/lib/format';
 import SpotifyField from '@/components/SpotifyField';
+import DropAnywhere from '@/components/DropAnywhere';
+import { filesFromDrop } from '@/lib/dropfiles';
 import { analyseSong, describeFiles, hintsFromName, pickListenFile, titleSource } from '@/lib/detect';
 import { parseMixName } from '@/lib/filename';
 
@@ -28,6 +30,39 @@ export default function Portal() {
   const [result, setResult] = useState(null);
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const setSong = (k, patch) => setSongs((ss) => ss.map((s) => (s.k === k ? { ...s, ...patch } : s)));
+  const [dropNote, setDropNote] = useState('');
+  // Drop anywhere: each folder becomes a song; loose files join the song they're named after, else the next empty one.
+  const dropAnywhere = ({ files: loose, folders }) => {
+    const notes = [];
+    {
+      let ss = [...songs];
+      const norm = (t) => String(t || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+      const firstEmpty = () => ss.find((x) => !x.files.length && !(x.pending || []).length);
+      const give = (song, list) => { ss = ss.map((x) => (x.k === song.k ? { ...x, pending: [...(x.pending || []), ...list] } : x)); };
+      for (const fo of folders) {
+        const guess = parseMixName((titleSource(fo.name) || fo.name) + '.wav', { artist: f.artist }).title;
+        let target = ss.find((x) => guess && norm(x.title) === norm(guess)) || firstEmpty();
+        if (!target) { target = blank(); ss = [...ss, target]; }
+        give(target, fo.files);
+        notes.push(`${fo.name} → ${guess || 'a new song'}`);
+      }
+      const rest = [];
+      for (const file of loose) {
+        const guess = parseMixName((titleSource(file.name) || file.name) + '.wav', { artist: f.artist }).title;
+        const match = guess && ss.find((x) => x.title && norm(x.title) === norm(guess));
+        if (match) give(match, [file]); else rest.push(file);
+      }
+      if (rest.length) {
+        let target = firstEmpty();
+        if (!target) { target = blank(); ss = [...ss, target]; }
+        give(target, rest);
+        notes.push(`${rest.length} file${rest.length > 1 ? 's' : ''} → song ${ss.findIndex((x) => x.k === target.k) + 1}`);
+      }
+      setSongs(ss);
+    }
+    setDropNote(notes.join(' · '));
+    setTimeout(() => setDropNote(''), 5000);
+  };
 
   useEffect(() => {
     if (!myEmail) return;
@@ -116,6 +151,8 @@ export default function Portal() {
   return (
     <>
       <TopBar crumbs={[{ label: 'Portal' }]} />
+      {!sending && <DropAnywhere onFiles={dropAnywhere} />}
+      {dropNote && <div className="dropnote" role="status">{dropNote}</div>}
       <section className="page portal">
         <div>
           <h1 className="up">Start a mix</h1>
@@ -190,6 +227,12 @@ function SongCard({ s, n, canRemove, onChange, onRemove, artist }) {
   const [listening, setListening] = useState(false);
   const files = useRef(null), folder = useRef(null);
   const auto = s.auto || {};
+  useEffect(() => {
+    if (!s.pending?.length) return;
+    const p = s.pending;
+    onChange({ pending: null });
+    add(p);
+  }, [s.pending]); // eslint-disable-line
   const add = async (list) => {
     const picked = Array.from(list || []).filter((x) => x.size > 0 && !x.name.startsWith('.'));
     if (!picked.length) return;
@@ -236,7 +279,7 @@ function SongCard({ s, n, canRemove, onChange, onRemove, artist }) {
       <div className="fld"><label htmlFor={`n-${s.k}`}>Notes for this song</label><textarea id={`n-${s.k}`} rows={2} value={s.notes} onChange={(e) => onChange({ notes: e.target.value })} placeholder="What matters most in this mix?" /></div>
       <div className={`minidrop ${hot ? 'hot' : ''}`}
         onDragOver={(e) => { e.preventDefault(); setHot(true); }} onDragLeave={() => setHot(false)}
-        onDrop={(e) => { e.preventDefault(); setHot(false); add(e.dataTransfer?.files); }}>
+        onDrop={async (e) => { e.preventDefault(); e.stopPropagation(); setHot(false); const { files: fl, folders } = await filesFromDrop(e.dataTransfer); add([...fl, ...folders.flatMap((x) => x.files)]); }}>
         <span className="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V4M7 9l5-5 5 5M4 15v4a1 1 0 001 1h14a1 1 0 001-1v-4" /></svg></span>
         <span className="mt"><b>{s.files.length ? `${s.files.length} file${s.files.length > 1 ? 's' : ''} · ${fmtBytes(total)}` : (hot ? "Drop it like it's hot" : "Drop this song's files here")}</b>
           <span>{s.files.length ? describeFiles(s.files) : 'Stems, session, zip, or rough mix. The name, BPM and key fill in from them.'}</span>

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useApp } from '@/components/AppShell';
+import SpotifyField from '@/components/SpotifyField';
 
 function Signup() {
   const router = useRouter();
@@ -46,13 +47,14 @@ function Signup() {
             <div className="fld"><label htmlFor="su-n">Your name</label><input id="su-n" autoComplete="name" value={f.name} onChange={set('name')} autoFocus /></div>
             <div className="fld"><label htmlFor="su-a">Artist name <span className="opt">optional</span></label><input id="su-a" value={f.artist} onChange={set('artist')} /></div>
           </div>
+          <SpotifyField id="su-s" label="Spotify artist link" value={f.spotify} onChange={(v) => setF((x) => ({ ...x, spotify: v }))} onArtist={(a) => setF((x) => ({ ...x, artist: x.artist.trim() ? x.artist : a.name || '' }))} />
           <div className="fld"><label htmlFor="su-e">Email</label><input id="su-e" type="email" autoComplete="email" value={f.email} onChange={set('email')} /></div>
           <div className="fld"><label htmlFor="su-p">Password <span className="opt">8+ characters</span></label>
             <div className="pwrow"><input id="su-p" type={show ? 'text' : 'password'} autoComplete="new-password" value={f.password} onChange={set('password')} />
               <button type="button" className="btn small quiet" onClick={() => setShow(!show)}>{show ? 'Hide' : 'Show'}</button></div></div>
           <div className="two">
             <div className="fld"><label htmlFor="su-ph">Phone <span className="opt">for text updates</span></label><input id="su-ph" type="tel" autoComplete="tel" value={f.phone} onChange={set('phone')} /></div>
-            <div className="fld"><label htmlFor="su-s">Spotify artist link <span className="opt">optional</span></label><input id="su-s" type="url" inputMode="url" placeholder="open.spotify.com/artist/…" value={f.spotify} onChange={set('spotify')} /></div>
+
           </div>
           <input className="hp" tabIndex={-1} autoComplete="off" aria-hidden="true" value={f.website} onChange={set('website')} />
           <button className="btn primary" disabled={busy}>{busy ? 'Creating your account…' : 'Create account'}</button>

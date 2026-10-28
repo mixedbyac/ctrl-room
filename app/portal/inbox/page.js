@@ -9,6 +9,8 @@ import { fmtBytes, ago, todayISO } from '@/lib/format';
 export default function Inbox() {
   const { eng, session } = useApp();
   const [rows, setRows] = useState(null);
+  const [view, setView] = useState('inbox');
+  const [msg, setMsg] = useState('');
   const load = useCallback(async () => {
     const { data } = await supabase().from('uploads').select('*, projects(id,title,seed,artist)').order('created_at', { ascending: false }).limit(100);
     setRows(data || []);
@@ -30,6 +32,14 @@ export default function Inbox() {
     }
     load();
   };
+  const archive = async (u, on) => {
+    setMsg('');
+    const { error } = await supabase().from('uploads').update({ archived: on }).eq('id', u.id);
+    if (error) return setMsg(/archived/.test(error.message) ? 'Archiving needs one line in Supabase (SQL Editor › New snippet › Run):  alter table uploads add column if not exists archived boolean not null default false;' : error.message);
+    setRows((rs) => rs.map((r) => (r.id === u.id ? { ...r, archived: on } : r)));
+  };
+  const shown = (rows || []).filter((u) => (view === 'archived' ? u.archived : !u.archived));
+  const archivedCount = (rows || []).filter((u) => u.archived).length;
   const portalLink = process.env.NEXT_PUBLIC_PORTAL_URL || (typeof window !== 'undefined' ? `${window.location.origin}/portal` : '/portal');
 
   return (
@@ -38,13 +48,18 @@ export default function Inbox() {
       <section className="page portal">
         <div>
           <h1 className="up">Portal inbox</h1>
-          <p className="lede">Everything clients send through your Portal, filed into your Dropbox by artist, project and song.</p>
+          <p className="lede">Everything clients send through your Portal, filed into your Dropbox in a folder for each artist.</p>
           <div className="share-link" style={{ marginTop: 14 }}><code>{portalLink}</code>
             <button className="btn small" onClick={async () => { try { await navigator.clipboard.writeText(portalLink); } catch {} }}>Copy Portal link</button>
             <Link className="btn small" href="/dropbox">Dropbox settings</Link></div>
         </div>
         <div className="inbox">
-          {rows === null ? <p className="muted">Loading…</p> : rows.length ? rows.map((u) => (
+          <div className="itabs" role="tablist">
+            <button role="tab" aria-selected={view === 'inbox'} onClick={() => setView('inbox')}>Inbox<span>{(rows || []).length - archivedCount}</span></button>
+            <button role="tab" aria-selected={view === 'archived'} onClick={() => setView('archived')}>Archived<span>{archivedCount}</span></button>
+          </div>
+          {msg && <p className="toast-inline">{msg}</p>}
+          {rows === null ? <p className="muted">Loading…</p> : shown.length ? shown.map((u) => (
             <article key={u.id} className="ucard">
               <Cover seed={u.projects?.seed} size={120} />
               <div style={{ minWidth: 0 }}>
@@ -61,9 +76,11 @@ export default function Inbox() {
               <div className="acts">
                 {u.downloaded_at ? <span className="m">Downloaded {ago(u.downloaded_at)}</span> : <button className="btn small primary" onClick={() => markDownloaded(u)}>Mark downloaded</button>}
                 {u.projects && <Link className="btn small" href={`/p/${u.projects.id}`}>Open project</Link>}
+                <button className="btn small quiet" onClick={() => archive(u, !u.archived)}>{u.archived ? 'Move to inbox' : 'Archive'}</button>
               </div>
             </article>
-          )) : <div className="empty-state"><strong>Nothing yet</strong>Send clients your Portal link. Their files land in your Dropbox and show up here.</div>}
+          )) : view === 'archived' ? <div className="empty-state"><strong>Nothing archived</strong>Archive a send once you’ve dealt with it to keep your inbox clear.</div>
+            : <div className="empty-state"><strong>{rows.length ? 'All clear' : 'Nothing yet'}</strong>{rows.length ? 'Everything is archived. New sends show up here.' : 'Send clients your Portal link. Their files land in your Dropbox and show up here.'}</div>}
         </div>
       </section>
     </>

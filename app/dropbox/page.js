@@ -28,7 +28,7 @@ function DropboxSetup() {
     try {
       const r = await api('/api/dropbox', { action: 'root', root, create });
       setSt((s) => ({ ...s, root: r.root })); setTyped(r.root || '/'); setBrowse(null);
-      setMsg(`Saved. Client files will go into ${r.root || 'the top of your Dropbox'}/Artist/Project/Song.`);
+      setMsg(`Saved. Client files will go into ${r.root || 'the top of your Dropbox'}/Artist name.`);
     } catch (e) { setBErr(e.message); }
     setBusy(false);
   };
@@ -49,7 +49,7 @@ function DropboxSetup() {
     <>
       <TopBar crumbs={[{ label: 'Home', href: '/' }, { label: 'Portal', href: '/portal/inbox' }, { label: 'Dropbox' }]} />
       <section className="page">
-        <div className="hhead"><h1 className="up">Dropbox</h1><p className="lede">Files clients send through the Portal land here, sorted into Artist / Project / Song. Clients never see Dropbox.</p></div>
+        <div className="hhead"><h1 className="up">Dropbox</h1><p className="lede">Files clients send through the Portal land here, sorted into a folder for each artist. Clients never see Dropbox.</p></div>
         {msg && <p className="toast-inline" style={{ marginBottom: 16 }}>{msg}</p>}
         {!st ? <p className="muted">Checking…</p> : (
           <div className="dbx">
@@ -101,7 +101,7 @@ function DropboxSetup() {
                     </label>
                   )}
                   <p className="muted small" style={{ margin: 0 }}>Client files go into</p>
-                  <div className="dbxpath mono">{st.root || '/'}<span className="muted">/Artist/Project/Song/</span></div>
+                  <div className="dbxpath mono">{st.root || '/'}<span className="muted">/Artist name/</span></div>
                   <form className="dbxtype" onSubmit={(e) => { e.preventDefault(); choose(typed, true); }}>
                     <label htmlFor="dbx-p" className="muted small">Folder in your Dropbox</label>
                     <div className="aerow">

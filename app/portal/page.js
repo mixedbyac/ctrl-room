@@ -7,7 +7,9 @@ import { useApp, TopBar, PORTAL_HOSTS, MAIN_SITE } from '@/components/AppShell';
 // on sendfileshere.com, links into the app go to the main domain
 const appBase = () => (typeof window !== 'undefined' && PORTAL_HOSTS.includes(window.location.hostname.toLowerCase()) ? MAIN_SITE : '');
 import Cover from '@/components/Cover';
-import { fmtBytes, fmtDate } from '@/lib/format';
+import { fmtBytes, fmtDate, todayISO } from '@/lib/format';
+import SpotifyField from '@/components/SpotifyField';
+import { analyseSong, describeFiles, hintsFromName, pickListenFile, titleSource } from '@/lib/detect';
 import { parseMixName } from '@/lib/filename';
 
 const LIMIT_SEND = 2 * 1024 * 1024 * 1024; // 2 GB per upload
@@ -16,7 +18,7 @@ const blank = () => ({ k: Math.random().toString(36).slice(2), title: '', bpm: '
 
 export default function Portal() {
   const { session, email: myEmail, projects } = useApp();
-  const [f, setF] = useState({ name: '', artist: '', email: '', phone: '', spotify: '', message: '', title: '', type: 'EP', release: '' });
+  const [f, setF] = useState({ name: '', artist: '', email: '', phone: '', spotify: '', message: '', title: '', type: 'EP', release: '', deadline: '' });
   const [mode, setMode] = useState('new');
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 1e9));
   const [songs, setSongs] = useState([blank()]);
@@ -54,7 +56,7 @@ export default function Portal() {
     setState('sending');
     try {
       const r = await api('/api/portal', {
-        name: f.name, email: f.email, phone: f.phone, artist: f.artist, spotify: f.spotify, message: f.message,
+        name: f.name, email: f.email, phone: f.phone, artist: f.artist, spotify: f.spotify, message: f.message, deadline: f.deadline || null,
         projectId: mode === 'new' ? null : mode,
         project: { title: autoTitle || 'Untitled', type: autoType, release: null, seed },
         songs: songs.map((s) => ({ title: s.title, bpm: s.bpm, key: s.key, ref: s.ref, notes: s.notes })),
@@ -123,17 +125,21 @@ export default function Portal() {
           <form className="sform" id="pform" onSubmit={submit} noValidate>
             <fieldset className="sec" disabled={sending}>
               <legend><span className="n">1</span>You</legend>
+              <SpotifyField value={f.spotify} onChange={(v) => setF((x) => ({ ...x, spotify: v }))} onArtist={(a) => setF((x) => ({ ...x, artist: x.artist.trim() ? x.artist : a.name || '' }))} />
               <div className="two">
                 <div className="fld"><label htmlFor="fName">Your name</label><input id="fName" autoComplete="name" value={f.name} onChange={set('name')} /></div>
                 <div className="fld"><label htmlFor="fArtist">Artist name</label><input id="fArtist" value={f.artist} onChange={set('artist')} /></div>
                 <div className="fld"><label htmlFor="fEmail">Email <span className="opt">you'll sign in with this</span></label><input id="fEmail" type="email" autoComplete="email" value={f.email} onChange={set('email')} /></div>
                 <div className="fld"><label htmlFor="fPhone">Phone <span className="opt">for text updates</span></label><input id="fPhone" type="tel" autoComplete="tel" value={f.phone} onChange={set('phone')} /></div>
               </div>
-              <div className="fld"><label htmlFor="fSpotify">Artist’s Spotify link <span className="opt">optional · sets up the artist page with their photo and bio</span></label><input id="fSpotify" type="url" inputMode="url" placeholder="https://open.spotify.com/artist/…" value={f.spotify} onChange={set('spotify')} /></div>
             </fieldset>
 
             <fieldset className="sec" disabled={sending}>
               <legend><span className="n">2</span>Songs</legend>
+              <div className="fld addto">
+                <label htmlFor="fDue">Need it by <span className="opt">optional</span></label>
+                <input id="fDue" type="date" min={todayISO()} value={f.deadline} onChange={set('deadline')} />
+              </div>
               {session && projects.filter((p) => !p.archived).length > 0 && (
                 <div className="fld addto">
                   <label htmlFor="fAddTo">Add to</label>
@@ -161,7 +167,7 @@ export default function Portal() {
               {mode === 'new' && !sending && <button type="button" className="shuf" onClick={() => setSeed(Math.floor(Math.random() * 1e9))}>Shuffle cover</button>}
             </div>
             <div><p className="sumt up">{mode === 'new' ? (autoTitle || 'Your mix') : project?.title}</p>
-              <p className="sums">{mode === 'new' ? `${autoType}${f.artist.trim() ? ` · ${f.artist.trim()}` : ''}` : project?.artist}</p></div>
+              <p className="sums">{mode === 'new' ? `${autoType}${f.artist.trim() ? ` · ${f.artist.trim()}` : ''}` : project?.artist}{f.deadline ? ` · needed by ${fmtDate(f.deadline)}` : ''}</p></div>
             <ul className="sumsongs">
               {songs.map((s, i) => <li key={s.k}><span>{s.title || `Song ${i + 1}`}</span><small>{s.files.length ? `${s.files.length} · ${fmtBytes(s.files.reduce((n, x) => n + x.size, 0))}` : 'no files yet'}</small></li>)}
             </ul>
@@ -181,25 +187,50 @@ export default function Portal() {
 
 function SongCard({ s, n, canRemove, onChange, onRemove, artist }) {
   const [hot, setHot] = useState(false);
+  const [listening, setListening] = useState(false);
   const files = useRef(null), folder = useRef(null);
-  const add = (list) => {
+  const auto = s.auto || {};
+  const add = async (list) => {
     const picked = Array.from(list || []).filter((x) => x.size > 0 && !x.name.startsWith('.'));
-    const patch = { files: [...s.files, ...picked] };
-    if (!s.title.trim() && picked.length) {
-      const first = picked[0], folder = first.webkitRelativePath ? first.webkitRelativePath.split('/')[0] : '';
-      const guess = parseMixName(folder || first.name, { artist }).title;
-      if (guess) patch.title = guess;
+    if (!picked.length) return;
+    const all = [...s.files, ...picked];
+    const patch = { files: all };
+    // song name: from the dropped folder, else the rough mix / beat, else the first file
+    const best = pickListenFile(all) || picked[0];
+    const folderName = picked[0].webkitRelativePath ? picked[0].webkitRelativePath.split('/')[0] : '';
+    if (!s.title.trim() || auto.title) {
+      const src = titleSource(folderName) || titleSource(best.name) || titleSource(picked[0].name);
+      const guess = parseMixName((src || '') + '.wav', { artist }).title;
+      if (guess) { patch.title = guess; patch.auto = { ...auto, ...(patch.auto || {}), title: true }; }
     }
+    // BPM / key written in the names win; otherwise listen to the audio
+    const hint = [folderName, ...all.map((x) => x.name)].map(hintsFromName).reduce((h, x) => ({ bpm: h.bpm || x.bpm, key: h.key || x.key }), { bpm: null, key: null });
+    const a2 = { ...auto, ...(patch.auto || {}) };
+    if ((!s.bpm || auto.bpm) && hint.bpm) { patch.bpm = String(hint.bpm); a2.bpm = 'name'; }
+    if ((!s.key || auto.key) && hint.key) { patch.key = hint.key; a2.key = 'name'; }
+    patch.auto = a2;
     onChange(patch);
+    const needBpm = (!s.bpm || auto.bpm) && !hint.bpm, needKey = (!s.key || auto.key) && !hint.key;
+    if ((needBpm || needKey) && pickListenFile(all)) {
+      setListening(true);
+      try {
+        const r = await analyseSong(pickListenFile(all));
+        const p2 = {}; const a3 = { ...a2 };
+        if (needBpm && r.bpm) { p2.bpm = String(r.bpm); a3.bpm = 'audio'; }
+        if (needKey && r.key) { p2.key = r.key; a3.key = 'audio'; }
+        if (Object.keys(p2).length) onChange({ ...p2, auto: a3 });
+      } catch { /* some formats can't be decoded in the browser; the fields stay editable */ }
+      setListening(false);
+    }
   };
   const total = s.files.reduce((m, x) => m + x.size, 0);
   return (
     <div className="songcard">
       <div className="sc-h"><b>SONG {String(n).padStart(2, '0')}</b>{canRemove && <button type="button" onClick={onRemove}>Remove</button>}</div>
       <div className="three">
-        <div className="fld"><label htmlFor={`t-${s.k}`}>Title</label><input id={`t-${s.k}`} value={s.title} onChange={(e) => onChange({ title: e.target.value })} /></div>
-        <div className="fld"><label htmlFor={`b-${s.k}`}>BPM</label><input id={`b-${s.k}`} inputMode="decimal" value={s.bpm} onChange={(e) => onChange({ bpm: e.target.value })} /></div>
-        <div className="fld"><label htmlFor={`k-${s.k}`}>Key</label><input id={`k-${s.k}`} value={s.key} onChange={(e) => onChange({ key: e.target.value })} /></div>
+        <div className="fld"><label htmlFor={`t-${s.k}`}>Title{auto.title && <span className="autotag">from files</span>}</label><input id={`t-${s.k}`} value={s.title} onChange={(e) => onChange({ title: e.target.value, auto: { ...auto, title: false } })} /></div>
+        <div className="fld"><label htmlFor={`b-${s.k}`}>BPM{auto.bpm && <span className="autotag">{auto.bpm === 'audio' ? 'detected' : 'from name'}</span>}</label><input id={`b-${s.k}`} inputMode="decimal" value={s.bpm} placeholder={listening ? 'Listening…' : ''} onChange={(e) => onChange({ bpm: e.target.value, auto: { ...auto, bpm: false } })} /></div>
+        <div className="fld"><label htmlFor={`k-${s.k}`}>Key{auto.key && <span className="autotag">{auto.key === 'audio' ? 'detected' : 'from name'}</span>}</label><input id={`k-${s.k}`} value={s.key} placeholder={listening ? 'Listening…' : ''} onChange={(e) => onChange({ key: e.target.value, auto: { ...auto, key: false } })} /></div>
       </div>
       <div className="fld"><label htmlFor={`r-${s.k}`}>Reference <span className="opt">a link or a song you want it to feel like</span></label><input id={`r-${s.k}`} value={s.ref} onChange={(e) => onChange({ ref: e.target.value })} /></div>
       <div className="fld"><label htmlFor={`n-${s.k}`}>Notes for this song</label><textarea id={`n-${s.k}`} rows={2} value={s.notes} onChange={(e) => onChange({ notes: e.target.value })} placeholder="What matters most in this mix?" /></div>
@@ -208,11 +239,12 @@ function SongCard({ s, n, canRemove, onChange, onRemove, artist }) {
         onDrop={(e) => { e.preventDefault(); setHot(false); add(e.dataTransfer?.files); }}>
         <span className="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V4M7 9l5-5 5 5M4 15v4a1 1 0 001 1h14a1 1 0 001-1v-4" /></svg></span>
         <span className="mt"><b>{s.files.length ? `${s.files.length} file${s.files.length > 1 ? 's' : ''} · ${fmtBytes(total)}` : (hot ? "Drop it like it's hot" : "Drop this song's files here")}</b>
-          <span>{s.files.length ? s.files.slice(0, 3).map((x) => x.name).join(', ') + (s.files.length > 3 ? ` +${s.files.length - 3} more` : '') : 'Stems, session, zip, or rough mix'}</span></span>
+          <span>{s.files.length ? describeFiles(s.files) : 'Stems, session, zip, or rough mix. The name, BPM and key fill in from them.'}</span>
+          {listening && <span className="listening">Listening for tempo and key…</span>}</span>
         <span className="mb">
           <button type="button" className="clr" style={{ color: 'var(--ink)', background: 'var(--s2)' }} onClick={() => files.current?.click()}>Files</button>
           <button type="button" className="clr" style={{ color: 'var(--ink)', background: 'var(--s2)' }} onClick={() => folder.current?.click()}>Folder</button>
-          {s.files.length > 0 && <button type="button" className="clr" onClick={() => onChange({ files: [] })}>Clear</button>}
+          {s.files.length > 0 && <button type="button" className="clr" onClick={() => onChange({ files: [], auto: {} })}>Clear</button>}
         </span>
         <input ref={files} className="vh" type="file" multiple onChange={(e) => { add(e.target.files); e.target.value = ''; }} />
         <input ref={folder} className="vh" type="file" multiple webkitdirectory="" directory="" onChange={(e) => { add(e.target.files); e.target.value = ''; }} />

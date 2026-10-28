@@ -14,6 +14,7 @@ export async function POST(req) {
   if (!/^\S+@\S+\.\S+$/.test(email)) return fail('Add a valid email address.');
   if (!songs.length) return fail('Add at least one song.');
 
+  const deadline = /^\d{4}-\d{2}-\d{2}$/.test(String(b.deadline || '')) ? b.deadline : null; // client's "need it by" becomes the song's due date
   const db = admin();
   let project;
   if (b.projectId) {
@@ -50,6 +51,7 @@ export async function POST(req) {
       ...(s.key ? { musical_key: String(s.key).slice(0, 40) } : {}),
       ...(s.ref ? { reference: String(s.ref).slice(0, 500) } : {}),
       ...(s.notes ? { artist_notes: String(s.notes).slice(0, 2000) } : {}),
+      ...(deadline ? { eta: deadline } : {}),
     };
     if (match) {
       if (Object.keys(info).length) await db.from('songs').update(info).eq('id', match.id);
@@ -62,7 +64,7 @@ export async function POST(req) {
   }
 
   const { data: up, error: upErr } = await db.from('uploads').insert({
-    project_id: project.id, name, email, phone: phone || null, artist, message: String(b.message || '').slice(0, 2000),
+    project_id: project.id, name, email, phone: phone || null, artist, message: [deadline ? `Needed by ${deadline}.` : '', String(b.message || '')].filter(Boolean).join(' ').slice(0, 2000),
     songs: out.map((s) => ({ ...s, files: 0, bytes: 0 })),
   }).select('id').single();
   if (upErr) return fail(upErr.message, 500);

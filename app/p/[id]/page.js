@@ -23,6 +23,12 @@ export default function ProjectPage() {
   const [p, setP] = useState(undefined);
   const [panel, setPanel] = useState(null); // 'share' | 'edit' | 'add'
   const [renaming, setRenaming] = useState(null);
+  const { session } = useApp();
+  const [savedCols, setSavedCols] = useState(() => {
+    try { const l = JSON.parse(localStorage.getItem('ctrl-room:cols') || 'null'); if (Array.isArray(l)) return l; } catch {}
+    return null;
+  });
+  useEffect(() => { const m = session?.user?.user_metadata?.ctrl_columns; if (Array.isArray(m)) setSavedCols(m); }, [session]);
   const dragSong = useRef(null);
   const [dragOver, setDragOver] = useState(null);
   const [stacks, setStacks] = useState({}); // song id -> open
@@ -32,7 +38,8 @@ export default function ProjectPage() {
     setRenaming(null);
     const t = String(raw || '').trim();
     if (!t || t === song.title) return;
-    await supabase().from('songs').update({ title: t }).eq('id', song.id);
+    if (!eng) await api('/api/admin', { action: 'title', songId: song.id, title: t }).catch(() => {});
+    else await supabase().from('songs').update({ title: t }).eq('id', song.id);
     load();
   };
   const pl = usePlayer();
@@ -73,6 +80,22 @@ export default function ProjectPage() {
     if (viaAdmin) { try { await api('/api/admin', { action: 'order', projectId: p.id, order: ids }); } catch (e) { alert(e.message); } }
     else await Promise.all(ids.map((sid, i) => supabase().from('songs').update({ position: i }).eq('id', sid)));
     load();
+  };
+  const moveSong = (i, dir) => {
+    const ids = p.songs.map((x) => x.id), j = i + dir;
+    if (j < 0 || j >= ids.length) return;
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+    saveOrder(ids);
+  };
+  // which columns show: each person's own choice, saved to their account
+  const availCols = ALL_COLS.filter((c) => !c.eng || eng);
+  const shownCols = (savedCols || DEFAULT_COLS).filter((k) => availCols.some((c) => c.k === k));
+  const cols = availCols.filter((c) => shownCols.includes(c.k));
+  const tpl = ['52px', 'minmax(0, 1fr)', ...cols.map((c) => c.w), ...(canEdit ? ['78px'] : []), 'auto'].join(' ');
+  const saveCols = async (next) => {
+    setSavedCols(next);
+    try { localStorage.setItem('ctrl-room:cols', JSON.stringify(next)); } catch {}
+    await supabase().auth.updateUser({ data: { ctrl_columns: next } }).catch(() => {});
   };
   const onDropRow = (targetId) => {
     const from = dragSong.current; dragSong.current = null; setDragOver(null);
@@ -127,12 +150,13 @@ export default function ProjectPage() {
         {eng && panel === 'edit' && <EditProject p={p} onSaved={() => { load(); reloadProjects(); setPanel(null); }} />}
 
         {p.songs.length > 0 && <TrackStats songs={p.songs} eng={eng} onMeasured={load} />}
-        <div className={`rows ${eng ? 'wide' : 'simple'}`}>
+        {p.songs.length > 0 && <ColumnPicker cols={availCols} shown={shownCols} onChange={saveCols} />}
+        <div className="rows dyn" style={{ '--tpl': tpl }}>
           {p.songs.length > 0 && (
             <div className="rowhead" aria-hidden="true">
               <span>#</span><span>Title</span>
-              {eng && <span>Ver</span>}<span className="c-len">Length</span>
-              {eng && <><span title="Integrated loudness (EBU R128)">LUFS</span><span title="Sample peak, dBFS">Peak</span><span className="c-fmt">Format</span><span className="c-bpm">BPM</span><span className="c-key">Key</span><span /></>}
+              {cols.map((c) => <span key={c.k} data-col={c.k} title={c.tip || ''}>{c.label}</span>)}
+              {canEdit && <span className="rtools" />}
               <span />
             </div>
           )}
@@ -141,6 +165,16 @@ export default function ProjectPage() {
             const last = currentMix(s, vs) || vs.at(-1); // the active (or newest) mix; a demo only shows when there's no mix yet
             const sub = vs.length ? statusText(s, vs) : s.eta ? `First mix ${fmtDate(s.eta)}` : statusText(s, vs);
             const fmtx = last ? fmtShort(last) : '';
+            const stackBtn = (extra = '') => (vs.length ? <button className={`vstackbtn ${extra} ${stacks[s.id] ? 'on' : ''}`} onClick={() => toggleStack(s.id)} aria-expanded={!!stacks[s.id]} title={`${vs.length} version${vs.length > 1 ? 's' : ''}`}><StackIcon /><span>{last?.label}</span></button> : null);
+            const cell = {
+              ver: <span key="ver" className="cell" data-col="ver">{stackBtn() || <span className="dim">—</span>}</span>,
+              len: <span key="len" className="cell mono" data-col="len">{last?.duration ? mmss(last.duration) : <span className="dim">—</span>}</span>,
+              fmt: <span key="fmt" className="cell mono" data-col="fmt" title={[last?.file_name, fmtx].filter(Boolean).join(' · ')}>{last && (last.file_format || last.lossless != null) ? <QualityBadge v={last} short showLossy /> : <span className="dim">—</span>}</span>,
+              bpm: <span key="bpm" className="cell mono" data-col="bpm">{s.bpm || <span className="dim">—</span>}</span>,
+              key: <span key="key" className="cell" data-col="key">{s.musical_key || <span className="dim">—</span>}</span>,
+              lufs: <span key="lufs" className="cell mono" data-col="lufs" title={last?.lufs != null ? `${last.lufs} LUFS integrated` : 'Not measured yet'}>{last?.lufs != null ? last.lufs.toFixed(1) : <span className="dim">—</span>}</span>,
+              peak: <span key="peak" className={`cell mono ${last?.peak_db != null && last.peak_db > -0.1 ? 'hot' : ''}`} data-col="peak" title={last?.peak_db != null ? `${last.peak_db} dBFS sample peak` : ''}>{last?.peak_db != null ? last.peak_db.toFixed(1) : <span className="dim">—</span>}</span>,
+            };
             return (
               <div key={s.id} className={`rowwrap ${dragOver === s.id ? 'dragover' : ''}`} draggable={canEdit && renaming !== s.id}
                 onDragStart={(e) => { if (!canEdit) return; dragSong.current = s.id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', s.id); }}
@@ -149,22 +183,19 @@ export default function ProjectPage() {
                 <button className="rplay" onClick={() => vs.length && playSong({ ...s, versions: vs })} disabled={!vs.length} aria-label={vs.length ? `Play ${s.title}` : 'No mix yet'}>
                   <span className="num">{i + 1}</span><svg viewBox="0 0 24 24">{pl.current?.song?.id === s.id && pl.playing ? <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" /> : <path d="M7 4.5v15l13-7.5z" />}</svg>
                   <span className="eq"><span /><span /><span /></span></button>
-                <Link className="ropen" href={`/s/${s.id}`}>{eng && renaming === s.id
+                <Link className="ropen" href={`/s/${s.id}`}>{canEdit && renaming === s.id
                   ? <input className="rowedit up" defaultValue={s.title} autoFocus maxLength={120} aria-label="Rename song" onClick={(e) => e.preventDefault()} onFocus={(e) => e.target.select()}
                       onBlur={(e) => renameSong(s, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } if (e.key === 'Escape') { e.currentTarget.value = s.title; e.currentTarget.blur(); } }} />
                   : <span className="t up">{s.title}</span>}<span className="rsub"><span className={`dot ${s.status}`}>{sub}</span>{last ? <span>· {shortDate(last.created_at)}</span> : null}</span></Link>
-                {eng && <span className="cell">{vs.length ? <button className={`vstackbtn ${stacks[s.id] ? 'on' : ''}`} onClick={() => toggleStack(s.id)} aria-expanded={!!stacks[s.id]} title={`${vs.length} version${vs.length > 1 ? 's' : ''}`}><StackIcon /><span>{last?.label}</span></button> : <span className="dim">—</span>}</span>}
-                <span className="cell mono c-len">{last?.duration ? mmss(last.duration) : <span className="dim">—</span>}</span>
-                {eng && <>
-                  <span className="cell mono" title={last?.lufs != null ? `${last.lufs} LUFS integrated` : 'Not measured yet'}>{last?.lufs != null ? last.lufs.toFixed(1) : <span className="dim">—</span>}</span>
-                  <span className={`cell mono ${last?.peak_db != null && last.peak_db > -0.1 ? 'hot' : ''}`} title={last?.peak_db != null ? `${last.peak_db} dBFS sample peak` : ''}>{last?.peak_db != null ? last.peak_db.toFixed(1) : <span className="dim">—</span>}</span>
-                  <span className="cell mono c-fmt" title={[last?.file_name, fmtx].filter(Boolean).join(' · ')}>{last && (last.file_format || last.lossless != null) ? <QualityBadge v={last} short showLossy /> : <span className="dim">—</span>}</span>
-                  <span className="cell mono c-bpm">{s.bpm || <span className="dim">—</span>}</span>
-                  <span className="cell c-key">{s.musical_key || <span className="dim">—</span>}</span>
-                  <button className="rpen" onClick={() => setRenaming(s.id)} disabled={renaming === s.id} aria-label={`Rename ${s.title}`} title="Rename">✎</button>
-                </>}
-                {!eng && vs.length > 0 ? <button className={`vstackbtn rmeta ${stacks[s.id] ? 'on' : ''}`} onClick={() => toggleStack(s.id)} aria-expanded={!!stacks[s.id]} title="Versions"><StackIcon /><span>{vs.length}</span></button>
-                  : <Link className="rmeta" href={`/s/${s.id}`} tabIndex={-1} aria-hidden="true"><span className="chev">›</span></Link>}
+                {cols.map((c) => cell[c.k])}
+                {canEdit && (
+                  <span className="rtools">
+                    <button onClick={() => moveSong(i, -1)} disabled={i === 0} aria-label={`Move ${s.title} up`} title="Move up">↑</button>
+                    <button onClick={() => moveSong(i, 1)} disabled={i === p.songs.length - 1} aria-label={`Move ${s.title} down`} title="Move down">↓</button>
+                    <button onClick={() => setRenaming(s.id)} disabled={renaming === s.id} aria-label={`Rename ${s.title}`} title="Rename">✎</button>
+                  </span>
+                )}
+                <span className="rtrail">{stackBtn(shownCols.includes('ver') ? 'mstack' : '')}<Link className="chev" href={`/s/${s.id}`} tabIndex={-1} aria-hidden="true">›</Link></span>
               </div>
               {stacks[s.id] && <VersionStack song={s} project={p} versions={vs.map((v) => ({ ...v }))} noteCounts={noteCounts} eng={eng} canEdit={canEdit} viaAdmin={viaAdmin} queue={queue} onChange={load} />}
               </div>
@@ -412,6 +443,47 @@ function NerdStuff({ songs }) {
             {size > 0 && <Stat k="Current mixes" v={fmtBytes(size)} sub={`${rows.length} file${rows.length === 1 ? '' : 's'}`} />}
           </div>
           {!lu.length && <p className="muted small" style={{ margin: 0 }}>Loudness shows up once the mixes have been measured (it happens on its own in the background).</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const ALL_COLS = [
+  { k: 'ver', label: 'Version', w: '72px' },
+  { k: 'len', label: 'Length', w: '60px' },
+  { k: 'fmt', label: 'Format', w: '96px' },
+  { k: 'bpm', label: 'BPM', w: '48px' },
+  { k: 'key', label: 'Key', w: '76px' },
+  { k: 'lufs', label: 'LUFS', w: '58px', eng: true, tip: 'Integrated loudness (EBU R128)' },
+  { k: 'peak', label: 'Peak', w: '56px', eng: true, tip: 'Sample peak, dBFS' },
+];
+const DEFAULT_COLS = ['ver', 'len', 'fmt', 'bpm', 'key'];
+
+/** "Columns" menu: tick what shows in the tracklist. Saved per person. */
+function ColumnPicker({ cols, shown, onChange }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const off = (e) => { if (box.current && !box.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('pointerdown', off);
+    return () => document.removeEventListener('pointerdown', off);
+  }, [open]);
+  const flip = (k) => onChange(shown.includes(k) ? shown.filter((x) => x !== k) : cols.map((c) => c.k).filter((x) => x === k || shown.includes(x)));
+  return (
+    <div className="colpick" ref={box}>
+      <button className={`colbtn ${open ? 'on' : ''}`} onClick={() => setOpen(!open)} aria-expanded={open}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" /></svg>Columns
+      </button>
+      {open && (
+        <div className="colmenu" role="menu">
+          <p>Show in the tracklist</p>
+          {cols.map((c) => (
+            <label key={c.k} className="colitem"><input type="checkbox" checked={shown.includes(c.k)} onChange={() => flip(c.k)} />{c.label}</label>
+          ))}
+          <button className="link small" onClick={() => onChange(DEFAULT_COLS)}>Reset to default</button>
+          <small>Saved to your account, just for you.</small>
         </div>
       )}
     </div>

@@ -794,3 +794,36 @@ body.playing .lbg { animation: breathe 9s ease-in-out infinite; }
   /* still art on phones: nothing spins */
   .mini .mart.spin, .bigdisc .art.spin { animation: none !important; }
 }
+
+/* tracklist with chosen columns */
+.rows.dyn .row, .rows.dyn .rowhead { grid-template-columns: var(--tpl); column-gap: 8px; }
+.rows.dyn .rowhead > span:first-child { text-align: center; }
+.rows.dyn .rtrail { display: flex; align-items: center; justify-content: flex-end; gap: 6px; padding-right: 6px; }
+.rows.dyn .rtrail .chev { color: var(--muted); font-size: 18px; padding: 0 4px; }
+.rows.dyn .mstack { display: none; }
+.rtools { display: flex; gap: 2px; justify-content: flex-end; opacity: 0; transition: opacity .15s; }
+.row:hover .rtools, .rtools:focus-within { opacity: 1; }
+.rtools button { width: 24px; height: 26px; border-radius: 7px; color: var(--muted); font-size: 14px; }
+.rtools button:hover:not(:disabled) { background: var(--s2); color: var(--ink); }
+.rtools button:disabled { opacity: .25; }
+@media (hover: none) { .rtools { opacity: .7; } }
+.colpick { position: relative; display: flex; justify-content: flex-end; margin: -4px 0 6px; z-index: 6; }
+.colbtn { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; color: var(--muted); background: var(--s1); border: 1px solid var(--line); }
+.colbtn svg { width: 15px; height: 15px; }
+.colbtn:hover, .colbtn.on { color: var(--ink); }
+.colmenu { position: absolute; right: 0; top: calc(100% + 6px); min-width: 210px; display: grid; gap: 2px; padding: 10px; border-radius: 14px; background: #1b1b1e; border: 1px solid var(--line); box-shadow: 0 20px 50px -15px rgba(0,0,0,.85); }
+.colmenu p { margin: 0 0 6px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.colitem { display: flex; align-items: center; gap: 10px; padding: 6px 4px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+.colitem:hover { background: rgba(255,255,255,.05); }
+.colitem input { width: 16px; height: 16px; accent-color: var(--sig); }
+.colmenu .link { justify-self: start; margin-top: 6px; }
+.colmenu small { font-size: 11.5px; color: var(--muted); }
+@media (max-width: 700px) {
+  .rows.dyn .row, .rows.dyn .rowhead { grid-template-columns: 44px minmax(0, 1fr) auto !important; }
+  .rows.dyn .cell, .rows.dyn .rowhead > [data-col], .rows.dyn .rtools { display: none; }
+  .rows.dyn .mstack { display: inline-flex; }
+}
+.vstack.standalone { border-radius: 16px; padding: 10px 12px 12px 14px; margin: 4px 0 2px; border: 1px solid var(--line); }
+.vstack.standalone::before { left: 25px; top: 44px; }
+.vs-title { margin: 0 0 4px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.vstack.standalone .vs-add { display: none; } /* the song page has its own Deliver button */

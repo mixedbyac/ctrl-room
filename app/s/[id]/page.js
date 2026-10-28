@@ -2,6 +2,7 @@
 import QualityBadge from '@/components/QualityBadge';
 import InlineText from '@/components/InlineText';
 import CommentList from '@/components/Comments';
+import VersionStack from '@/components/VersionStack';
 import { InvoiceNotice, useInvoices, lockingInvoice } from '@/components/Invoices';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -148,7 +149,11 @@ export default function SongPage() {
               </> : [song.bpm ? `${song.bpm} BPM` : '', song.musical_key].filter(Boolean).map((x) => <span key={x}>{x}</span>)}
               <span>{[mixesOf(versions).length ? `${mixesOf(versions).length} version${mixesOf(versions).length > 1 ? 's' : ''}${demoOf(versions) ? ' + demo' : ''}` : demoOf(versions) ? 'Demo only' : ''].filter(Boolean).join(' · ')}</span></div>
             {hasMix && <div className="shbar"><ShareButton kind="song" id={song.id} eng={eng} title={song.title} /></div>}
-            {v?.note && <p className="vnote">{v.label}: {v.note}</p>}
+            {hasMix && (
+              <VersionStack title="Versions" song={song} project={p} versions={versions} eng={eng} canEdit={eng || canEditArtist(p?.artist)} viaAdmin={!eng}
+                noteCounts={notes.reduce((m, n) => (n.version_id && !n.parent_id ? { ...m, [n.version_id]: (m[n.version_id] || 0) + 1 } : m), {})}
+                queue={queueIds.length ? queueIds : [id]} onChange={load} selectedId={vid} onSelect={switchTo} />
+            )}
             {eng && <DeliverVersion song={song} versions={versions} onDone={load} setMsg={setMsg} />}
             {!demoOf(versions) && <AddDemo song={song} eng={eng} onDone={load} setMsg={setMsg} />}
             {msg && <p className="upmsg">{msg}</p>}
@@ -160,8 +165,7 @@ export default function SongPage() {
         {hasMix && locked ? (
           <div className="nomix lockedmix"><strong className="up">Locked until paid</strong>Your mixes are ready. They unlock as soon as the invoice above is paid.</div>
         ) : hasMix ? (
-          <Scrub {...{ v, notes, time, dur: dur || v?.duration || 0, seek, eng, plays }}
-            header={<VersionPicker {...{ versions, vid, switchTo, eng, song, reload: load, setMsg, time, dur: dur || v?.duration || 0 }} />} />
+          <Scrub {...{ v, notes, time, dur: dur || v?.duration || 0, seek, eng, plays }} />
         ) : (
           <div className="nomix"><strong className="up">No mix yet</strong>{song.eta ? `The first mix is expected ${fmtDate(song.eta)}.` : 'The first mix will show up here.'}{p.phone ? " You'll get a text the moment it's ready." : ''}</div>
         )}
@@ -612,79 +616,5 @@ function AddDemo({ song, eng, onDone, setMsg }) {
 }
 
 /* ---------- version picker: a dropdown by the waveform, each version with its own little waveform ---------- */
-function MiniWave({ peaks, progress = 0, active = false, w = 150, h = 30 }) {
-  const cv = useRef(null);
-  useEffect(() => {
-    const c = cv.current; if (!c) return;
-    const dpr = window.devicePixelRatio || 1;
-    c.width = w * dpr; c.height = h * dpr;
-    const g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height);
-    const step = 2 * dpr, n = Math.floor(c.width / step);
-    for (let i = 0; i < n; i++) {
-      let p = 0.06;
-      if (peaks?.length) { const a = Math.floor((i / n) * peaks.length), b = Math.max(a + 1, Math.floor(((i + 1) / n) * peaks.length)); p = 0; for (let j = a; j < b; j++) p = Math.max(p, peaks[j] || 0); }
-      const bh = Math.max(dpr, Math.min(1, p) * c.height * 0.95);
-      g.fillStyle = active && i / n < progress ? '#f5d547' : active ? '#d4d4d8' : '#6b6b73';
-      g.fillRect(i * step, (c.height - bh) / 2, Math.max(1, dpr), bh);
-    }
-  }, [peaks, progress, active, w, h]);
-  return <canvas ref={cv} className="miniwave" style={{ width: w, height: h }} aria-hidden="true" />;
-}
 
 
-function VersionPicker({ versions, vid, switchTo, eng, song, reload, setMsg, time, dur }) {
-  const [open, setOpen] = useState(false);
-  const box = useRef(null);
-  const cur = versions.find((x) => x.id === vid) || versions.at(-1);
-  const latest = latestMix(versions);
-  useEffect(() => {
-    if (!open) return;
-    const off = (e) => { if (box.current && !box.current.contains(e.target)) setOpen(false); };
-    const esc = (e) => { if (e.key === 'Escape') setOpen(false); };
-    document.addEventListener('pointerdown', off); document.addEventListener('keydown', esc);
-    return () => { document.removeEventListener('pointerdown', off); document.removeEventListener('keydown', esc); };
-  }, [open]);
-  const rename = async (ver, nl) => {
-    if (!nl) return;
-    if (versions.some((x) => x.id !== ver.id && x.label.toLowerCase() === nl.toLowerCase())) return setMsg(`There's already a version called ${nl}.`);
-    const { error } = await supabase().from('versions').update({ label: nl.slice(0, 20) }).eq('id', ver.id);
-    setMsg(error ? error.message : `Renamed ${ver.label} to ${nl}.`);
-    reload();
-  };
-  const tags = (x) => [isDemo(x) ? 'Demo' : '', x.id === latest?.id ? 'Latest' : '', song.approved_version === x.id ? 'Approved' : ''].filter(Boolean);
-  const prog = dur ? time / dur : 0;
-  // (a plain function, not a component, so the box keeps focus while the player ticks)
-  const name = (x) => (eng
-    ? <InlineText key={`n-${x.id}`} value={x.label} onSave={(t) => rename(x, t)} width={3} label={`Name of ${x.label}`} className="vp-inl" />
-    : <b>{x.label}</b>);
-  if (!cur) return null;
-  return (
-    <div className="vpick2" ref={box}>
-      <div className={`vp-trigger ${open ? 'open' : ''}`}>
-        <span className="vp-lab">{name(cur)}{tags(cur).map((t) => <i key={t} className={`vp-tag ${t.toLowerCase()}`}>{t}</i>)}<QualityBadge v={cur} short /></span>
-        <button className="vp-open" onClick={() => setOpen(!open)} aria-haspopup="listbox" aria-expanded={open} aria-label="Choose a version">
-          <MiniWave peaks={cur.peaks} progress={prog} active w={180} h={24} />
-          <span className="vp-count">{versions.length} version{versions.length === 1 ? '' : 's'}</span>
-          <svg className="vp-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
-        </button>
-      </div>
-      {open && (
-        <ul className="vp-list" role="listbox" aria-label="Versions">
-          {[...versions].reverse().map((x) => (
-            <li key={x.id} role="option" aria-selected={x.id === vid} className={`${x.id === vid ? 'on' : ''} ${isDemo(x) ? 'demo' : ''}`}
-              onClick={() => { switchTo(x.id); setOpen(false); }}>
-              <span className="vp-name">
-                {name(x)}
-                {tags(x).map((t) => <i key={t} className={`vp-tag ${t.toLowerCase()}`}>{t}</i>)}
-                <QualityBadge v={x} short />
-                <small>{[shortDate(x.created_at), x.duration ? mmss(x.duration) : '', eng && x.lufs != null ? `${x.lufs.toFixed(1)} LUFS` : '', x.note].filter(Boolean).join(' · ')}</small>
-              </span>
-              <MiniWave peaks={x.peaks} progress={x.id === vid ? prog : 0} active={x.id === vid} />
-            </li>
-          ))}
-          <li className="vp-hint">{eng ? 'Hover a name and click to rename it. ' : ''}Switching keeps your spot. <kbd>X</kbd> jumps back.</li>
-        </ul>
-      )}
-    </div>
-  );
-}

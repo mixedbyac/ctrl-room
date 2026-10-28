@@ -20,7 +20,7 @@ const baseName = (n) => String(n || '').replace(/\.[a-z0-9]{2,5}$/i, '').replace
  * The versions of one song, opened under its row: play any version, see notes per version,
  * and (engineer) rename on hover, add a version, or delete one.
  */
-export default function VersionStack({ song, project, versions, noteCounts = {}, eng, canEdit = eng, viaAdmin = false, queue, onChange }) {
+export default function VersionStack({ song, project, versions, noteCounts = {}, eng, canEdit = eng, viaAdmin = false, queue, onChange, selectedId = null, onSelect = null, title = null }) {
   const pl = usePlayer();
   const list = [...orderVersions(versions)].reverse(); // newest on top, demo at the bottom
   const latest = latestMix(versions), active = currentMix(song, versions);
@@ -37,6 +37,7 @@ export default function VersionStack({ song, project, versions, noteCounts = {},
 
   const playing = (v) => pl.current?.song?.id === song.id && pl.current?.versionId === v.id;
   const play = (v) => {
+    if (onSelect && !playing(v)) { onSelect(v.id); return; } // song page: switch at the same spot (keeps playing if it was)
     if (playing(v)) return pl.toggle();
     if (pl.current?.song?.id === song.id) return pl.switchVersion(v.id) || (!pl.playing && pl.resume());
     pl.play({ songId: song.id, project, versionId: v.id, queue });
@@ -84,7 +85,8 @@ export default function VersionStack({ song, project, versions, noteCounts = {},
   };
 
   return (
-    <div className="vstack">
+    <div className={`vstack ${title ? 'standalone' : ''}`}>
+      {title && <p className="vs-title">{title}</p>}
       {eng && (
         <button className="vs-add" onClick={() => file.current?.click()} disabled={!!busy}>
           <span className="vs-plus" aria-hidden="true">+</span>{busy || 'Add Version'}
@@ -92,7 +94,7 @@ export default function VersionStack({ song, project, versions, noteCounts = {},
         </button>
       )}
       {list.map((v) => {
-        const on = playing(v), n = noteCounts[v.id] || 0;
+        const on = playing(v) || (selectedId === v.id && !(pl.current?.song?.id === song.id)), n = noteCounts[v.id] || 0;
         const name = v.note && !/^the starting point$/i.test(v.note) ? v.note : baseName(v.file_name) || `${song.title} ${v.label}`;
         return (
           <div key={v.id} className={`vs-item ${on ? 'on' : ''} ${on && pl.playing ? 'live' : ''} ${isDemo(v) ? 'demo' : ''}`} onClick={() => play(v)} role="button" tabIndex={0}

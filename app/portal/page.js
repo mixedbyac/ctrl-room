@@ -10,7 +10,8 @@ import Cover from '@/components/Cover';
 import { fmtBytes, fmtDate } from '@/lib/format';
 import { parseMixName } from '@/lib/filename';
 
-const LIMIT_FILE = 150 * 1024 * 1024;
+const LIMIT_SEND = 2 * 1024 * 1024 * 1024; // 2 GB per upload
+const DIRECT_MAX = 150 * 1024 * 1024; // bigger files go up in pieces
 const blank = () => ({ k: Math.random().toString(36).slice(2), title: '', bpm: '', key: '', ref: '', notes: '', files: [] });
 
 export default function Portal() {
@@ -47,8 +48,7 @@ export default function Portal() {
     if (!f.artist.trim()) return setErr('Add the artist name.');
     if (!/^\S+@\S+\.\S+$/.test(f.email.trim())) return setErr('Add an email address. You sign in with it to follow along.');
     if (songs.some((s) => !s.title.trim())) return setErr('Every song needs a title.');
-    const big = songs.flatMap((s) => s.files).find((x) => x.size > LIMIT_FILE);
-    if (big) return setErr(`${big.name} is over 150 MB. Zip it into smaller parts or split it up.`);
+    if (bytes > LIMIT_SEND) return setErr(`That’s ${fmtBytes(bytes)}. Each upload can be up to 2 GB, so send the rest in a second upload.`);
     if (!fileCount) return setErr('Add files for at least one song. Drop them on the song they belong to.');
 
     setState('sending');
@@ -66,8 +66,14 @@ export default function Portal() {
         const s = songs[i], match = r.songs[i];
         let nb = 0;
         for (const file of s.files) {
-          const { link } = await api('/api/portal/link', { uploadId: r.uploadId, songId: match.songId, name: file.webkitRelativePath || file.name, size: file.size });
-          await putFile(link, file, (loaded) => setProgress({ sent: sent + loaded, total: bytes, file: file.name }));
+          const rel = file.webkitRelativePath || file.name;
+          const onP = (loaded) => setProgress({ sent: sent + loaded, total: bytes, file: file.name });
+          if (file.size > DIRECT_MAX) {
+            await putChunked({ uploadId: r.uploadId, songId: match.songId, name: rel }, file, onP);
+          } else {
+            const { link } = await api('/api/portal/link', { uploadId: r.uploadId, songId: match.songId, name: rel, size: file.size });
+            await putFile(link, file, onP);
+          }
           sent += file.size; nb += file.size;
         }
         results.push({ songId: match.songId, files: s.files.length, bytes: nb });
@@ -165,7 +171,7 @@ export default function Portal() {
             </div>
             {err && <p className="ferr">{err}</p>}
             <button className="send" type="submit" form="pform" disabled={sending}>{sending ? 'Sending… keep this page open' : 'Send to the CTRL ROOM'}</button>
-            <p className="fine">Files up to 150 MB each. Zip big sessions into parts.</p>
+            <p className="fine">Up to 2 GB per upload.</p>
           </aside>
         </div>
       </section>
@@ -225,4 +231,38 @@ function putFile(link, file, onProgress) {
     x.onerror = () => reject(new Error(`Upload of ${file.name} failed. Check your connection and try again.`));
     x.send(file);
   });
+}
+
+const PIECE = 4 * 1024 * 1024;
+/** Files over 150 MB: send 4 MB pieces (retrying each a few times) that Dropbox joins back into one file. */
+async function putChunked(meta, file, onProgress) {
+  const send = async (step, blob, extra = {}) => {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const r = await fetch('/api/portal/chunk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/octet-stream', 'x-upload-id': meta.uploadId, 'x-song-id': meta.songId, 'x-name': encodeURIComponent(meta.name), 'x-size': String(file.size), 'x-step': step, ...extra },
+          body: blob,
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw Object.assign(new Error(j.error || `Upload of ${file.name} failed (${r.status}).`), { fatal: r.status < 500 && r.status !== 429 });
+        return j;
+      } catch (e) {
+        if (e.fatal || attempt >= 3) throw e;
+        await new Promise((res) => setTimeout(res, 1000 * (attempt + 1)));
+      }
+    }
+  };
+  const first = file.slice(0, PIECE);
+  const { session } = await send('start', first);
+  let offset = first.size;
+  onProgress(offset);
+  while (offset < file.size) {
+    const piece = file.slice(offset, offset + PIECE);
+    const last = offset + piece.size >= file.size;
+    await send(last ? 'finish' : 'append', piece, { 'x-session': session, 'x-offset': String(offset) });
+    offset += piece.size;
+    onProgress(offset);
+  }
+  if (first.size >= file.size) await send('finish', new Blob([]), { 'x-session': session, 'x-offset': String(offset) });
 }

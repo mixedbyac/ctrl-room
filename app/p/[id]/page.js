@@ -17,6 +17,7 @@ import { parseMixName, matchSong } from '@/lib/filename';
 import { deliverFile } from '@/lib/deliver';
 import { usePlayer } from '@/components/Player';
 import CoverMenu from '@/components/CoverMenu';
+import SongMenu, { CommentIcon } from '@/components/SongMenu';
 
 export default function ProjectPage() {
   const { id } = useParams();
@@ -111,6 +112,12 @@ export default function ProjectPage() {
     if (pl.current?.song?.id === s.id) return pl.toggle();
     pl.play({ songId: s.id, project: p, queue });
   };
+  // comment from the tracklist: start the song if it isn't on, then pop the player up with the comment box
+  const commentOn = async (s) => {
+    if (!eng && lockingInvoice(inv.list)) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+    if (pl.current?.song?.id !== s.id) await pl.play({ songId: s.id, project: p, queue });
+    pl.openComment();
+  };
   const projectPlaying = pl.playing && pl.current?.project?.id === p.id;
   const crumbs = eng ? [{ label: 'Home', href: '/' }, { label: p.title }] : [{ label: 'Projects', href: '/' }, { label: p.title }];
 
@@ -184,7 +191,7 @@ export default function ProjectPage() {
                 <button className="rplay" onClick={() => vs.length && playSong({ ...s, versions: vs })} disabled={!vs.length} aria-label={vs.length ? `Play ${s.title}` : 'No mix yet'}>
                   <span className="num">{i + 1}</span><svg viewBox="0 0 24 24">{pl.current?.song?.id === s.id && pl.playing ? <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" /> : <path d="M7 4.5v15l13-7.5z" />}</svg>
                   <span className="eq"><span /><span /><span /></span></button>
-                <Link className="ropen" href={`/s/${s.id}`}>{canEdit && renaming === s.id
+                <Link className="ropen" href={`/s/${s.id}`} onClick={(e) => { if (renaming === s.id) return e.preventDefault(); if (vs.length) { e.preventDefault(); playSong({ ...s, versions: vs }); } }}>{canEdit && renaming === s.id
                   ? <input className="rowedit up" defaultValue={s.title} autoFocus maxLength={120} aria-label="Rename song" onClick={(e) => e.preventDefault()} onFocus={(e) => e.target.select()}
                       onBlur={(e) => renameSong(s, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } if (e.key === 'Escape') { e.currentTarget.value = s.title; e.currentTarget.blur(); } }} />
                   : <span className="t up">{s.title}</span>}<span className="rsub"><span className={`dot ${s.status}`}>{sub}</span>{last ? <span>· {shortDate(last.created_at)}</span> : null}</span></Link>
@@ -196,7 +203,14 @@ export default function ProjectPage() {
                     <button onClick={() => setRenaming(s.id)} disabled={renaming === s.id} aria-label={`Rename ${s.title}`} title="Rename">✎</button>
                   </span>
                 )}
-                <span className="rtrail">{stackBtn(shownCols.includes('ver') ? 'mstack' : '')}<Link className="chev" href={`/s/${s.id}`} tabIndex={-1} aria-hidden="true">›</Link></span>
+                <span className="rtrail">
+                  {vs.length > 0 && (() => { const n = vs.reduce((m, v) => m + (noteCounts[v.id] || 0), 0); return (
+                    <button className={`rcomment ${n ? '' : 'none'}`} onClick={() => commentOn({ ...s, versions: vs })} aria-label={`Comment on ${s.title}${n ? ` (${n} so far)` : ''}`} title="Add a comment"><CommentIcon />{n ? <span>{n}</span> : null}</button>); })()}
+                  <SongMenu song={s} versions={vs} project={p} eng={eng} canEdit={canEdit} queue={queue} onChange={load}
+                    onPlay={() => playSong({ ...s, versions: vs })} onComment={() => commentOn({ ...s, versions: vs })}
+                    onVersions={() => toggleStack(s.id)} versionsOpen={!!stacks[s.id]} onRename={() => setRenaming(s.id)}
+                    onMove={(d) => moveSong(i, d)} index={i} count={p.songs.length} />
+                </span>
               </div>
               {stacks[s.id] && <VersionStack song={s} project={p} versions={vs.map((v) => ({ ...v }))} noteCounts={noteCounts} eng={eng} canEdit={canEdit} viaAdmin={viaAdmin} queue={queue} onChange={load} />}
               </div>

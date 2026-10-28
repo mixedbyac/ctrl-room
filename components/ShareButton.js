@@ -5,8 +5,10 @@ import { api } from '@/lib/supabase';
 const ICON = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 002 2h10a2 2 0 002-2v-6" /></svg>;
 
 /** Share a song or project as a listen-only link. The engineer can switch sharing on/off and reset the link. */
-export default function ShareButton({ kind, id, eng, title }) {
-  const [open, setOpen] = useState(false);
+export default function ShareButton({ kind, id, eng, title, open: openProp, onOpenChange, hideButton = false }) {
+  const [openState, setOpenState] = useState(!!openProp);
+  const open = openProp ?? openState;
+  const setOpen = (o) => { setOpenState(o); onOpenChange?.(o); };
   const [st, setSt] = useState(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -33,7 +35,7 @@ export default function ShareButton({ kind, id, eng, title }) {
 
   return (
     <span className="sharewrap" ref={box}>
-      <button className="gear" onClick={() => setOpen(!open)} aria-expanded={open}>{ICON}Share</button>
+      {!hideButton && <button className="gear" onClick={() => setOpen(!open)} aria-expanded={open}>{ICON}Share</button>}
       {open && (
         <div className="sharepop" role="dialog" aria-label={`Share this ${what}`}>
           <p className="shtitle">Share this {what}</p>

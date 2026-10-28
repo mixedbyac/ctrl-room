@@ -17,6 +17,7 @@ import { deliverFile } from '@/lib/deliver';
 import { describeFormat } from '@/lib/fileinfo';
 import { usePlayer } from '@/components/Player';
 import CoverMenu from '@/components/CoverMenu';
+import SongMenu from '@/components/SongMenu';
 import ShareButton from '@/components/ShareButton';
 
 const BINS = 100;
@@ -148,14 +149,16 @@ export default function SongPage() {
                   onSave={async (t) => { await supabase().from('songs').update({ musical_key: t || null }).eq('id', song.id); load(); }} />
               </> : [song.bpm ? `${song.bpm} BPM` : '', song.musical_key].filter(Boolean).map((x) => <span key={x}>{x}</span>)}
               <span>{[mixesOf(versions).length ? `${mixesOf(versions).length} version${mixesOf(versions).length > 1 ? 's' : ''}${demoOf(versions) ? ' + demo' : ''}` : demoOf(versions) ? 'Demo only' : ''].filter(Boolean).join(' · ')}</span></div>
-            {hasMix && <div className="shbar"><ShareButton kind="song" id={song.id} eng={eng} title={song.title} /></div>}
+            <div className="shbar">
+              {hasMix && <ShareButton kind="song" id={song.id} eng={eng} title={song.title} />}
+              <SongMenu page song={song} versions={versions} project={p} eng={eng} canEdit={eng || canEditArtist(p?.artist)} queue={queueIds.length ? queueIds : [id]} onChange={load} setMsg={setMsg}
+                onPlay={toggle} onComment={async () => { if (locked) return setMsg('Mixes unlock once the invoice is paid.'); if (!isCur) await start(0); pl.openComment(); }} />
+            </div>
             {hasMix && (
               <VersionStack title="Versions" song={song} project={p} versions={versions} eng={eng} canEdit={eng || canEditArtist(p?.artist)} viaAdmin={!eng}
                 noteCounts={notes.reduce((m, n) => (n.version_id && !n.parent_id ? { ...m, [n.version_id]: (m[n.version_id] || 0) + 1 } : m), {})}
                 queue={queueIds.length ? queueIds : [id]} onChange={load} selectedId={vid} onSelect={switchTo} />
             )}
-            {eng && <DeliverVersion song={song} versions={versions} onDone={load} setMsg={setMsg} />}
-            {!demoOf(versions) && <AddDemo song={song} eng={eng} onDone={load} setMsg={setMsg} />}
             {msg && <p className="upmsg">{msg}</p>}
             {mixesOf(versions).length > 0 && <Decision {...{ eng, song, v, versions, notes, reload: load, setMsg, setTab }} />}
           </div>

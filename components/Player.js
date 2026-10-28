@@ -24,6 +24,9 @@ export function PlayerProvider({ eng, children }) {
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [expanded, setExpanded] = useState(false);
+  const [composeReq, setComposeReq] = useState(0); // bump to open Now Playing with the comment box up
+  const wantCompose = useRef(false);
+  const openComment = useCallback(() => { wantCompose.current = true; setExpanded(true); setComposeReq((n) => n + 1); }, []);
   // when a cover changes anywhere, the mini player and Now Playing change with it
   useEffect(() => {
     const on = (e) => {
@@ -215,7 +218,7 @@ export function PlayerProvider({ eng, children }) {
   useEffect(() => () => { Object.values(audios.current).forEach((a) => { a.pause(); a.src = ''; }); }, []);
 
   const version = current ? current.versions.find((v) => v.id === current.versionId) : null;
-  const value = { eng, current, version, queue, playing, time, expanded, setExpanded, duration: duration || version?.duration || 0, play, pause, resume, toggle, seek, switchVersion, refresh, next: () => step(1), prev: () => step(-1) };
+  const value = { eng, current, version, queue, playing, time, expanded, setExpanded, composeReq, wantCompose, openComment, duration: duration || version?.duration || 0, play, pause, resume, toggle, seek, switchVersion, refresh, next: () => step(1), prev: () => step(-1) };
   return <Ctx.Provider value={value}>{children}<MiniPlayer />{expanded && current && <NowPlaying />}</Ctx.Provider>;
 }
 
@@ -305,6 +308,15 @@ function NowPlaying() {
   const [text, setText] = useState('');
   const [posting, setPosting] = useState(false);
   const [posted, setPosted] = useState('');
+  useEffect(() => { if (pl.wantCompose.current) { pl.wantCompose.current = false; setPinAt(pl.time); setComposing(true); } }, [pl.composeReq]); // eslint-disable-line
+  // keep the comment box above the phone keyboard
+  useEffect(() => {
+    if (!composing) return;
+    const vv = window.visualViewport; if (!vv) return;
+    const fit = () => document.documentElement.style.setProperty('--kb', `${Math.max(0, window.innerHeight - vv.height - vv.offsetTop)}px`);
+    fit(); vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit);
+    return () => { vv.removeEventListener('resize', fit); vv.removeEventListener('scroll', fit); document.documentElement.style.setProperty('--kb', '0px'); };
+  }, [composing]);
   const postComment = async () => {
     if (!text.trim()) return;
     setPosting(true);
@@ -388,17 +400,6 @@ function NowPlaying() {
           <button onClick={pl.next} aria-label="Next song"><svg viewBox="0 0 24 24"><path d="M13 12L4 5.5v13zM22 12l-9-6.5v13z" /></svg></button>
           <button className="npskip" onClick={() => pl.seek(Math.min(pl.duration || 0, pl.time + 15))} aria-label="Forward 15 seconds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 11-3-6.7L21 8" /><path d="M21 3v5h-5" /><text x="12" y="15.5" textAnchor="middle" fontSize="7.5" fontWeight="700" fill="currentColor" stroke="none">15</text></svg></button>
         </div>
-        {composing && (
-          <div className="npcompose" role="dialog" aria-label="Add a comment">
-            <div className="npcompose-h">
-              <button className="ctime" onClick={() => setPinAt(pl.time)} title="Use the current time">At {mmss(pinAt)}</button>
-              <span className="muted small">Tap the time to move it to now</span>
-              <button className="npclose" onClick={() => { setComposing(false); setText(''); }} aria-label="Cancel">✕</button>
-            </div>
-            <textarea autoFocus rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="What do you hear here? Like “vocal a touch louder”" aria-label="Comment" />
-            <button className="btn primary" disabled={!text.trim() || posting} onClick={postComment}>{posting ? 'Posting…' : `Post at ${mmss(pinAt)}`}</button>
-          </div>
-        )}
         {posted && <p className="npposted" role="status">{posted}</p>}
         {upNext.length > 1 && (
           <div className="npqueue">
@@ -417,6 +418,17 @@ function NowPlaying() {
         )}
       </div>
     </div>
+        {composing && (
+      <div className="npcompose sheet" role="dialog" aria-label="Add a comment">
+        <div className="npcompose-h">
+          <button className="ctime" onClick={() => setPinAt(pl.time)} title="Use the current time">At {mmss(pinAt)}</button>
+          <span className="muted small">Tap the time to move it to now</span>
+          <button className="npclose" onClick={() => { setComposing(false); setText(''); }} aria-label="Cancel">✕</button>
+        </div>
+        <textarea autoFocus rows={2} enterKeyHint="send" onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); postComment(); } }} value={text} onChange={(e) => setText(e.target.value)} placeholder="What do you hear here? Like “vocal a touch louder”" aria-label="Comment" />
+        <button className="btn primary" disabled={!text.trim() || posting} onClick={postComment}>{posting ? 'Posting…' : `Post at ${mmss(pinAt)}`}</button>
+      </div>
+    )}
     </>
   );
 }

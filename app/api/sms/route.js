@@ -1,11 +1,11 @@
-import { admin, userFrom, isEngineerEmail, json, fail, sendText } from '@/lib/server';
+import { admin, userFrom, isEngineer, json, fail, sendText } from '@/lib/server';
 
 export const runtime = 'nodejs';
 
 // Engineer only: text the client on a song's project.
 export async function POST(req) {
   const user = await userFrom(req);
-  if (!user || !isEngineerEmail(user.email)) return fail('Only the engineer can send texts.', 403);
+  if (!user || !(await isEngineer(user.email))) return fail('Only the engineer can send texts.', 403);
   const b = await req.json().catch(() => null);
   if (!b?.songId || !String(b.body || '').trim()) return fail('Missing message.');
   const db = admin();

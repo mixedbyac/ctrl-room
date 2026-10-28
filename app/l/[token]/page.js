@@ -123,7 +123,7 @@ export default function SharedListen() {
       <Art src={artSrc} seed={artSeed} size={200} className="lbg" />
       {ar?.header_url && <div className="lheader" style={{ backgroundImage: `url(${ar.header_url})` }} />}
       <div className="lwrap">
-        <div className="ltop"><img src="/logo.png" alt="" className="llogo" /><span>Ctrl Room</span></div>
+        <div className="ltop"><img src="/logo.png" alt="" className="llogo" /><span>CTRL ROOM</span></div>
         <div className="lmain">
           <div className="npdisc ldisc"><Art src={artSrc} seed={artSeed} size={640} className="npart spin" /><span className="nphole" />
             <button className="lhub" onClick={toggle} disabled={!cur} aria-label={playing ? 'Pause' : 'Play'}><svg viewBox="0 0 24 24">{playing ? PAUSE : PLAY}</svg></button>
@@ -156,7 +156,7 @@ export default function SharedListen() {
               {ar.spotify_url && <a className="spbtn" href={ar.spotify_url} target="_blank" rel="noopener noreferrer"><SpotifyMark />Listen on Spotify</a>}</div>
           </section>
         )}
-        <p className="lfoot">Shared privately with Ctrl Room. Please don’t repost unreleased music.</p>
+        <p className="lfoot">Shared privately with CTRL ROOM. Please don’t repost unreleased music.</p>
       </div>
     </main>
   );

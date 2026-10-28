@@ -58,7 +58,7 @@ function Login() {
     <div className="login">
       <div className="logincard">
         <img src="/logo.png" alt="" className="loginlogo" />
-        <h1 className="up">Ctrl Room</h1>
+        <h1 className="up">CTRL ROOM</h1>
         {step === 'password' ? (
           <>
             <p>Sign in with your password.</p>

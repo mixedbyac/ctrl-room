@@ -8,6 +8,7 @@ import Cover from '@/components/Cover';
 import { hashStr } from '@/lib/art';
 import { fmtDate, todayISO, statusText, shortDate } from '@/lib/format';
 import { ArtistHero, ArtistAvatar } from '@/components/ArtistProfile';
+import ArtistTeam from '@/components/ArtistTeam';
 
 const initials = (n) => n.split(/\s+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 const sortKey = (n) => n.replace(/^the\s+/i, '');
@@ -85,6 +86,7 @@ function Artists() {
                 <b className="up">{p.title}</b><span className="pc-sub">{p.type}{p.release ? ` · out ${fmtDate(p.release)}` : ''}</span>
                 <span className="pc-bar"><i style={{ width: `${n ? (ap / n) * 100 : 0}%` }} /></span><span className="pc-sub">{ap} of {n} approved</span></Link>; })}
           </div></section>
+          {eng && <ArtistTeam artist={artist.name} projects={artist.projects} />}
           {st.done.length > 0 && <section className="asec"><h2 className="h2 up">Finished</h2><ul className="mlist">
             {st.done.map(({ p, s }) => <li key={s.id}><Link className="mini-row" href={`/s/${s.id}`}><Cover seed={s.seed} size={80} /><span><b>{s.title}</b><small>{p.title} · approved {shortDate(s.approved_at)}</small></span></Link></li>)}
           </ul></section>}

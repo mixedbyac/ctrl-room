@@ -1,4 +1,4 @@
-import { admin, userFrom, isEngineerEmail, json, fail } from '@/lib/server';
+import { admin, userFrom, canSee, json, fail } from '@/lib/server';
 import { fetchSpotifyArtist, spotifyArtistId } from '@/lib/spotify';
 
 export const runtime = 'nodejs';
@@ -19,8 +19,8 @@ export async function POST(req) {
   if (b.projectId) {
     const user = await userFrom(req);
     const { data: p } = await db.from('projects').select('*').eq('id', b.projectId).single();
-    const ok = p && user && ((p.client_email || '').toLowerCase() === user.email.toLowerCase() || isEngineerEmail(user.email));
-    if (!ok) return fail('Sign in with the email on that project to add to it.', 403);
+    const ok = p && user && (await canSee(user.email, p.id));
+    if (!ok) return fail('You don’t have access to that project. Ask your engineer to add you to the artist’s team.', 403);
     project = p;
     const patch = {};
     if (phone && !p.phone) patch.phone = phone;

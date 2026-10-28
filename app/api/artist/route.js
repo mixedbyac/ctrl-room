@@ -1,4 +1,4 @@
-import { admin, userFrom, isEngineer, json, fail } from '@/lib/server';
+import { admin, userFrom, isEngineer, onTeam, json, fail } from '@/lib/server';
 import { fetchSpotifyArtist } from '@/lib/spotify';
 
 export const runtime = 'nodejs';
@@ -10,7 +10,7 @@ const FIELDS = ['display_name', 'bio', 'spotify_url', 'accent'];
 async function canEdit(email, name) {
   if (await isEngineer(email)) return true;
   const { data } = await admin().from('projects').select('id').ilike('artist', name).ilike('client_email', email).limit(1);
-  return !!data?.length;
+  return !!data?.length || onTeam(email, name);
 }
 
 async function upsert(db, name, patch) {

@@ -47,7 +47,7 @@ export default function UpdateWatcher({ eng }) {
         <div className="toast upd" role="status">
           <img src="/icon-192.png" alt="" className="updicon" />
           <span className="nmain">
-            <span className="ntext"><b>There’s a new version of Ctrl Room</b></span>
+            <span className="ntext"><b>There’s a new version of CTRL ROOM</b></span>
             <span className="nmeta">Update to get the latest. It only takes a second.</span>
             <span className="row-actions" style={{ marginTop: 6 }}>
               <button className="btn small primary" onClick={() => window.location.reload()}>Update</button>
@@ -60,7 +60,7 @@ export default function UpdateWatcher({ eng }) {
         <div className="toast upd" role="status">
           <img src="/icon-192.png" alt="" className="updicon" />
           <span className="nmain">
-            <span className="nmeta">What’s new in Ctrl Room</span>
+            <span className="nmeta">What’s new in CTRL ROOM</span>
             <span className="ntext"><b>{news.title}</b></span>
             <ul className="updlist">{news.items.slice(0, 3).map((i, k) => <li key={k}>{i.text}</li>)}</ul>
             <span className="row-actions" style={{ marginTop: 6 }}>

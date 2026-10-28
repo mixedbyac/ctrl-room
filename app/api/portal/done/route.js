@@ -33,7 +33,7 @@ export async function POST(req) {
   }
 
   if (process.env.ENGINEER_PHONE && total) {
-    await sendText(process.env.ENGINEER_PHONE, `Ctrl Room: ${up.name} (${up.artist}) sent ${total} file${total > 1 ? 's' : ''} for ${p?.title}.`);
+    await sendText(process.env.ENGINEER_PHONE, `CTRL ROOM: ${up.name} (${up.artist}) sent ${total} file${total > 1 ? 's' : ''} for ${p?.title}.`);
   }
   return json({ ok: true });
 }

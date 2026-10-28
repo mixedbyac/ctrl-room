@@ -1,4 +1,4 @@
-# Ctrl Room
+# CTRL ROOM
 
 Your client mix-review app. Clients listen, leave timestamp and general notes, A/B versions and approve mixes. You track progress, deliver versions, text updates and see who listened. Client files sent through the Portal land in your Dropbox.
 
@@ -10,7 +10,7 @@ Your client mix-review app. Clients listen, leave timestamp and general notes, A
 3. **Authentication › Sign In / Providers › Email**: make sure Email is on.
 4. **Authentication › Email Templates › Magic Link**: add the code to the email so people can type it in (needed when the app is on your Dock or Home Screen). Replace the body with:
    ```html
-   <h2>Your Ctrl Room sign-in</h2>
+   <h2>Your CTRL ROOM sign-in</h2>
    <p>Your code: <strong>{{ .Token }}</strong></p>
    <p>Or <a href="{{ .ConfirmationURL }}">tap here to sign in</a>.</p>
    ```
@@ -20,7 +20,7 @@ Your client mix-review app. Clients listen, leave timestamp and general notes, A
 Mix files: Supabase's free plan limits each uploaded file to 50 MB. Full-length WAV mixes are often bigger, so either upgrade to Pro and raise the limit under **Storage › Settings**, or deliver review mixes as 16-bit/44.1k or high-quality MP3.
 
 ### 2. Dropbox (where client uploads land)
-1. Go to [dropbox.com/developers/apps](https://www.dropbox.com/developers/apps) › **Create app** › **Scoped access** › **App folder** › name it `Ctrl Room`.
+1. Go to [dropbox.com/developers/apps](https://www.dropbox.com/developers/apps) › **Create app** › **Scoped access** › **App folder** › name it `CTRL ROOM`.
 2. **Permissions** tab: tick `files.content.write` and `files.content.read`, click **Submit**.
 3. **Settings** tab: copy the **App key** and **App secret**.
 4. Get a refresh token (one time). In your browser open (with your app key):
@@ -30,7 +30,7 @@ Mix files: Supabase's free plan limits each uploaded file to 50 MB. Full-length 
    curl https://api.dropbox.com/oauth2/token -d code=THE_CODE -d grant_type=authorization_code -u APP_KEY:APP_SECRET
    ```
    Copy `refresh_token` from the reply.
-Files land in `Dropbox/Apps/Ctrl Room/Clients/Artist/Project/Song/`.
+Files land in `Dropbox/Apps/CTRL ROOM/Clients/Artist/Project/Song/`.
 
 ### 3. Vercel (puts the app online)
 1. Go to [vercel.com](https://vercel.com), sign up with GitHub, click **Add New › Project**, and import `ctrl-room`.
@@ -46,7 +46,7 @@ Files land in `Dropbox/Apps/Ctrl Room/Clients/Artist/Project/Song/`.
 Sign up at [twilio.com](https://www.twilio.com), buy a phone number, and add `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` in Vercel, then redeploy. US numbers need A2P 10DLC registration before texts go through reliably; Twilio walks you through it. Until then everything works, texts just don't send.
 
 ## Put it on your Mac and phone
-- **Mac:** open your Ctrl Room address in Safari › **File › Add to Dock**. Sign in with the code from the email.
+- **Mac:** open your CTRL ROOM address in Safari › **File › Add to Dock**. Sign in with the code from the email.
 - **iPhone:** Safari › Share › **Add to Home Screen**.
 
 ## Using it

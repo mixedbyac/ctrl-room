@@ -1,7 +1,7 @@
 export default function manifest() {
   return {
-    name: 'Ctrl Room',
-    short_name: 'Ctrl Room',
+    name: 'CTRL ROOM',
+    short_name: 'CTRL ROOM',
     description: 'Listen, leave notes, and approve your mixes.',
     start_url: '/',
     display: 'standalone',

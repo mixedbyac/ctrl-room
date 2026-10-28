@@ -3,9 +3,9 @@ import './app.css';
 import AppShell from '@/components/AppShell';
 
 export const metadata = {
-  title: 'Ctrl Room',
+  title: 'CTRL ROOM',
   description: 'Listen, leave notes, and approve your mixes.',
-  appleWebApp: { capable: true, title: 'Ctrl Room', statusBarStyle: 'black-translucent' },
+  appleWebApp: { capable: true, title: 'CTRL ROOM', statusBarStyle: 'black-translucent' },
   icons: { icon: '/icon-192.png', apple: '/apple-icon.png' },
 };
 

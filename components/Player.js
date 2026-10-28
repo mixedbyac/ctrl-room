@@ -164,7 +164,7 @@ export function PlayerProvider({ eng, children }) {
     if (!t.rowId && !t.creating) {
       t.creating = true;
       const from = new URLSearchParams(window.location.search).get('from');
-      supabase().from('plays').insert({ song_id: t.songId, version_id: t.vid, device: deviceName(), source: from === 'text' ? 'from your text' : 'in Ctrl Room', duration: d, listened: 0 })
+      supabase().from('plays').insert({ song_id: t.songId, version_id: t.vid, device: deviceName(), source: from === 'text' ? 'from your text' : 'in CTRL ROOM', duration: d, listened: 0 })
         .select('id').single().then(({ data }) => { if (data) t.rowId = data.id; t.creating = false; });
     } else if (t.rowId && now - t.savedAt > 5000) {
       t.savedAt = now;

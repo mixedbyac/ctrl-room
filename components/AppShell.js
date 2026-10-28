@@ -65,7 +65,7 @@ export default function AppShell({ children }) {
       <PlayerProvider eng={eng}>
       <div className="frame">
         <aside className="side">
-          <Link href="/" className="word"><img className="logo" src="/logo.png" alt="" /><span className="wtxt">Ctrl Room</span></Link>
+          <Link href="/" className="word"><img className="logo" src="/logo.png" alt="" /><span className="wtxt">CTRL ROOM</span></Link>
           {session && (
             <div style={{ display: 'grid', gap: 2 }}>
               <Link className="navitem" href="/" aria-current={pathname === '/'}>
@@ -126,7 +126,7 @@ export function TopBar({ crumbs = [], right = null }) {
   const { eng, session } = useApp();
   return (
     <div className="bar">
-      <Link href="/"><img className="barlogo" src="/logo.png" alt="Ctrl Room" /></Link>
+      <Link href="/"><img className="barlogo" src="/logo.png" alt="CTRL ROOM" /></Link>
       <div className="crumbs">
         {crumbs.map((c, i) => (
           <span key={i} style={{ display: 'contents' }}>

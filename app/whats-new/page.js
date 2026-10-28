@@ -14,7 +14,7 @@ export default function WhatsNew() {
     <>
       <TopBar crumbs={[{ label: 'Home', href: '/' }, { label: 'What’s new' }]} />
       <section className="page">
-        <div className="hhead"><h1 className="up">What’s new</h1><p className="lede">Every update to Ctrl Room, newest first.</p></div>
+        <div className="hhead"><h1 className="up">What’s new</h1><p className="lede">Every update to CTRL ROOM, newest first.</p></div>
         <ol className="changelog">
           {list.map((e, i) => (
             <li key={e.id} className={i === 0 ? 'latest' : ''}>

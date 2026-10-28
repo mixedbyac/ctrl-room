@@ -1,13 +1,15 @@
 'use client';
 import ShareButton from '@/components/ShareButton';
 import EditableTitle from '@/components/EditableTitle';
+import { analyseFile } from '@/lib/audio';
+import { readFileInfo } from '@/lib/fileinfo';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
-import { fmtDate, shortDate, statusText } from '@/lib/format';
+import { fmtDate, shortDate, statusText, mmss } from '@/lib/format';
 import { parseMixName, matchSong } from '@/lib/filename';
 import { deliverFile } from '@/lib/deliver';
 import { usePlayer } from '@/components/Player';
@@ -29,7 +31,10 @@ export default function ProjectPage() {
   const pl = usePlayer();
 
   const load = useCallback(async () => {
-    const { data } = await supabase().from('projects').select('*, songs(*, versions(id,label,created_at))').eq('id', id).single();
+    const sb = supabase();
+    const cols = 'id,label,created_at,storage_path,file_name,duration,lufs,peak_db,rms_db,file_format,sample_rate,bit_depth,file_size';
+    let { data, error } = await sb.from('projects').select(`*, songs(*, versions(${cols}))`).eq('id', id).single();
+    if (error && /column/i.test(error.message)) ({ data } = await sb.from('projects').select('*, songs(*, versions(*))').eq('id', id).single()); // older database
     if (data) data.songs = (data.songs || []).sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at));
     setP(data || null);
   }, [id]);
@@ -85,11 +90,21 @@ export default function ProjectPage() {
         {eng && panel === 'add' && <AddSong p={p} onSaved={() => { load(); setPanel(null); }} />}
         {eng && panel === 'edit' && <EditProject p={p} onSaved={() => { load(); reloadProjects(); setPanel(null); }} />}
 
-        <div className="rows">
+        {p.songs.length > 0 && <TrackStats songs={p.songs} eng={eng} onMeasured={load} />}
+        <div className={`rows ${eng ? 'wide' : 'simple'}`}>
+          {p.songs.length > 0 && (
+            <div className="rowhead" aria-hidden="true">
+              <span>#</span><span>Title</span>
+              {eng && <span>Ver</span>}<span className="c-len">Length</span>
+              {eng && <><span title="Integrated loudness (EBU R128)">LUFS</span><span title="Sample peak, dBFS">Peak</span><span className="c-fmt">Format</span><span className="c-bpm">BPM</span><span className="c-key">Key</span><span /></>}
+              <span />
+            </div>
+          )}
           {p.songs.length ? p.songs.map((s, i) => {
             const vs = [...(s.versions || [])].sort((a, b) => a.created_at.localeCompare(b.created_at));
             const last = vs.at(-1);
             const sub = vs.length ? statusText(s, vs) : s.eta ? `First mix ${fmtDate(s.eta)}` : statusText(s, vs);
+            const fmtx = last ? fmtShort(last) : '';
             return (
               <div key={s.id} className={`row ${vs.length ? '' : 'nomix'} ${pl.current?.song?.id === s.id ? 'cur' : ''} ${pl.current?.song?.id === s.id && pl.playing ? 'live' : ''}`} style={{ '--i': i }}>
                 <button className="rplay" onClick={() => vs.length && playSong({ ...s, versions: vs })} disabled={!vs.length} aria-label={vs.length ? `Play ${s.title}` : 'No mix yet'}>
@@ -99,8 +114,17 @@ export default function ProjectPage() {
                   ? <input className="rowedit up" defaultValue={s.title} autoFocus maxLength={120} aria-label="Rename song" onClick={(e) => e.preventDefault()} onFocus={(e) => e.target.select()}
                       onBlur={(e) => renameSong(s, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } if (e.key === 'Escape') { e.currentTarget.value = s.title; e.currentTarget.blur(); } }} />
                   : <span className="t up">{s.title}</span>}<span className="rsub"><span className={`dot ${s.status}`}>{sub}</span>{last ? <span>· {shortDate(last.created_at)}</span> : null}</span></Link>
-                {eng && renaming !== s.id && <button className="rpen" onClick={() => setRenaming(s.id)} aria-label={`Rename ${s.title}`} title="Rename">✎</button>}
-                <Link className="rmeta" href={`/s/${s.id}`} tabIndex={-1} aria-hidden="true">{last ? <span className="vtag">{last.label}</span> : null}<span className="chev">›</span></Link>
+                {eng && <span className="cell">{last ? <span className="vtag">{last.label}</span> : <span className="dim">—</span>}</span>}
+                <span className="cell mono c-len">{last?.duration ? mmss(last.duration) : <span className="dim">—</span>}</span>
+                {eng && <>
+                  <span className="cell mono" title={last?.lufs != null ? `${last.lufs} LUFS integrated` : 'Not measured yet'}>{last?.lufs != null ? last.lufs.toFixed(1) : <span className="dim">—</span>}</span>
+                  <span className={`cell mono ${last?.peak_db != null && last.peak_db > -0.1 ? 'hot' : ''}`} title={last?.peak_db != null ? `${last.peak_db} dBFS sample peak` : ''}>{last?.peak_db != null ? last.peak_db.toFixed(1) : <span className="dim">—</span>}</span>
+                  <span className="cell mono c-fmt" title={last?.file_name || ''}>{fmtx || <span className="dim">—</span>}</span>
+                  <span className="cell mono c-bpm">{s.bpm || <span className="dim">—</span>}</span>
+                  <span className="cell c-key">{s.musical_key || <span className="dim">—</span>}</span>
+                  <button className="rpen" onClick={() => setRenaming(s.id)} disabled={renaming === s.id} aria-label={`Rename ${s.title}`} title="Rename">✎</button>
+                </>}
+                <Link className="rmeta" href={`/s/${s.id}`} tabIndex={-1} aria-hidden="true">{!eng && last ? <span className="vtag">{last.label}</span> : null}<span className="chev">›</span></Link>
               </div>
             );
           }) : <div className="empty-state"><strong>No songs yet</strong>{eng ? 'Add a song above, or have the client send files through the Portal.' : 'Send your files through the Portal to get started.'}</div>}
@@ -261,6 +285,56 @@ function AddMixes({ p, onSaved }) {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+const fmtShort = (v) => {
+  if (!v?.file_format && !v?.sample_rate) return '';
+  const kHz = v.sample_rate ? `${(v.sample_rate / 1000).toFixed(v.sample_rate % 1000 ? 1 : 0)}k` : '';
+  const bits = v.bit_depth ? (v.bit_depth < 0 ? `${-v.bit_depth}f` : `${v.bit_depth}`) : '';
+  return [v.file_format, [bits, kHz].filter(Boolean).join('/')].filter(Boolean).join(' ');
+};
+
+/** Totals across the project's current mixes, plus a one-click loudness measure for mixes uploaded before LUFS existed. */
+function TrackStats({ songs, eng, onMeasured }) {
+  const [busy, setBusy] = useState('');
+  const latest = songs.map((s) => [...(s.versions || [])].sort((a, b) => a.created_at.localeCompare(b.created_at)).at(-1)).filter(Boolean);
+  const total = latest.reduce((n, v) => n + (v.duration || 0), 0);
+  const lu = latest.map((v) => v.lufs).filter((x) => x != null);
+  const pk = latest.map((v) => v.peak_db).filter((x) => x != null);
+  const hasCol = latest.some((v) => 'lufs' in v);
+  const missing = latest.filter((v) => v.storage_path && (v.lufs == null || v.duration == null || !v.sample_rate));
+  const measure = async () => {
+    const sb = supabase();
+    for (let i = 0; i < missing.length; i++) {
+      const v = missing[i];
+      setBusy(`Measuring ${i + 1} of ${missing.length}…`);
+      try {
+        const { data: u } = await sb.storage.from('mixes').createSignedUrl(v.storage_path, 600);
+        const blob = await (await fetch(u.signedUrl)).blob();
+        const file = new File([blob], v.file_name || v.storage_path.split('/').pop().replace(/^\d+-/, ''), { type: blob.type });
+        const [st, info] = await Promise.all([analyseFile(file), readFileInfo(file)]);
+        const patch = { lufs: st.lufs, peak_db: st.peak_db, rms_db: st.rms_db, duration: v.duration ?? st.duration };
+        if (!v.sample_rate) Object.assign(patch, { file_format: info.file_format, sample_rate: info.sample_rate, bit_depth: info.bit_depth, file_size: info.file_size, lossless: info.lossless, file_name: v.file_name || info.file_name });
+        const { error } = await sb.from('versions').update(patch).eq('id', v.id);
+        if (error && /column/i.test(error.message)) { setBusy('Run supabase/005_loudness.sql in Supabase first, then try again.'); return; }
+      } catch { /* skip files that can't be read */ }
+    }
+    setBusy('');
+    onMeasured();
+  };
+  const parts = [];
+  if (total) parts.push(`${latest.length} mix${latest.length === 1 ? '' : 'es'} · ${mmss(total)} total`);
+  if (eng && lu.length) parts.push(lu.length > 1 ? `${Math.min(...lu).toFixed(1)} to ${Math.max(...lu).toFixed(1)} LUFS · ${(Math.max(...lu) - Math.min(...lu)).toFixed(1)} LU spread` : `${lu[0].toFixed(1)} LUFS`);
+  if (eng && pk.length) parts.push(`peaks up to ${Math.max(...pk).toFixed(1)} dBFS`);
+  if (!parts.length && !(eng && missing.length)) return null;
+  return (
+    <div className="tstats">
+      <span className="mono">{parts.join('  ·  ')}</span>
+      {eng && missing.length > 0 && (busy
+        ? <span className="muted small">{busy}</span>
+        : <button className="btn small" onClick={measure} title="Reads each mix to measure LUFS, peak and format. Nothing about the file changes.">{hasCol || lu.length ? `Measure ${missing.length} mix${missing.length === 1 ? '' : 'es'}` : 'Measure loudness'}</button>)}
     </div>
   );
 }

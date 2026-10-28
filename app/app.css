@@ -208,3 +208,12 @@ body.playing .lbg { animation: breathe 9s ease-in-out infinite; }
 .rpen:hover { color: var(--ink); background: var(--s2); }
 @media (hover: none) { .rpen { opacity: .6; } }
 .rowedit { font: inherit; font-weight: 700; font-size: 16px; width: 100%; background: var(--s1); border: 1px solid var(--sig); border-radius: 8px; color: var(--ink); padding: 3px 8px; }
+
+/* sign up */
+.signcard { max-width: 520px; width: 100%; }
+.signform { display: grid; gap: 12px; width: 100%; text-align: left; }
+.signform .two { gap: 12px; }
+.pwrow { display: flex; gap: 8px; align-items: center; }
+.pwrow input { flex: 1; min-width: 0; }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.authswitch { margin-top: 4px; }

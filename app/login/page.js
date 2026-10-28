@@ -1,5 +1,6 @@
 'use client';
 import { Suspense, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useApp } from '@/components/AppShell';
@@ -88,6 +89,7 @@ function Login() {
           </>
         )}
         {err && <p className="ferr">{err}</p>}
+        <p className="muted small authswitch">New here? <Link className="link" href={`/signup${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`}>Create an account</Link></p>
       </div>
     </div>
   );

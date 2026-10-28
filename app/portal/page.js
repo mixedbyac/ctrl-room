@@ -23,7 +23,11 @@ export default function Portal() {
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const setSong = (k, patch) => setSongs((ss) => ss.map((s) => (s.k === k ? { ...s, ...patch } : s)));
 
-  useEffect(() => { if (myEmail && !f.email) setF((x) => ({ ...x, email: myEmail })); }, [myEmail]); // eslint-disable-line
+  useEffect(() => {
+    if (!myEmail) return;
+    const md = session?.user?.user_metadata || {};
+    setF((x) => ({ ...x, email: x.email || myEmail, name: x.name || md.name || '', artist: x.artist || md.artist || '', phone: x.phone || md.phone || '', spotify: x.spotify || md.spotify || '' }));
+  }, [myEmail]); // eslint-disable-line
 
   const project = mode === 'new' ? null : projects.find((p) => p.id === mode);
   const bytes = songs.reduce((n, s) => n + s.files.reduce((m, x) => m + x.size, 0), 0);

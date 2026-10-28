@@ -11,7 +11,7 @@ import { forRole } from '@/lib/changelog';
 const Ctx = createContext(null);
 export const useApp = () => useContext(Ctx);
 
-const PUBLIC = ['/login', '/portal', '/l'];
+const PUBLIC = ['/login', '/signup', '/portal', '/l'];
 
 export default function AppShell({ children }) {
   const pathname = usePathname();
@@ -54,7 +54,7 @@ export default function AppShell({ children }) {
   const signOut = async () => { await supabase().auth.signOut(); router.replace('/login'); };
   const value = { session, email: session?.user?.email || '', eng, projects, reloadProjects, signOut };
 
-  if (pathname === '/login' || pathname.startsWith('/l/')) return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  if (pathname === '/login' || pathname === '/signup' || pathname.startsWith('/l/')) return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
   if (session === undefined || (session === null && !isPublic)) {
     return <div className="boot"><img src="/logo.png" alt="" className="bootlogo" /></div>;
   }

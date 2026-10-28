@@ -9,7 +9,7 @@ import { installNativeBridge, isMacApp } from '@/lib/native';
 import MfaGate from '@/components/MfaGate';
 import PoweredBy from '@/components/PoweredBy';
 import TabBar from '@/components/TabBar';
-import EnterAnimation from '@/components/EnterAnimation';
+import EnterAnimation, { LogoLoader } from '@/components/EnterAnimation';
 import VerifyBanner from '@/components/VerifyBanner';
 import UpdateWatcher, { getSeen } from '@/components/UpdateWatcher';
 import { forRole } from '@/lib/changelog';
@@ -39,9 +39,11 @@ export default function AppShell({ children }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  const [loaded, setLoaded] = useState(false); // first project list is in
   const reloadProjects = useCallback(async () => {
     const { data } = await supabase().from('projects').select('*').order('created_at', { ascending: false });
     setProjects(data || []);
+    setLoaded(true);
   }, []);
 
   // two-step verification: accounts with it on must enter the code before anything loads
@@ -93,7 +95,7 @@ export default function AppShell({ children }) {
   if (portalHost && session !== undefined) return <Ctx.Provider value={value}><div className="portalhost">{children}<PoweredBy /></div></Ctx.Provider>;
   if (pathname === '/login' || pathname === '/signup' || pathname === '/protect' || pathname === '/portal/prep' || pathname.startsWith('/l/')) return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
   if (session === undefined || (session === null && !isPublic)) {
-    return <div className="boot"><img src="/logo.png" alt="" className="bootlogo" /></div>;
+    return <LogoLoader />;
   }
 
   const live = projects.filter((p) => !p.archived);
@@ -173,7 +175,7 @@ export default function AppShell({ children }) {
           {children}
           <PoweredBy />
         </div>
-        <EnterAnimation active={!!session && !needMfa} />
+        <EnterAnimation active={!!session && !needMfa} ready={loaded} />
         {session && <UpdateWatcher eng={eng} />}
         {session && <TabBar eng={eng} projects={projects} email={session.user.email} signOut={signOut} unseen={unseen} />}
       </div>

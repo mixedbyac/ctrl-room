@@ -42,11 +42,12 @@ export async function GET(req) {
   const slow = limit(req, 'covers', 60, 600_000); if (slow) return slow;
   const url = (await getConfig('login_playlist')) || DEFAULT_PLAYLIST;
   const cached = JSON.parse((await getConfig('login_covers')) || 'null');
-  if (cached && cached.url === url && Date.now() - cached.at < 24 * 3600 * 1000) return json({ covers: cached.covers });
+  const fast = { headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400' } };
+  if (cached && cached.url === url && Date.now() - cached.at < 24 * 3600 * 1000) return Response.json({ covers: cached.covers }, fast);
   try {
     const covers = await fromPlaylist(url);
     if (covers.length) await setConfig('login_covers', JSON.stringify({ url, at: Date.now(), covers }));
-    return json({ covers });
+    return Response.json({ covers }, fast);
   } catch {
     return json({ covers: cached?.covers || [] });
   }

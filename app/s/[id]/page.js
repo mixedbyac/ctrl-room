@@ -221,23 +221,42 @@ function Versions({ versions, vid, ab, setAb, switchTo, flip, eng, song, reload,
 function DeliverVersion({ song, versions, onDone, setMsg }) {
   const [busy, setBusy] = useState('');
   const [text, setText] = useState(true);
+  const [hot, setHot] = useState(false);
   const inputId = `deliver-${song.id}`;
-  const deliver = async (e) => {
-    const f = e.target.files?.[0]; e.target.value = '';
-    if (!f) return;
-    try {
-      const r = await deliverFile({ song, versions, file: f, project: song.projects, text, onStatus: setBusy });
-      const aiffNote = r.info?.file_format === 'AIFF' ? ' Heads up: Chrome and Android can\'t play AIFF. WAV plays everywhere.' : '';
-      setMsg(`Delivered ${f.name} as ${r.label}${r.parsed.note ? ` (${r.parsed.note})` : ''}.${text ? (r.texted ? ' Texted the client.' : ' (Text not sent — check the phone number and Twilio setup.)') : ''} Tap ✎ to rename it.${aiffNote}`);
-      onDone();
-    } catch (err) {
-      setMsg(`Couldn't deliver ${f.name}: ${err.message}`);
-    } finally { setBusy(''); }
+  // one or many files: each becomes its own version, in name order; the client gets one text at the end
+  const deliverAll = async (list) => {
+    const files = Array.from(list || []).filter((f) => f.size > 0 && /\.(wav|aiff?|mp3|m4a|flac)$/i.test(f.name))
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    if (!files.length) return setMsg('Drop WAV, AIFF, FLAC, MP3 or M4A files.');
+    const done = [], failed = [];
+    let current = versions, texted = false, aiff = false;
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i], last = i === files.length - 1;
+      try {
+        const r = await deliverFile({ song, versions: current, file: f, project: song.projects, text: text && last, onStatus: (m) => setBusy(files.length > 1 ? `${i + 1}/${files.length} · ${m}` : m) });
+        done.push(`${r.label}${r.parsed.note ? ` (${r.parsed.note})` : ''}`);
+        if (last) texted = r.texted;
+        if (r.info?.file_format === 'AIFF') aiff = true;
+        const { data } = await supabase().from('versions').select('id,label,created_at').eq('song_id', song.id).order('created_at');
+        current = data || current;
+      } catch (err) { failed.push(`${f.name}: ${err.message}`); }
+    }
+    setBusy('');
+    setMsg([
+      done.length ? `Delivered ${done.join(', ')}.` : '',
+      done.length && text ? (texted ? 'Texted the client.' : '(Text not sent. Check the phone number and Twilio setup.)') : '',
+      done.length ? 'Tap ✎ to rename a version.' : '',
+      aiff ? 'Heads up: Chrome and Android can’t play AIFF. WAV plays everywhere.' : '',
+      failed.length ? `Couldn’t deliver ${failed.join('; ')}` : '',
+    ].filter(Boolean).join(' '));
+    if (done.length) onDone();
   };
   return (
-    <div className="row-actions">
-      <label className="btn small" htmlFor={inputId} style={{ cursor: 'pointer' }}>{busy || '+ Deliver new version'}</label>
-      <input id={inputId} className="vh" type="file" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.flac" onChange={deliver} disabled={!!busy} />
+    <div className={`row-actions deliverbox ${hot ? 'hot' : ''}`}
+      onDragOver={(e) => { e.preventDefault(); setHot(true); }} onDragLeave={() => setHot(false)}
+      onDrop={(e) => { e.preventDefault(); setHot(false); if (!busy) deliverAll(e.dataTransfer?.files); }}>
+      <label className="btn small" htmlFor={inputId} style={{ cursor: 'pointer' }}>{busy || (hot ? 'Drop to deliver' : '+ Deliver new versions')}</label>
+      <input id={inputId} className="vh" type="file" multiple accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.flac" onChange={(e) => { const l = Array.from(e.target.files || []); e.target.value = ''; deliverAll(l); }} disabled={!!busy} />
       <label className="smsopt"><input type="checkbox" checked={text} onChange={(e) => setText(e.target.checked)} /> Text the client</label>
     </div>
   );

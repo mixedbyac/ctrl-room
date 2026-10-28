@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase, api } from '@/lib/supabase';
 
 /**
@@ -10,6 +10,15 @@ export default function CoverMenu({ table, row, onChange, className = '', viaAdm
   const input = useRef(null);
   const [busy, setBusy] = useState('');
   const [err, setErr] = useState('');
+  const [open, setOpen] = useState(false);
+  const box = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const off = (e) => { if (box.current && !box.current.contains(e.target)) setOpen(false); };
+    const esc = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('pointerdown', off); document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', off); document.removeEventListener('keydown', esc); };
+  }, [open]);
   const projectId = table === 'projects' ? row.id : row.project_id;
 
   const update = async (patch) => {
@@ -25,7 +34,7 @@ export default function CoverMenu({ table, row, onChange, className = '', viaAdm
     return true;
   };
   const shuffle = async (e) => {
-    e.preventDefault(); e.stopPropagation(); setErr('');
+    e.preventDefault(); e.stopPropagation(); setErr(''); setOpen(false);
     const seed = Math.floor(Math.random() * 1e9);
     // a project's new cover flows to all its songs; a song shuffle gives just that song its own cover
     await update(table === 'songs' ? { cover_path: `gen:${seed}` } : { seed, ...(row.cover_path ? { cover_path: null } : {}) });
@@ -50,22 +59,24 @@ export default function CoverMenu({ table, row, onChange, className = '', viaAdm
     await update({ cover_path: finalPath });
     setBusy('');
   };
-  const remove = async (e) => { e.preventDefault(); e.stopPropagation(); setErr(''); await update({ cover_path: null }); };
+  const remove = async (e) => { e.preventDefault(); e.stopPropagation(); setErr(''); setOpen(false); await update({ cover_path: null }); };
 
   return (
-    <div className={`covermenu ${busy || err ? 'show' : ''} ${className}`} onClick={(e) => e.stopPropagation()}>
-      {busy ? <span className="cmbusy">{busy}</span> : (
-        <>
-          <button type="button" onClick={shuffle} title="Shuffle a new generated cover">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" /></svg>Shuffle
-          </button>
-          <button type="button" onClick={(e) => { e.preventDefault(); input.current?.click(); }} title="Use your own artwork">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="9" cy="9" r="2" /><path d="M21 15l-5-5L5 21" /></svg>Upload image
-          </button>
-          {row.cover_path && <button type="button" onClick={remove} title={table === 'songs' ? 'Use the project’s cover again' : 'Go back to a generated cover'}>{table === 'songs' ? 'Use project cover' : 'Remove image'}</button>}
-        </>
+    <div ref={box} className={`covermenu ${open ? 'open' : ''} ${className}`} onClick={(e) => e.stopPropagation()}>
+      <button type="button" className="cmhit" aria-label="Change cover art" aria-expanded={open} title="Change cover art"
+        onClick={(e) => { e.preventDefault(); setErr(''); setOpen(!open); }} />
+      {(open || busy || err) && (
+        <div className="cmpop" role="menu">
+          {busy ? <span className="cmbusy">{busy}</span> : open && (
+            <>
+              <button type="button" role="menuitem" onClick={(e) => { e.preventDefault(); setOpen(false); input.current?.click(); }}>Upload new cover</button>
+              <button type="button" role="menuitem" onClick={shuffle}>Shuffle a generated cover</button>
+              {row.cover_path && <button type="button" role="menuitem" onClick={remove}>{table === 'songs' ? 'Use the project cover' : 'Remove image'}</button>}
+            </>
+          )}
+          {err && <span className="cmerr">{err}</span>}
+        </div>
       )}
-      {err && <span className="cmerr">{err}</span>}
       <input ref={input} type="file" accept="image/*" className="vh" onChange={upload} />
     </div>
   );

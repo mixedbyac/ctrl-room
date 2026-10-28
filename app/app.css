@@ -1034,3 +1034,19 @@ a.driftc:hover { transform: scale(1.04); }
   .sleevewrap:hover .record, body.playing .sleevewrap .record { left: 0; }
   .sleevewrap:hover .sleeve, body.playing .sleevewrap .sleeve { transform: translateX(3%) rotate(1.5deg); }
 }
+
+/* cover art: click it for a small menu (upload / shuffle) instead of buttons on top */
+.covermenu, .hascm:hover .covermenu, .covermenu:focus-within, .covermenu.show, .covermenu.ondisc { position: absolute; inset: 0; left: 0; bottom: 0; transform: none; opacity: 1; pointer-events: auto; width: auto; max-width: none; display: block; z-index: 4; border-radius: inherit; }
+@media (hover: none) { .covermenu { transform: none; } }
+.cmhit { position: absolute; inset: 0; width: 100%; height: 100%; background: transparent !important; border: 0 !important; border-radius: inherit; cursor: pointer; padding: 0 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+.cmhit:focus-visible { outline: 2px solid var(--sig); outline-offset: 3px; }
+.cmpop { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: grid; gap: 4px; min-width: 210px; padding: 6px; border-radius: 14px; background: rgba(20,20,22,.94); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,.12); box-shadow: 0 20px 50px -12px rgba(0,0,0,.7); animation: npfade .15s; z-index: 5; }
+.cmpop button { display: block; width: 100%; text-align: left; background: none !important; border: 0 !important; border-radius: 9px; padding: 10px 12px !important; font-size: 14px; }
+.cmpop button:hover { background: rgba(255,255,255,.08) !important; }
+.cmpop .cmbusy, .cmpop .cmerr { background: none; text-align: center; }
+
+/* phones: covers never turn (the only spinning thing is the mini player's round cover) */
+@media (max-width: 900px) {
+  .spin { transform: none !important; }
+}
+.bigdisc .hub { z-index: 6; }

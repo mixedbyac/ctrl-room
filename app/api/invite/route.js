@@ -1,4 +1,4 @@
-import { admin, userFrom, isEngineer, json, fail } from '@/lib/server';
+import { admin, engineerFrom, json, fail } from '@/lib/server';
 import { fetchSpotifyArtist, spotifyArtistId } from '@/lib/spotify';
 
 export const runtime = 'nodejs';
@@ -6,8 +6,8 @@ export const maxDuration = 30;
 
 // Engineer adds an artist by hand and invites people to join. body: { artist, emails: [], spotify?, role? }
 export async function POST(req) {
-  const user = await userFrom(req);
-  if (!user || !(await isEngineer(user.email))) return fail('Only engineers can add artists.', 403);
+  const { user, why } = await engineerFrom(req);
+  if (!user) return fail(why, 403);
   const b = await req.json().catch(() => ({}));
   const artist = String(b.artist || '').trim().slice(0, 100);
   const emails = [...new Set((Array.isArray(b.emails) ? b.emails : String(b.emails || '').split(/[\s,;]+/)).map((e) => String(e).trim().toLowerCase()).filter(Boolean))].slice(0, 10);

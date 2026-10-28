@@ -9,6 +9,7 @@ import { installNativeBridge, isMacApp } from '@/lib/native';
 import MfaGate from '@/components/MfaGate';
 import PoweredBy from '@/components/PoweredBy';
 import TabBar from '@/components/TabBar';
+import ProjectMenu from '@/components/ProjectMenu';
 import EnterAnimation, { LogoLoader } from '@/components/EnterAnimation';
 import VerifyBanner from '@/components/VerifyBanner';
 import UpdateWatcher, { getSeen } from '@/components/UpdateWatcher';
@@ -40,6 +41,8 @@ export default function AppShell({ children }) {
   }, []);
 
   const [loaded, setLoaded] = useState(false); // first project list is in
+  const [pmenu, setPmenu] = useState(null); // right-click menu on a sidebar project
+  const [showArchived, setShowArchived] = useState(false);
   const reloadProjects = useCallback(async () => {
     const { data } = await supabase().from('projects').select('*').order('created_at', { ascending: false });
     setProjects(data || []);
@@ -132,13 +135,27 @@ export default function AppShell({ children }) {
               <p className="navlabel">Projects</p>
               <div style={{ display: 'grid', gap: 2 }}>
                 {live.map((p) => (
-                  <Link key={p.id} className="navitem" href={`/p/${p.id}`} aria-current={pathname.startsWith(`/p/${p.id}`)}>
+                  <Link key={p.id} className="navitem" href={`/p/${p.id}`} aria-current={pathname.startsWith(`/p/${p.id}`)}
+                    onContextMenu={(e) => { if (!eng) return; e.preventDefault(); setPmenu({ project: p, x: e.clientX, y: e.clientY }); }}>
                     <Cover seed={p.seed} path={p.cover_path} size={64} />{p.title}
                   </Link>
                 ))}
               </div>
             </div>
           )}
+          {eng && projects.some((p) => p.archived) && (
+            <div>
+              <button className="navlabel navtoggle" onClick={() => setShowArchived(!showArchived)} aria-expanded={showArchived}>Archived ({projects.filter((p) => p.archived).length}) {showArchived ? '▾' : '▸'}</button>
+              {showArchived && <div style={{ display: 'grid', gap: 2 }}>
+                {projects.filter((p) => p.archived).map((p) => (
+                  <Link key={p.id} className="navitem archived" href={`/p/${p.id}`} onContextMenu={(e) => { e.preventDefault(); setPmenu({ project: p, x: e.clientX, y: e.clientY }); }}>
+                    <Cover seed={p.seed} path={p.cover_path} size={64} />{p.title}
+                  </Link>
+                ))}
+              </div>}
+            </div>
+          )}
+          <ProjectMenu menu={pmenu} onClose={() => setPmenu(null)} onChanged={reloadProjects} router={router} />
           <div>
             <p className="navlabel">Files</p>
             <Link className="navitem" href={eng ? '/portal/inbox' : '/portal'} aria-current={pathname.startsWith('/portal')}>

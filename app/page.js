@@ -145,6 +145,7 @@ function EngineerHome() {
             </ul>
           </section>
           <section>
+            <UnpaidInvoices />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, marginBottom: 12 }}><h2 className="h2 up" style={{ margin: 0 }}>Activity</h2><Link className="link small" href="/insights">Insights ›</Link></div>
             <ul className="nlist" style={{ overflow: 'visible' }}>
               {activity.length ? activity.map((a) => <ActivityItem key={a.kind + a.x.id} a={a} />) : <li className="emptyday">Plays, notes and sign-offs will show up here.</li>}
@@ -253,5 +254,25 @@ function ClientHome() {
         )}
       </section>
     </>
+  );
+}
+
+function UnpaidInvoices() {
+  const [rows, setRows] = useState(null);
+  useEffect(() => {
+    supabase().from('invoices').select('*, projects(id,title,artist)').eq('status', 'unpaid').order('due_date', { ascending: true, nullsFirst: false })
+      .then(({ data, error }) => setRows(error ? [] : data || []));
+  }, []);
+  if (!rows?.length) return null;
+  const total = rows.reduce((n, i) => n + (Number(i.amount) || 0), 0);
+  const today = todayISO();
+  return (
+    <div className="invhome">
+      <div className="invhome-h"><b>Unpaid invoices</b><span className="mono">{rows.length} · ${total.toLocaleString()}</span></div>
+      <ul>{rows.slice(0, 5).map((i) => (
+        <li key={i.id}><Link href={`/p/${i.projects?.id}`}><span>{i.projects?.artist} · {i.projects?.title}{i.number ? ` · #${i.number}` : ''}</span>
+          <small className={i.due_date && i.due_date < today ? 'late' : ''}>{i.amount != null ? `$${Number(i.amount).toLocaleString()}` : ''}{i.due_date ? ` · due ${fmtDate(i.due_date)}` : ''}{i.lock ? ' · 🔒' : ''}{i.visible ? '' : ' · private'}</small></Link></li>
+      ))}</ul>
+    </div>
   );
 }

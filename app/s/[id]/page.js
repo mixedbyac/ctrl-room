@@ -1,5 +1,6 @@
 'use client';
 import QualityBadge from '@/components/QualityBadge';
+import { InvoiceNotice, useInvoices, lockingInvoice } from '@/components/Invoices';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -63,13 +64,15 @@ export default function SongPage() {
     supabase().from('plays').select('*').eq('song_id', id).order('updated_at', { ascending: false }).then(({ data }) => setPlays(data || []));
   }, [eng, id, song]);
 
+  const inv = useInvoices(song?.project_id);
+  const locked = !eng && !!lockingInvoice(inv.list);
   const v = versions.find((x) => x.id === vid) || null;
   const p = song?.projects;
 
   /* ---------- controls (app-wide player) ---------- */
   useEffect(() => { if (isCur && pl.current.versionId !== vid) setVid(pl.current.versionId); }, [isCur, pl.current?.versionId]); // eslint-disable-line
   const start = (at = 0, versionId = vid) => pl.play({ song, project: p, versions, versionId, at, queue: queueIds.length ? queueIds : [id] });
-  const toggle = () => (isCur ? pl.toggle() : start(0));
+  const toggle = () => (locked ? setMsg('Mixes unlock once the invoice is paid.') : isCur ? pl.toggle() : start(0));
   const seek = (t) => (isCur ? pl.seek(t) : start(t));
   const prevVid = useRef(null);
   const switchTo = (newId) => {
@@ -146,7 +149,10 @@ export default function SongPage() {
           </div>
         </div>
 
-        {hasMix ? (
+        {!eng && <InvoiceNotice list={inv.list} />}
+        {hasMix && locked ? (
+          <div className="nomix lockedmix"><strong className="up">Locked until paid</strong>Your mixes are ready. They unlock as soon as the invoice above is paid.</div>
+        ) : hasMix ? (
           <Scrub {...{ v, notes, time, dur: dur || v?.duration || 0, seek, eng, plays }}
             header={<VersionPicker {...{ versions, vid, switchTo, eng, song, reload: load, setMsg, time, dur: dur || v?.duration || 0 }} />} />
         ) : (

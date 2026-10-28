@@ -25,6 +25,8 @@ export async function GET(req) {
     ({ data: songs } = await db.from('songs').select('*').eq('project_id', project.id).neq('sharing', false).order('position'));
   }
   if (!project || project.sharing === false || project.archived) return fail('Sharing is turned off for this project.', 403);
+  const { data: lockInv } = await db.from('invoices').select('id').eq('project_id', project.id).eq('lock', true).eq('status', 'unpaid').limit(1).then((r) => r, () => ({ data: null }));
+  if (lockInv?.length) return fail('This music isn’t available right now.', 403);
 
   const ids = (songs || []).map((s) => s.id);
   const { data: allV } = ids.length ? await db.from('versions').select('*').in('song_id', ids).order('created_at') : { data: [] };

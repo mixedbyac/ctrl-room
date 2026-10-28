@@ -1,5 +1,6 @@
 'use client';
 import QualityBadge from '@/components/QualityBadge';
+import { InvoicePanel, InvoiceNotice, useInvoices, lockingInvoice } from '@/components/Invoices';
 import ShareButton from '@/components/ShareButton';
 import EditableTitle from '@/components/EditableTitle';
 import { measureVersion, needsMeasure } from '@/lib/measure';
@@ -29,6 +30,7 @@ export default function ProjectPage() {
     load();
   };
   const pl = usePlayer();
+  const inv = useInvoices(id);
 
   const load = useCallback(async () => {
     const sb = supabase();
@@ -51,6 +53,7 @@ export default function ProjectPage() {
   const firstPlayable = p.songs.find((s) => s.versions?.length);
   const queue = p.songs.filter((s) => s.versions?.length).map((s) => s.id);
   const playSong = (s) => {
+    if (!eng && lockingInvoice(inv.list)) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; } // locked until the invoice is paid
     if (pl.current?.song?.id === s.id) return pl.toggle();
     pl.play({ songId: s.id, project: p, queue });
   };
@@ -77,6 +80,7 @@ export default function ProjectPage() {
               {!eng && <span className="chipnote">{ready ? `${ready} mix${ready > 1 ? 'es' : ''} waiting on you` : "You're all caught up"}</span>}
               {eng && <>
                 <button className="gear" onClick={() => setPanel(panel === 'share' ? null : 'share')}>Client access</button>
+                <button className="gear" onClick={() => setPanel(panel === 'invoice' ? null : 'invoice')}>Invoices{(inv.list || []).some((i) => i.status === 'unpaid') ? <span className="gdot" aria-label="unpaid" /> : null}</button>
                 <button className="gear" onClick={() => setPanel(panel === 'mixes' ? null : 'mixes')}>+ Add mixes</button>
                 <button className="gear" onClick={() => setPanel(panel === 'add' ? null : 'add')}>+ Add song</button>
                 <button className="gear" onClick={() => setPanel(panel === 'edit' ? null : 'edit')}>Edit details</button>
@@ -86,6 +90,8 @@ export default function ProjectPage() {
         </div>
 
         {eng && panel === 'share' && <SharePanel p={p} onSaved={load} />}
+        {eng && panel === 'invoice' && <InvoicePanel project={p} firstSongId={p.songs[0]?.id} onChange={inv.load} />}
+        {!eng && <InvoiceNotice list={inv.list} />}
         {eng && panel === 'mixes' && <AddMixes p={p} onSaved={load} />}
         {eng && panel === 'add' && <AddSong p={p} onSaved={() => { load(); setPanel(null); }} />}
         {eng && panel === 'edit' && <EditProject p={p} onSaved={() => { load(); reloadProjects(); setPanel(null); }} />}

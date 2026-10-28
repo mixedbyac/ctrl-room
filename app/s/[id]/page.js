@@ -27,7 +27,6 @@ export default function SongPage() {
   const [updates, setUpdates] = useState([]);
   const [plays, setPlays] = useState([]);
   const [vid, setVid] = useState(null);
-  const [ab, setAb] = useState({ a: null, b: null });
   const [tab, setTab] = useState('notes');
   const [msg, setMsg] = useState('');
 
@@ -53,11 +52,8 @@ export default function SongPage() {
     sb.from('songs').select('id').eq('project_id', s.project_id).order('position').then(({ data }) => setQueueIds((data || []).map((x) => x.id)));
     pl.refresh(id, list);
     if (list.length) {
-      const mixes = mixesOf(list), top = mixes.at(-1) || list[list.length - 1], demo = demoOf(list);
+      const top = mixesOf(list).at(-1) || list[list.length - 1];
       setVid((cur) => (cur && list.some((v) => v.id === cur) ? cur : top.id));
-      // A/B starts as the demo vs the latest mix when there's a demo, else the last two mixes
-      setAb((cur) => (cur.a && cur.b && list.some((v) => v.id === cur.a) && list.some((v) => v.id === cur.b) ? cur
-        : demo && mixes.length ? { a: demo.id, b: top.id } : { a: list[Math.max(0, list.length - 2)].id, b: top.id }));
     }
   }, [id]);
   useEffect(() => { load(); }, [load]);
@@ -74,13 +70,16 @@ export default function SongPage() {
   const start = (at = 0, versionId = vid) => pl.play({ song, project: p, versions, versionId, at, queue: queueIds.length ? queueIds : [id] });
   const toggle = () => (isCur ? pl.toggle() : start(0));
   const seek = (t) => (isCur ? pl.seek(t) : start(t));
+  const prevVid = useRef(null);
   const switchTo = (newId) => {
     if (!newId || newId === vid) return;
+    prevVid.current = vid;
     setVid(newId);
     if (isCur) pl.switchVersion(newId);
     document.querySelector('.bigdisc')?.animate?.([{ transform: 'rotate(0)' }, { transform: 'rotate(-28deg)' }, { transform: 'rotate(8deg)' }, { transform: 'rotate(0)' }], { duration: 550, easing: 'cubic-bezier(.3,.7,.3,1)' });
   };
-  const flip = () => { if (ab.a && ab.b) switchTo(vid === ab.b ? ab.a : ab.b); };
+  // X jumps back to the version you were just on (same spot in the song)
+  const flip = () => { const back = prevVid.current && versions.some((x) => x.id === prevVid.current) ? prevVid.current : null; if (back) switchTo(back); };
 
   useEffect(() => {
     const k = (e) => {
@@ -132,7 +131,6 @@ export default function SongPage() {
             <div className="meta"><span className={`dot ${song.status}`}>{statusText(song, versions)}</span>
               <span>{[song.bpm ? `${song.bpm} BPM` : '', mixesOf(versions).length ? `${mixesOf(versions).length} version${mixesOf(versions).length > 1 ? 's' : ''}${demoOf(versions) ? ' + demo' : ''}` : demoOf(versions) ? 'Demo only' : ''].filter(Boolean).join(' · ')}</span></div>
             {hasMix && <div className="shbar"><ShareButton kind="song" id={song.id} eng={eng} title={song.title} /></div>}
-            {hasMix && <Versions {...{ versions, vid, ab, setAb, switchTo, flip, eng, song, reload: load, setMsg }} />}
             {v?.note && <p className="vnote">{v.label}: {v.note}</p>}
             {eng && <DeliverVersion song={song} versions={versions} onDone={load} setMsg={setMsg} />}
             {!demoOf(versions) && <AddDemo song={song} eng={eng} onDone={load} setMsg={setMsg} />}
@@ -142,7 +140,10 @@ export default function SongPage() {
         </div>
 
         {hasMix ? (
-          <Scrub {...{ v, notes, time, dur: dur || v?.duration || 0, seek, eng, plays }} />
+          <>
+            <VersionPicker {...{ versions, vid, switchTo, eng, song, reload: load, setMsg, time, dur: dur || v?.duration || 0, playing }} />
+            <Scrub {...{ v, notes, time, dur: dur || v?.duration || 0, seek, eng, plays }} />
+          </>
         ) : (
           <div className="nomix"><strong className="up">No mix yet</strong>{song.eta ? `The first mix is expected ${fmtDate(song.eta)}.` : 'The first mix will show up here.'}{p.phone ? " You'll get a text the moment it's ready." : ''}</div>
         )}
@@ -163,67 +164,6 @@ export default function SongPage() {
 }
 
 /* ---------- versions timeline + A/B ---------- */
-function Versions({ versions, vid, ab, setAb, switchTo, flip, eng, song, reload, setMsg }) {
-  const [editing, setEditing] = useState(null);
-  const [draft, setDraft] = useState('');
-  const vi = versions.findIndex((x) => x.id === vid);
-  const side = vid === ab.a ? 'a' : vid === ab.b ? 'b' : 'none';
-  const rename = async (ver) => {
-    const nl = draft.trim();
-    setEditing(null);
-    if (!nl || nl === ver.label) return;
-    if (versions.some((x) => x.id !== ver.id && x.label.toLowerCase() === nl.toLowerCase())) return setMsg(`There's already a version called ${nl}.`);
-    const { error } = await supabase().from('versions').update({ label: nl }).eq('id', ver.id);
-    setMsg(error ? error.message : `Renamed ${ver.label} to ${nl}.`);
-    reload();
-  };
-  const pick = (k, idv) => {
-    const other = k === 'a' ? 'b' : 'a';
-    const next = { ...ab, [k]: idv };
-    if (idv === ab[other]) next[other] = ab[k];
-    const wasOn = vid === ab[k];
-    setAb(next);
-    if (wasOn) switchTo(idv);
-  };
-  return (
-    <div className="vblock">
-      <div className="vtrack">
-        {versions.map((x, i) => (
-          <div key={x.id} className={`vnode ${x.id === vid ? 'cur' : ''} ${i < vi ? 'past' : ''} ${song.approved_version === x.id ? 'ok' : ''} ${isDemo(x) ? 'demo' : ''}`}>
-            <button className="vpick" onClick={() => switchTo(x.id)} aria-pressed={x.id === vid} aria-label={`Play ${x.label}`}><span className="vdot" /></button>
-            <span className="vlab">
-              {editing === x.id ? (
-                <input className="vrename" value={draft} maxLength={14} autoFocus aria-label={`Rename ${x.label}`}
-                  onChange={(e) => setDraft(e.target.value)} onBlur={() => rename(x)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditing(null); }} />
-              ) : (
-                <>
-                  <button onClick={() => switchTo(x.id)}>{x.label}</button>
-                  {eng && <button className="vedit" title="Rename" aria-label={`Rename ${x.label}`} onClick={() => { setDraft(x.label); setEditing(x.id); }}>✎</button>}
-                </>
-              )}
-            </span>
-            <span className="vdate">{shortDate(x.created_at)}</span>
-            {versions.length > 1 && (x.id === ab.a ? <span className="vchip a">A</span> : x.id === ab.b ? <span className="vchip b">B</span> : null)}
-          </div>
-        ))}
-      </div>
-      {demoOf(versions) && mixesOf(versions).length > 0 && !(ab.a === demoOf(versions).id || ab.b === demoOf(versions).id) && (
-        <button className="btn small cmpdemo" onClick={() => { const d = demoOf(versions), m = latestMix(versions); setAb({ a: d.id, b: m.id }); if (vid !== d.id && vid !== m.id) switchTo(m.id); }}>Compare to demo</button>
-      )}
-      {versions.length > 1 && (
-        <div className="abbar">
-          <div className={`abslot a ${side === 'a' ? 'on' : ''}`}><span className="abletter">A</span>
-            <select value={ab.a || ''} onChange={(e) => pick('a', e.target.value)} aria-label="Version A">{versions.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select></div>
-          <button className="abswitch" data-side={side} onClick={flip} aria-label="Flip between A and B"><i>{side === 'a' ? 'A' : side === 'b' ? 'B' : '·'}</i></button>
-          <div className={`abslot b ${side === 'b' ? 'on' : ''}`}><span className="abletter">B</span>
-            <select value={ab.b || ''} onChange={(e) => pick('b', e.target.value)} aria-label="Version B">{versions.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select></div>
-          <span className="abhint">Flips at the same spot · <kbd>X</kbd></span>
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* ---------- deliver a new version (engineer) ---------- */
 function DeliverVersion({ song, versions, onDone, setMsg }) {
@@ -611,6 +551,85 @@ function AddDemo({ song, eng, onDone, setMsg }) {
       <label className="btn small quiet" htmlFor={id} style={{ cursor: 'pointer' }}>{busy || (hot ? 'Drop the demo' : '+ Add demo')}</label>
       <input id={id} className="vh" type="file" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.flac" disabled={!!busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; go(f); }} />
       <span className="muted small">{eng ? 'The rough or demo the mixes get compared to.' : 'Got a rough or demo? Add it so you can compare every mix to it.'}</span>
+    </div>
+  );
+}
+
+/* ---------- version picker: a dropdown by the waveform, each version with its own little waveform ---------- */
+function MiniWave({ peaks, progress = 0, active = false, w = 150, h = 30 }) {
+  const cv = useRef(null);
+  useEffect(() => {
+    const c = cv.current; if (!c) return;
+    const dpr = window.devicePixelRatio || 1;
+    c.width = w * dpr; c.height = h * dpr;
+    const g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height);
+    const step = 2 * dpr, n = Math.floor(c.width / step);
+    for (let i = 0; i < n; i++) {
+      let p = 0.06;
+      if (peaks?.length) { const a = Math.floor((i / n) * peaks.length), b = Math.max(a + 1, Math.floor(((i + 1) / n) * peaks.length)); p = 0; for (let j = a; j < b; j++) p = Math.max(p, peaks[j] || 0); }
+      const bh = Math.max(dpr, Math.min(1, p) * c.height * 0.95);
+      g.fillStyle = active && i / n < progress ? '#f5d547' : active ? '#d4d4d8' : '#6b6b73';
+      g.fillRect(i * step, (c.height - bh) / 2, Math.max(1, dpr), bh);
+    }
+  }, [peaks, progress, active, w, h]);
+  return <canvas ref={cv} className="miniwave" style={{ width: w, height: h }} aria-hidden="true" />;
+}
+
+function VersionPicker({ versions, vid, switchTo, eng, song, reload, setMsg, time, dur }) {
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [draft, setDraft] = useState('');
+  const box = useRef(null);
+  const cur = versions.find((x) => x.id === vid) || versions.at(-1);
+  const latest = latestMix(versions);
+  useEffect(() => {
+    if (!open) return;
+    const off = (e) => { if (box.current && !box.current.contains(e.target)) setOpen(false); };
+    const esc = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('pointerdown', off); document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', off); document.removeEventListener('keydown', esc); };
+  }, [open]);
+  const rename = async (ver) => {
+    const nl = draft.trim(); setEditing(null);
+    if (!nl || nl === ver.label) return;
+    if (versions.some((x) => x.id !== ver.id && x.label.toLowerCase() === nl.toLowerCase())) return setMsg(`There's already a version called ${nl}.`);
+    const { error } = await supabase().from('versions').update({ label: nl }).eq('id', ver.id);
+    setMsg(error ? error.message : `Renamed ${ver.label} to ${nl}.`);
+    reload();
+  };
+  const tags = (x) => [isDemo(x) ? 'Demo' : '', x.id === latest?.id ? 'Latest' : '', song.approved_version === x.id ? 'Approved' : ''].filter(Boolean);
+  const prog = dur ? time / dur : 0;
+  if (!cur) return null;
+  return (
+    <div className="vpick2" ref={box}>
+      <button className={`vp-trigger ${open ? 'open' : ''}`} onClick={() => setOpen(!open)} aria-haspopup="listbox" aria-expanded={open}>
+        <span className="vp-lab"><b>{cur.label}</b>{tags(cur).map((t) => <i key={t} className={`vp-tag ${t.toLowerCase()}`}>{t}</i>)}</span>
+        <MiniWave peaks={cur.peaks} progress={prog} active w={180} h={26} />
+        <span className="vp-count">{versions.length} version{versions.length === 1 ? '' : 's'}</span>
+        <svg className="vp-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+      </button>
+      {open && (
+        <ul className="vp-list" role="listbox" aria-label="Versions">
+          {[...versions].reverse().map((x) => (
+            <li key={x.id} role="option" aria-selected={x.id === vid} className={`${x.id === vid ? 'on' : ''} ${isDemo(x) ? 'demo' : ''}`}>
+              <button className="vp-row" onClick={() => { switchTo(x.id); setOpen(false); }}>
+                <span className="vp-name">
+                  {editing === x.id
+                    ? <input className="vrename" value={draft} maxLength={14} autoFocus aria-label={`Rename ${x.label}`} onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => setDraft(e.target.value)} onBlur={() => rename(x)}
+                        onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setEditing(null); }} />
+                    : <b>{x.label}</b>}
+                  {tags(x).map((t) => <i key={t} className={`vp-tag ${t.toLowerCase()}`}>{t}</i>)}
+                  <small>{[shortDate(x.created_at), x.duration ? mmss(x.duration) : '', eng && x.lufs != null ? `${x.lufs.toFixed(1)} LUFS` : '', x.note].filter(Boolean).join(' · ')}</small>
+                </span>
+                <MiniWave peaks={x.peaks} progress={x.id === vid ? prog : 0} active={x.id === vid} />
+              </button>
+              {eng && editing !== x.id && <button className="vedit" title="Rename" aria-label={`Rename ${x.label}`} onClick={() => { setDraft(x.label); setEditing(x.id); }}>✎</button>}
+            </li>
+          ))}
+          <li className="vp-hint">Switching keeps your spot in the song. Press <kbd>X</kbd> to jump back to the last one.</li>
+        </ul>
+      )}
     </div>
   );
 }

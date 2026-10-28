@@ -333,7 +333,7 @@ function NowPlaying() {
         {c.versions.length > 1 && (
           <div className="npvers" role="group" aria-label="Versions">
             {c.versions.map((x) => <button key={x.id} aria-pressed={x.id === c.versionId} onClick={() => pl.switchVersion(x.id)}>{x.label}</button>)}
-            <span className="nphint"><kbd>X</kbd> to A/B</span>
+            <span className="nphint">keeps your spot</span>
           </div>
         )}
         <div>

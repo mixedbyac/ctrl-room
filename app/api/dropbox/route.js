@@ -25,9 +25,18 @@ export async function POST(req) {
     return json({ ok: true });
   }
   if (b.action === 'root') {
-    const root = '/' + String(b.root || '').split('/').map((s) => s.trim()).filter(Boolean).join('/');
-    await setConfig('dropbox_root', root === '/' ? '' : root);
+    const root = '/' + String(b.root || '').replace(/\\/g, '/').replace(/^.*?dropbox(\.com\/home)?\//i, '').split('/').map((x) => x.trim()).filter(Boolean).join('/');
+    const clean = root === '/' ? '' : root;
+    if (clean && b.create) { try { await dropboxApi('files/create_folder_v2', { path: clean, autorename: false }); } catch (e) { if (!/conflict|already/i.test(e.message)) return fail(e.message, 500); } }
+    const { error } = await setConfig('dropbox_root', clean);
+    if (error) return fail(error.message, 500);
     return json({ root: await dropboxRoot() });
+  }
+  if (b.action === 'mkdir') {
+    const path = '/' + String(b.path || '').split('/').map((x) => x.trim()).filter(Boolean).join('/');
+    if (path === '/') return fail('Name the folder.');
+    try { await dropboxApi('files/create_folder_v2', { path, autorename: false }); } catch (e) { if (!/conflict|already/i.test(e.message)) return fail(e.message, 500); }
+    return json({ ok: true, path });
   }
   if (b.action === 'folders') {
     try {

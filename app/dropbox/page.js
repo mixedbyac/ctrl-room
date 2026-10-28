@@ -11,16 +11,33 @@ function DropboxSetup() {
   const [msg, setMsg] = useState(q.get('connected') ? 'Dropbox is connected. Now pick the folder client files should go into.' : q.get('error') || '');
   const [browse, setBrowse] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [typed, setTyped] = useState('');
+  const [bErr, setBErr] = useState('');
+  const [newName, setNewName] = useState('');
 
-  const load = () => api('/api/dropbox', { action: 'status' }).then(setSt).catch((e) => setMsg(e.message));
+  const load = () => api('/api/dropbox', { action: 'status' }).then((r) => { setSt(r); setTyped(r.root || '/'); }).catch((e) => setMsg(e.message));
   useEffect(() => { if (eng) load(); }, [eng]);
   const open = async (path) => {
-    setBusy(true);
-    try { setBrowse(await api('/api/dropbox', { action: 'folders', path })); } catch (e) { setMsg(e.message); }
+    setBusy(true); setBErr('');
+    try { setBrowse(await api('/api/dropbox', { action: 'folders', path })); } catch (e) { setBErr(e.message); if (!browse) setBrowse({ path: path || '/', folders: [], failed: true }); }
     setBusy(false);
   };
   const connect = async () => { try { const r = await api('/api/dropbox', { action: 'connect' }); window.location.href = r.url; } catch (e) { setMsg(e.message); } };
-  const choose = async (root) => { const r = await api('/api/dropbox', { action: 'root', root }); setSt((s) => ({ ...s, root: r.root })); setBrowse(null); setMsg(`Client files will go into ${r.root || 'the top of your Dropbox'}.`); };
+  const choose = async (root, create = false) => {
+    setBusy(true); setBErr('');
+    try {
+      const r = await api('/api/dropbox', { action: 'root', root, create });
+      setSt((s) => ({ ...s, root: r.root })); setTyped(r.root || '/'); setBrowse(null);
+      setMsg(`Saved. Client files will go into ${r.root || 'the top of your Dropbox'}/Artist/Project/Song.`);
+    } catch (e) { setBErr(e.message); }
+    setBusy(false);
+  };
+  const mkdir = async () => {
+    const name = newName.trim().replace(/\//g, '-'); if (!name) return;
+    setBusy(true); setBErr('');
+    try { const base = browse?.path && browse.path !== '/' ? browse.path : ''; await api('/api/dropbox', { action: 'mkdir', path: `${base}/${name}` }); setNewName(''); await open(`${base}/${name}`); } catch (e) { setBErr(e.message); }
+    setBusy(false);
+  };
   const disconnect = async () => { if (!confirm('Disconnect Dropbox? Portal uploads will stop until you connect again.')) return; await api('/api/dropbox', { action: 'disconnect' }); load(); };
   const copy = async (t) => { try { await navigator.clipboard.writeText(t); setMsg('Copied.'); } catch {} };
 
@@ -64,7 +81,15 @@ function DropboxSetup() {
                 <div className="dbxfolder">
                   <p className="muted small" style={{ margin: 0 }}>Client files go into</p>
                   <div className="dbxpath mono">{st.root || '/'}<span className="muted">/Artist/Project/Song/</span></div>
-                  {!browse && <button className="btn small" disabled={busy} onClick={() => open(st.root || '')}>{busy ? 'Opening…' : 'Change folder'}</button>}
+                  <form className="dbxtype" onSubmit={(e) => { e.preventDefault(); choose(typed, true); }}>
+                    <label htmlFor="dbx-p" className="muted small">Folder in your Dropbox</label>
+                    <div className="aerow">
+                      <input id="dbx-p" className="mono" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="/Clients" spellCheck={false} />
+                      <button className="btn small primary" disabled={busy || (typed || '/') === (st.root || '/')}>{busy ? 'Saving…' : 'Save'}</button>
+                      {!browse && <button type="button" className="btn small" disabled={busy} onClick={() => open(st.root || '')}>Browse…</button>}
+                    </div>
+                    <p className="muted small" style={{ margin: 0 }}>Type a path like <b>/Mixing/Clients</b>. If the folder doesn’t exist yet, it gets made for you.</p>
+                  </form>
                 </div>
               )}
               {browse && (
@@ -73,17 +98,21 @@ function DropboxSetup() {
                     <button onClick={() => open('')}>Dropbox</button>
                     {crumbs.map((c, i) => <span key={i}> / <button onClick={() => open('/' + crumbs.slice(0, i + 1).join('/'))}>{c}</button></span>)}
                   </div>
-                  <ul className="dbxlist">
-                    {browse.folders.map((f) => <li key={f.path}><button onClick={() => open(f.path)}><span aria-hidden="true">📁</span> {f.name}</button></li>)}
+                  {!browse.failed && <ul className="dbxlist">
+                    {browse.folders.map((f) => <li key={f.path}><button onClick={() => open(f.path)} disabled={busy}><span aria-hidden="true">📁</span> {f.name}</button></li>)}
                     {!browse.folders.length && <li className="muted small">No folders in here.</li>}
-                  </ul>
+                  </ul>}
+                  {!browse.failed && <div className="aerow">
+                    <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="New folder name" aria-label="New folder name" />
+                    <button className="btn small" disabled={busy || !newName.trim()} onClick={mkdir}>Make folder here</button>
+                  </div>}
                   <div className="row-actions">
-                    <button className="btn small primary" onClick={() => choose(browse.path === '/' ? '' : browse.path)}>Use {browse.path === '/' ? 'the top of Dropbox' : `“${crumbs.at(-1)}”`}</button>
-                    <button className="btn small quiet" onClick={() => setBrowse(null)}>Cancel</button>
+                    {!browse.failed && <button className="btn small primary" disabled={busy} onClick={() => choose(browse.path === '/' ? '' : browse.path)}>Use {browse.path === '/' ? 'the top of Dropbox' : `“${crumbs.at(-1)}”`}</button>}
+                    <button className="btn small quiet" onClick={() => { setBrowse(null); setBErr(''); }}>Close</button>
                   </div>
-                  <p className="muted small" style={{ margin: 0 }}>Tip: make a folder like <b>Clients</b> in Dropbox first, then pick it here.</p>
                 </div>
               )}
+              {bErr && <p className="ferr" style={{ margin: 0 }}>{bErr}</p>}
             </div>
           </div>
         )}

@@ -277,3 +277,4 @@ body.playing .lbg { animation: breathe 9s ease-in-out infinite; }
 .dbxlist button { width: 100%; text-align: left; padding: 10px 12px; font-size: 14px; }
 .dbxlist button:hover { background: var(--s1); }
 .dbxlist .muted { padding: 10px 12px; }
+.dbxtype { display: grid; gap: 6px; width: 100%; margin-top: 6px; }

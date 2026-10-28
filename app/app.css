@@ -278,3 +278,7 @@ body.playing .lbg { animation: breathe 9s ease-in-out infinite; }
 .dbxlist button:hover { background: var(--s1); }
 .dbxlist .muted { padding: 10px 12px; }
 .dbxtype { display: grid; gap: 6px; width: 100%; margin-top: 6px; }
+.dbxwarn { border: 1px solid rgba(245,213,71,.35); background: rgba(245,213,71,.06); border-radius: 12px; padding: 14px 16px; display: grid; gap: 8px; font-size: 14px; line-height: 1.5; }
+.dbxwarn p { margin: 0; }
+.dbxwarn ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.dbxwarn code { font-family: var(--mono); font-size: 12px; background: var(--s2); padding: 1px 5px; border-radius: 5px; overflow-wrap: anywhere; }

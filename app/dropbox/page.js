@@ -78,12 +78,26 @@ function DropboxSetup() {
                   ? <><button className="btn small" onClick={connect}>Reconnect</button><button className="btn small quiet" onClick={disconnect}>Disconnect</button></>
                   : <button className="btn primary" disabled={!st.hasKeys} onClick={connect}>Connect Dropbox</button>}
               </div>
+              {st.connected && st.problem === 'APP_FOLDER' && (
+                <div className="dbxwarn">
+                  <b>Your Dropbox app is set to “App folder”, so it can only see its own empty folder.</b>
+                  <p>To use your business folders it needs <b>Full Dropbox</b> access. Dropbox doesn’t let you change that on an existing app, so make a new one:</p>
+                  <ol>
+                    <li>At <a className="link" href="https://www.dropbox.com/developers/apps/create" target="_blank" rel="noopener noreferrer">dropbox.com/developers/apps/create</a> choose <b>Scoped access › Full Dropbox</b>.</li>
+                    <li>Permissions tab: tick files.metadata.read, files.content.read, files.content.write, account_info.read › <b>Submit</b>.</li>
+                    <li>Settings tab: add the redirect URI <code>{st.redirect}</code>, and under Development users click <b>Enable additional users</b>.</li>
+                    <li>In Vercel, replace <code>DROPBOX_APP_KEY</code> and <code>DROPBOX_APP_SECRET</code> with the new app’s, then Redeploy.</li>
+                    <li>Come back here and click <b>Reconnect</b>.</li>
+                  </ol>
+                </div>
+              )}
+              {st.connected && st.problem && st.problem !== 'APP_FOLDER' && <p className="ferr" style={{ margin: 0 }}>{st.problem}</p>}
               {st.connected && (
                 <div className="dbxfolder">
                   {st.account?.teamRoot && (
                     <label className="shrow" style={{ marginBottom: 8 }}>
                       <span><b>Use team folders</b><span className="muted small">{st.teamSpace ? `Showing ${st.account.team}’s shared team space.` : 'Showing only your own folder.'}</span></span>
-                      <button className="switch" role="switch" aria-checked={st.teamSpace} disabled={busy} onClick={async () => { setBusy(true); try { const r = await api('/api/dropbox', { action: 'space', team: !st.teamSpace }); setSt((x) => ({ ...x, teamSpace: r.teamSpace })); setBrowse(null); } catch (e) { setBErr(e.message); } setBusy(false); }}><i /></button>
+                      <button className="switch" role="switch" aria-checked={st.teamSpace} disabled={busy} onClick={async () => { setBusy(true); try { const r = await api('/api/dropbox', { action: 'space', team: !st.teamSpace }); setSt((x) => ({ ...x, teamSpace: r.teamSpace })); setBrowse(null); open(''); } catch (e) { setBErr(e.message); } setBusy(false); }}><i /></button>
                     </label>
                   )}
                   <p className="muted small" style={{ margin: 0 }}>Client files go into</p>
@@ -107,7 +121,7 @@ function DropboxSetup() {
                   </div>
                   {!browse.failed && <ul className="dbxlist">
                     {browse.folders.map((f) => <li key={f.path}><button onClick={() => open(f.path)} disabled={busy}><span aria-hidden="true">📁</span> {f.name}</button></li>)}
-                    {!browse.folders.length && <li className="muted small">No folders in here.</li>}
+                    {!browse.folders.length && <li className="muted small">{browse.path === '/' ? (st.account?.teamRoot && !st.teamSpace ? 'Nothing here. Turn on “Use team folders” above to see your business folders.' : browse.files ? 'Only files here, no folders. Make one below.' : 'Dropbox shows nothing at the top level. If you expected your business folders, check that your Dropbox app has Full Dropbox access.') : 'No folders in here.'}</li>}
                   </ul>}
                   {!browse.failed && <div className="aerow">
                     <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="New folder name" aria-label="New folder name" />

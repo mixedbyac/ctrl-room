@@ -1,4 +1,5 @@
 'use client';
+import NotifyClient from '@/components/NotifyClient';
 import ArtistName from '@/components/ArtistName';
 import Credit, { useProfiles } from '@/components/Credit';
 import { TitleInput, ArtistPicker, CaseButtons, CASES } from '@/components/TitleCase';
@@ -153,7 +154,7 @@ export default function ProjectPage() {
         {eng && panel === 'share' && <SharePanel p={p} onSaved={load} />}
         {eng && panel === 'invoice' && <InvoicePanel project={p} firstSongId={p.songs[0]?.id} onChange={inv.load} />}
         {!eng && <InvoiceNotice list={inv.list} />}
-        {eng && panel === 'mixes' && <AddMixes p={p} onSaved={load} />}
+        {eng && <AddMixes p={p} onSaved={load} />}
         {eng && panel === 'add' && <AddSong p={p} onSaved={() => { load(); setPanel(null); }} />}
         {eng && panel === 'edit' && <EditProject p={p} onSaved={() => { load(); reloadProjects(); setPanel(null); }} />}
 
@@ -274,7 +275,10 @@ function AddPlus({ onPick, unpaid }) {
     return () => document.removeEventListener('pointerdown', off);
   }, [open]);
   const pick = (k) => { setOpen(false); onPick(k); };
-  const Row = ({ k, icon, title, sub, dot }) => <button role="menuitem" onClick={() => pick(k)}><span className="pmi">{icon}</span><span><b>{title}{dot ? <span className="gdot" aria-label="unpaid" style={{ position: 'static', display: 'inline-block', marginLeft: 6 }} /> : null}</b><small>{sub}</small></span></button>;
+  const Row = ({ k, icon, title, sub, dot }) => k === 'mixes'
+    // a label opens the file picker in the same tap (Safari needs that)
+    ? <label role="menuitem" htmlFor="addmix-file" className="pmlabel" onClick={() => setOpen(false)}><span className="pmi">{icon}</span><span><b>{title}</b><small>{sub}</small></span></label>
+    : <button role="menuitem" onClick={() => pick(k)}><span className="pmi">{icon}</span><span><b>{title}{dot ? <span className="gdot" aria-label="unpaid" style={{ position: 'static', display: 'inline-block', marginLeft: 6 }} /> : null}</b><small>{sub}</small></span></button>;
   return (
     <span className="addplus" ref={box}>
       <button className="bigplus" onClick={() => setOpen(!open)} aria-expanded={open} aria-label="Add to this project" title="Add & manage">
@@ -283,7 +287,7 @@ function AddPlus({ onPick, unpaid }) {
       {unpaid && !open && <span className="gdot" aria-label="unpaid invoice" />}
       {open && (
         <div className="plusmenu" role="menu">
-          <Row k="mixes" icon="↑" title="Add mixes" sub="Drop files, they find their songs" />
+          <Row k="mixes" icon="↑" title="Add mixes" sub="Pick files, they go straight in" />
           <Row k="add" icon="♪" title="Add a song" sub="A new song in this project" />
           <Row k="share" icon="@" title="Client access" sub="Who can open it, downloads" />
           <Row k="invoice" icon="$" title="Invoices" sub="Attach, show, lock until paid" dot={unpaid} />
@@ -381,90 +385,83 @@ function EditProject({ p, onSaved }) {
   );
 }
 
+/**
+ * Add mixes: the + menu opens your files right away. Every file you pick goes straight into the project
+ * (matching song, or a new song named from the file). Pick more anytime. Then one tap emails the client.
+ */
 function AddMixes({ p, onSaved }) {
-  const [rows, setRows] = useState([]);
-  const [text, setText] = useState(true);
+  const [rows, setRows] = useState([]); // { id, file, title, label, songId, state, status }
+  const [done, setDone] = useState([]);
   const [busy, setBusy] = useState(false);
   const [hot, setHot] = useState(false);
-  const pick = (list) => {
-    const files = Array.from(list || []).filter((f) => f.size > 0 && /\.(wav|aiff?|mp3|m4a|flac)$/i.test(f.name));
-    setRows(files.map((file) => {
-      const parsed = parseMixName(file.name, { artist: p.artist, project: p.title });
-      const song = matchSong(p.songs, parsed.title);
-      return { file, title: parsed.title || file.name.replace(/\.[^.]+$/, ''), label: parsed.label, note: parsed.note, songId: song?.id || null, state: 'ready' };
-    }));
-  };
-  const setRow = (i, patch) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
-  const go = async () => {
+  const input = useRef(null);
+  const chain = useRef(Promise.resolve());
+  const created = useRef({});
+  const pos = useRef(null);
+  const setRow = (id, patch) => setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  const run = async (batch) => {
     setBusy(true);
     const sb = supabase();
-    let pos = p.songs.reduce((m, s) => Math.max(m, s.position), -1);
-    const created = {};
-    for (let i = 0; i < rows.length; i++) {
-      const r = rows[i];
+    if (pos.current == null) pos.current = p.songs.reduce((m, s) => Math.max(m, s.position), -1);
+    for (const r of batch) {
       try {
-        setRow(i, { state: 'working' });
-        let song = r.songId ? p.songs.find((s) => s.id === r.songId) : created[r.title.toLowerCase()] || matchSong(p.songs, r.title);
+        setRow(r.id, { state: 'working', status: 'Starting…' });
+        let song = r.songId ? p.songs.find((s) => s.id === r.songId) : created.current[r.title.toLowerCase()] || matchSong(p.songs, r.title);
         if (!song) {
-          const { data, error } = await sb.from('songs').insert({ project_id: p.id, title: r.title.trim(), position: ++pos, seed: Math.floor(Math.random() * 1e9) }).select('*').single();
+          const { data, error } = await sb.from('songs').insert({ project_id: p.id, title: r.title.trim(), position: ++pos.current, seed: Math.floor(Math.random() * 1e9) }).select('*').single();
           if (error) throw new Error(error.message);
           song = { ...data, versions: [] };
-          created[r.title.toLowerCase()] = song;
+          created.current[r.title.toLowerCase()] = song;
         }
         const { data: vs } = await sb.from('versions').select('id,label,created_at').eq('song_id', song.id).order('created_at');
-        const res = await deliverFile({ song, versions: vs || [], file: r.file, project: p, text, onStatus: (m) => setRow(i, { status: m }) });
-        setRow(i, { state: 'done', status: `${song.title} · ${res.label}${res.texted ? ' · emailed' : ''}` });
-      } catch (e) {
-        setRow(i, { state: 'error', status: e.message });
-      }
+        const res = await deliverFile({ song, versions: vs || [], file: r.file, project: p, text: false, onStatus: (m) => setRow(r.id, { status: m }) });
+        setRow(r.id, { state: 'done', status: `${song.title} · ${res.label}` });
+        setDone((d) => [...d, { songId: song.id, songTitle: song.title, label: res.label }]);
+      } catch (e) { setRow(r.id, { state: 'error', status: e.message }); }
     }
     setBusy(false);
     onSaved();
   };
+  const pick = (list) => {
+    const files = Array.from(list || []).filter((f) => f.size > 0 && /\.(wav|aiff?|mp3|m4a|flac)$/i.test(f.name))
+      .sort((x, y) => x.name.localeCompare(y.name, undefined, { numeric: true }));
+    if (!files.length) return;
+    const batch = files.map((file, i) => {
+      const parsed = parseMixName(file.name, { artist: p.artist, project: p.title });
+      const song = matchSong(p.songs, parsed.title);
+      return { id: `${Date.now()}-${i}-${Math.random()}`, file, title: parsed.title || file.name.replace(/\.[^.]+$/, ''), label: parsed.label, songId: song?.id || null, state: 'waiting', status: 'Waiting…' };
+    });
+    setRows((rs) => [...rs, ...batch]);
+    chain.current = chain.current.then(() => run(batch)); // one after another, as you keep adding
+  };
+  const input_el = <input ref={input} id="addmix-file" className="vh" type="file" multiple accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.flac" onChange={(e) => { pick(e.target.files); e.target.value = ''; }} />;
+  if (!rows.length) return input_el; // nothing yet: just the hidden picker (opened from the + menu)
   return (
-    <div className="panel" style={{ marginBottom: 24 }}>
-      <h3>Add mixes</h3>
-      <p className="muted small" style={{ margin: 0 }}>Drop bounces named however you like, e.g. “{p.artist} - Song Name - Mix 2.wav”. Each file goes to the matching song (or a new one), and “Mix 2” becomes v2.</p>
-      <label className={`minidrop ${hot ? 'hot' : ''}`} style={{ cursor: 'pointer' }}
-        onDragOver={(e) => { e.preventDefault(); setHot(true); }} onDragLeave={() => setHot(false)}
-        onDrop={(e) => { e.preventDefault(); setHot(false); pick(e.dataTransfer?.files); }}>
-        <span className="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V4M7 9l5-5 5 5M4 15v4a1 1 0 001 1h14a1 1 0 001-1v-4" /></svg></span>
-        <span className="mt"><b>{rows.length ? `${rows.length} mix${rows.length > 1 ? 'es' : ''} ready` : 'Drop mixes here, or click to choose'}</b><span>WAV, AIFF, MP3, M4A or FLAC</span></span>
-        <input className="vh" type="file" multiple accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.flac" onChange={(e) => { pick(e.target.files); e.target.value = ''; }} />
-      </label>
-      {rows.length > 0 && (
-        <>
-          {rows.some((r) => r.state === 'ready' && !r.songId) && (
-            <div className="row-actions small muted" style={{ alignItems: 'center' }}>Style every new title:
-              <span className="casebtns" role="group" aria-label="Style every new title">
-                {CASES.map((c) => <button key={c.k} type="button" title={c.title} onClick={() => setRows((rs) => rs.map((r) => (r.state === 'ready' && !r.songId ? { ...r, title: c.fn(r.title) } : r)))}>{c.label}</button>)}
-              </span>
-            </div>
-          )}
-          <ul className="act">
-            {rows.map((r, i) => (
-              <li key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.4fr) minmax(0,1fr) 70px', gap: 10, alignItems: 'center' }}>
-                <span className="small muted" style={{ overflowWrap: 'anywhere' }}>{r.file.name}</span>
-                {r.state === 'ready' ? (
-                  <span style={{ display: 'grid', gap: 6, minWidth: 0 }}>
-                    <select className="sinput" value={r.songId || 'new'} onChange={(e) => setRow(i, { songId: e.target.value === 'new' ? null : e.target.value })} aria-label="Which song">
-                      <option value="new">New song: {r.title}</option>
-                      {p.songs.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
-                    </select>
-                    {!r.songId && <TitleInput className="sinput" value={r.title} onChange={(v) => setRow(i, { title: v })} ariaLabel="New song title" />}
-                  </span>
-                ) : <span className="small" style={{ color: r.state === 'error' ? 'var(--warn)' : r.state === 'done' ? 'var(--ok)' : 'var(--muted)' }}>{r.status}</span>}
-                <span className="mono small">{r.label || 'next'}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="row-actions">
-            <button className="btn primary" onClick={go} disabled={busy || rows.every((r) => r.state === 'done')}>{busy ? 'Delivering…' : `Deliver ${rows.length} mix${rows.length > 1 ? 'es' : ''}`}</button>
-            <label className="smsopt"><input type="checkbox" checked={text} onChange={(e) => setText(e.target.checked)} /> Email the client</label>
-            {!busy && <button className="btn quiet" onClick={() => setRows([])}>Clear</button>}
-          </div>
-        </>
+    <div className={`panel addmixes ${hot ? 'hot' : ''}`} style={{ marginBottom: 24 }}
+      onDragOver={(e) => { e.preventDefault(); setHot(true); }} onDragLeave={() => setHot(false)}
+      onDrop={(e) => { e.preventDefault(); setHot(false); pick(e.dataTransfer?.files); }}>
+      <div className="row-actions" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 style={{ margin: 0 }}>{busy ? 'Adding mixes…' : 'Mixes added'}</h3>
+        <span className="row-actions">
+          <button className="btn small" onClick={() => input.current?.click()}>+ Add more</button>
+          {!busy && <button className="btn small quiet" onClick={() => { setRows([]); setDone([]); }}>Done</button>}
+        </span>
+      </div>
+      <ul className="act addlist">
+        {rows.map((r) => (
+          <li key={r.id} className={`addrow ${r.state}`}>
+            <span className="addname">{r.file.name}</span>
+            <span className="addstat">{r.state === 'done' ? `✓ ${r.status}` : r.status}</span>
+          </li>
+        ))}
+      </ul>
+      {!busy && done.length > 0 && (
+        <div className="row-actions" style={{ alignItems: 'center' }}>
+          <span className="muted small">In the project and on the timeline. Rename a song from its ⋯ menu.</span>
+          <NotifyClient deliveries={done} />
+        </div>
       )}
+      {input_el}
     </div>
   );
 }

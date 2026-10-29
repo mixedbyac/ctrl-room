@@ -1446,3 +1446,19 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 @media (max-width: 900px) { .sinfo .titlewrap { display: block; width: 100%; position: relative; padding: 0 30px; box-sizing: border-box; text-align: center; } .sinfo .titlewrap .titlepen { position: absolute; right: 0; top: 50%; transform: translateY(-50%); margin: 0; font-size: 15px; } }
 @media (max-width: 900px) { .aback { display: none !important; } } /* the top bar already has Back */
 .rowrename { position: relative; display: block; } .rowrename .casebtns.floating { top: calc(100% + 4px); }
+/* add mixes progress + email button */
+.pmlabel { display: flex; align-items: center; gap: 10px; text-align: left; padding: 9px 10px; border-radius: 10px; color: var(--ink); cursor: pointer; }
+.pmlabel:hover { background: rgba(255,255,255,.07); }
+@media (max-width: 900px) { .addplus .plusmenu .pmlabel { padding: 13px 12px; } }
+.addmixes.hot { box-shadow: inset 0 0 0 2px rgba(245,213,71,.5); }
+.addlist { display: grid; gap: 6px; margin: 12px 0; padding: 0; list-style: none; }
+.addrow { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.04); }
+.addrow .addname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.addrow .addstat { flex: none; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.addrow.done .addstat { color: var(--ok); }
+.addrow.error .addstat { color: var(--warn); white-space: normal; }
+.addrow.working .addstat { color: var(--sig); }
+.notifyclient { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.notifyclient .btn svg { width: 15px; height: 15px; margin-right: 6px; }
+.nc-done { color: var(--ok); font-weight: 700; font-size: 13.5px; }
+.snote-act { display: flex; align-items: center; gap: 10px; margin-top: 8px; }

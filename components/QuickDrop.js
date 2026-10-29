@@ -1,4 +1,5 @@
 'use client';
+import NotifyClient from '@/components/NotifyClient';
 import { TitleInput, ArtistPicker, CASES } from '@/components/TitleCase';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -73,8 +74,8 @@ export default function QuickDrop({ projects, onDone }) {
               song = data; songs.push(song);
             }
             const { data: vs } = await sb.from('versions').select('id,label,created_at').eq('song_id', song.id).order('created_at');
-            const r = await deliverFile({ song, versions: vs || [], file: f.file, project, text: text && !!project.phone, onStatus: (m) => setFile(gi, fi, { status: m }) });
-            setFile(gi, fi, { state: 'done', status: `${song.title} · ${r.label}`, songId: song.id });
+            const r = await deliverFile({ song, versions: vs || [], file: f.file, project, text: false, onStatus: (m) => setFile(gi, fi, { status: m }) });
+            setFile(gi, fi, { state: 'done', status: `${song.title} · ${r.label}`, songId: song.id, songTitle: song.title, doneLabel: r.label });
           } catch (e) { setFile(gi, fi, { state: 'error', status: e.message }); }
         }
         setGroup(gi, { doneId: project.id });
@@ -159,13 +160,13 @@ export default function QuickDrop({ projects, onDone }) {
                 </ul>
                 {g.error && <p className="ferr">{g.error}</p>}
                 {g.doneId && <Link className="link" href={`/p/${g.doneId}`}>Open {g.target === 'new' ? g.title : projects.find((p) => p.id === g.target)?.title} ›</Link>}
+                {g.doneId && <NotifyClient deliveries={g.files.filter((f) => f.state === 'done').map((f) => ({ songId: f.songId, songTitle: f.songTitle, label: f.doneLabel }))} />}
               </div>
             );
           })}
           {warn && <p className="ferr">{warn}</p>}
           <div className="row-actions">
             {!allDone && <button className="btn primary" onClick={go} disabled={busy}>{busy ? 'Delivering…' : `Deliver ${total} mix${total > 1 ? 'es' : ''}`}</button>}
-            {!allDone && <label className="smsopt"><input type="checkbox" checked={text} onChange={(e) => setText(e.target.checked)} /> Text clients (projects with a phone number)</label>}
             {!busy && <button className="btn quiet" onClick={() => setGroups([])}>{allDone ? 'Done' : 'Clear'}</button>}
           </div>
         </div>

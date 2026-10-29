@@ -1,4 +1,5 @@
 'use client';
+import NotifyClient from '@/components/NotifyClient';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { supabase, api } from '@/lib/supabase';
@@ -27,6 +28,7 @@ export default function VersionStack({ song, project, versions, noteCounts = {},
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState('');
   const [menu, setMenu] = useState(null);
+  const [just, setJust] = useState([]);
   const file = useRef(null);
   useEffect(() => {
     if (!menu) return;
@@ -76,7 +78,8 @@ export default function VersionStack({ song, project, versions, noteCounts = {},
     let current = versions;
     for (let i = 0; i < picked.length; i++) {
       try {
-        await deliverFile({ song: { ...song, projects: project }, versions: current, file: picked[i], project, text: i === picked.length - 1, onStatus: (m) => setBusy(m) });
+        const r = await deliverFile({ song: { ...song, projects: project }, versions: current, file: picked[i], project, text: false, onStatus: (m) => setBusy(m) });
+        setJust((j) => [...j, { songId: song.id, songTitle: song.title, label: r.label }]);
         const { data } = await supabase().from('versions').select('id,label,created_at').eq('song_id', song.id).order('created_at');
         current = data || current;
       } catch (e) { setMsg(`Couldn’t add ${picked[i].name}: ${e.message}`); }
@@ -122,6 +125,7 @@ export default function VersionStack({ song, project, versions, noteCounts = {},
       })}
       {!list.length && <p className="muted small" style={{ margin: '4px 0 4px 34px' }}>No versions yet.</p>}
       {msg && <p className="toast-inline" style={{ margin: '4px 0 0 34px' }}>{msg}</p>}
+      {just.length > 0 && !busy && <p className="row-actions" style={{ margin: '6px 0 0 34px', alignItems: 'center' }}><span className="muted small">Added. The timeline is updated.</span><NotifyClient deliveries={just} /></p>}
     </div>
   );
 }

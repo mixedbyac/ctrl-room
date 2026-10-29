@@ -1,4 +1,5 @@
 'use client';
+import NotifyClient from '@/components/NotifyClient';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import ShareButton from '@/components/ShareButton';
@@ -22,6 +23,7 @@ export default function SongMenu({ song, versions = [], project, eng, canEdit, q
   const [sharing, setSharing] = useState(false);
   const [busy, setBusy] = useState('');
   const [note, setNote] = useState('');
+  const [just, setJust] = useState([]);
   const box = useRef(null), mixIn = useRef(null), demoIn = useRef(null);
   const say = (m) => { setNote(m); setMsg?.(m); if (m) setTimeout(() => setNote((x) => (x === m ? '' : x)), 6000); };
   useEffect(() => {
@@ -43,7 +45,7 @@ export default function SongMenu({ song, versions = [], project, eng, canEdit, q
     let current = versions; const done = [], failed = [];
     for (let i = 0; i < files.length; i++) {
       try {
-        const r = await deliverFile({ song: { ...song, projects: project }, versions: current, file: files[i], project, text: i === files.length - 1,
+        const r = await deliverFile({ song: { ...song, projects: project }, versions: current, file: files[i], project, text: false,
           onStatus: (m) => setBusy(files.length > 1 ? `${i + 1}/${files.length} · ${m}` : m) });
         done.push(r.label);
         const { data } = await supabase().from('versions').select('id,label,created_at').eq('song_id', song.id).order('created_at');
@@ -51,7 +53,8 @@ export default function SongMenu({ song, versions = [], project, eng, canEdit, q
       } catch (e) { failed.push(`${files[i].name}: ${e.message}`); }
     }
     setBusy('');
-    say([done.length ? `Delivered ${done.join(', ')} of ${song.title}.` : '', failed.length ? `Couldn’t deliver ${failed.join('; ')}` : ''].filter(Boolean).join(' '));
+    if (done.length) setJust(done.map((label) => ({ songId: song.id, songTitle: song.title, label })));
+    say([done.length ? `Added ${done.join(', ')} of ${song.title}. The timeline is updated.` : '', failed.length ? `Couldn’t deliver ${failed.join('; ')}` : ''].filter(Boolean).join(' '));
     if (done.length) onChange?.();
   };
   const addDemo = async (file) => {
@@ -88,7 +91,7 @@ export default function SongMenu({ song, versions = [], project, eng, canEdit, q
         {busy ? <span className="sbusy" /> : <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.9" /><circle cx="12" cy="12" r="1.9" /><circle cx="19" cy="12" r="1.9" /></svg>}
       </button>
       {sharing && <ShareButton kind="song" id={song.id} eng={eng} title={song.title} open onOpenChange={(o) => { if (!o) setSharing(false); }} hideButton />}
-      {(note || busy) && !open && <span className="snote" role="status">{busy || note}</span>}
+      {(note || busy || just.length > 0) && !open && <span className="snote" role="status">{busy || note}{!busy && just.length > 0 && <span className="snote-act"><NotifyClient deliveries={just} /><button type="button" className="link small" onClick={() => setJust([])}>Not now</button></span>}</span>}
       {open && (
         <div className="spop" role="menu" aria-label={song.title}>
           {view === 'info' ? (

@@ -1,4 +1,5 @@
 'use client';
+import ArtistName from '@/components/ArtistName';
 import Credit from '@/components/Credit';
 import { CaseButtons } from '@/components/TitleCase';
 import QualityBadge from '@/components/QualityBadge';
@@ -134,7 +135,7 @@ export default function SongPage() {
             <button className="hub" onClick={toggle} disabled={!v} aria-label={playing ? 'Pause' : 'Play'}><svg viewBox="0 0 24 24">{playing ? PAUSE : PLAY}</svg></button>
           </div>
           <div className="sinfo">
-            <p className="eyebrow"><Link href={`/p/${p.id}`}>{p.title}</Link> · {p.artist}</p>
+            <p className="eyebrow"><Link href={`/p/${p.id}`}>{p.title}</Link> · <ArtistName name={p.artist} link /></p>
             <p className="pcredit"><Credit project={p} /></p>
             <SongTitle song={song} eng={eng || canEditArtist(p?.artist)} viaAdmin={!eng} reload={load} />
             <div className="meta"><span className={`dot ${song.status}`}>{statusText(song, versions)}</span>

@@ -1,4 +1,5 @@
 'use client';
+import ArtistName from '@/components/ArtistName';
 import Credit from '@/components/Credit';
 import QualityBadge from '@/components/QualityBadge';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
@@ -378,7 +379,7 @@ function NowPlaying() {
         <div className="nphead">
           <div className="nphead-t">
             <h2 className="ttl">{c.song.title}</h2>
-            <p className="npsub">{c.project.artist} · {c.project.title}</p>
+            <p className="npsub"><ArtistName name={c.project.artist} /> · {c.project.title}</p>
             <p className="npsub"><Credit project={c.project} /></p>
           </div>
           <button className="npcomment" onClick={() => { setPinAt(pl.time); setComposing(true); }} aria-label="Add a comment at this moment">

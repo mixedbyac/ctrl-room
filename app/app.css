@@ -1354,3 +1354,10 @@ a.driftc:hover { transform: scale(1.04); }
   .app .sleevewrap .sleeve, .app .sleevewrap:hover .sleeve, body.playing .app .sleevewrap .sleeve { left: 0; right: 0; width: 100%; transform: none; }
   .phero { justify-items: center; }
 }
+/* artist name with their Spotify picture */
+.artistname { display: inline-flex; align-items: center; gap: 6px; vertical-align: middle; color: inherit; text-decoration: none; max-width: 100%; }
+.artistname img, .artistname i { width: 18px; height: 18px; flex: none; border-radius: 50%; object-fit: cover; }
+.artistname i { display: grid; place-items: center; font-style: normal; font-size: 10px; font-weight: 800; background: rgba(245,213,71,.16); color: var(--sig); }
+.artistname span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px; }
+.eyebrow .artistname img, .eyebrow .artistname i { width: 16px; height: 16px; }

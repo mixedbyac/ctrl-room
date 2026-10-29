@@ -9,6 +9,7 @@ import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
 import { artOf } from '@/lib/art';
 import QuickDrop from '@/components/QuickDrop';
+import ArtistName from '@/components/ArtistName';
 import { fmtDate, todayISO, addDaysISO, statusText, ago, mmss, fmtBytes, latestMix, mixesOf, nextLabel } from '@/lib/format';
 
 export default function HomePage() {
@@ -127,7 +128,7 @@ function EngineerHome() {
                   <Link key={p.id} className="pcard" href={`/p/${p.id}`}>
                     <span className="pc-art"><span className="pc-rec" /><Cover seed={p.seed} path={p.cover_path} size={360} /></span>
                     <b className="ttl">{p.title}</b>
-                    <span className="pc-sub">{p.artist} · {p.type}</span>
+                    <span className="pc-sub"><ArtistName name={p.artist} /> · {p.type}</span>
                     <span className="pc-bar"><i style={{ width: `${n ? (ap / n) * 100 : 0}%` }} /></span>
                     <span className="pc-sub">{ap} of {n} approved{next ? ` · next due ${next === today ? 'today' : fmtDate(next)}` : ''}</span>
                   </Link>

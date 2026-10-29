@@ -1197,3 +1197,23 @@ a.driftc:hover { transform: scale(1.04); }
   .addplus .plusmenu { position: fixed; left: 0; right: 0; top: auto; bottom: 0; border-radius: 20px 20px 0 0; padding: 10px 10px calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 60; min-width: 0; }
   .addplus .plusmenu button { padding: 13px 12px; }
 }
+
+/* comment box: small, smooth, sits right above the keyboard */
+.npcompose.sheet.compact { gap: 6px; padding: 10px 10px 8px; border-radius: 18px; animation: ncup .24s cubic-bezier(.2,.8,.2,1); transition: bottom .18s ease-out; }
+@keyframes ncup { from { opacity: 0; transform: translate(-50%, 24px); } }
+.nc-row { display: flex; align-items: flex-end; gap: 8px; }
+.nc-time { flex: none; display: inline-flex; align-items: center; gap: 5px; height: 38px; padding: 0 11px; border-radius: 12px; background: rgba(245,213,71,.14); color: var(--sig); border: 0; font-size: 14px; font-weight: 700; cursor: pointer; }
+.nc-time svg { width: 15px; height: 15px; }
+.npcompose.compact textarea { flex: 1; min-width: 0; min-height: 38px; max-height: 110px; padding: 8px 12px; border-radius: 12px; line-height: 1.35; font-size: 16px; overflow-y: auto; }
+.nc-send { flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--sig); border: 0; cursor: pointer; transition: transform .12s, opacity .12s; }
+.nc-send svg { width: 18px; height: 18px; fill: none; stroke: #0f0f10; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.nc-send:disabled { opacity: .35; cursor: default; }
+.nc-send:not(:disabled):active { transform: scale(.92); }
+.nc-sub { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 0 4px; font-size: 12px; color: var(--muted); }
+.nc-sub button { background: none; border: 0; color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer; padding: 4px 2px; }
+@media (max-width: 760px) {
+  .npcompose.sheet.compact { left: 8px; right: 8px; bottom: calc(8px + var(--kb, 0px)); border-radius: 18px; border-bottom: 1px solid rgba(255,255,255,.12); padding: 10px 10px 8px; }
+  @keyframes ncupm { from { opacity: 0; transform: translateY(24px); } }
+  .npcompose.sheet.compact { animation-name: ncupm; }
+  .npcompose.sheet.compact .muted.small { display: inline; }
+}

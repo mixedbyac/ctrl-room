@@ -419,14 +419,22 @@ function NowPlaying() {
       </div>
     </div>
         {composing && (
-      <div className="npcompose sheet" role="dialog" aria-label="Add a comment">
-        <div className="npcompose-h">
-          <button className="ctime" onClick={() => setPinAt(pl.time)} title="Use the current time">At {mmss(pinAt)}</button>
-          <span className="muted small">Tap the time to move it to now</span>
-          <button className="npclose" onClick={() => { setComposing(false); setText(''); }} aria-label="Cancel">✕</button>
+      <div className="npcompose sheet compact" role="dialog" aria-label="Add a comment">
+        <div className="nc-row">
+          <button className="nc-time mono" onClick={() => setPinAt(pl.time)} title="Tap to set it to right now" aria-label={`Comment at ${mmss(pinAt)}. Tap to use the current time`}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 2M10 2h4" /></svg>{mmss(pinAt)}
+          </button>
+          <textarea autoFocus rows={1} enterKeyHint="send" value={text} placeholder="Add a note…" aria-label="Comment"
+            onChange={(e) => { setText(e.target.value); const t = e.target; t.style.height = 'auto'; t.style.height = `${Math.min(t.scrollHeight, 110)}px`; }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); postComment(); } if (e.key === 'Escape') { setComposing(false); setText(''); } }} />
+          <button className="nc-send" disabled={!text.trim() || posting} onClick={postComment} aria-label={`Post at ${mmss(pinAt)}`}>
+            {posting ? <span className="sbusy" /> : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6" /></svg>}
+          </button>
         </div>
-        <textarea autoFocus rows={2} enterKeyHint="send" onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); postComment(); } }} value={text} onChange={(e) => setText(e.target.value)} placeholder="What do you hear here? Like “vocal a touch louder”" aria-label="Comment" />
-        <button className="btn primary" disabled={!text.trim() || posting} onClick={postComment}>{posting ? 'Posting…' : `Post at ${mmss(pinAt)}`}</button>
+        <div className="nc-sub">
+          <span>On {pl.version?.label || 'this mix'} · tap the time to set it to now</span>
+          <button onClick={() => { setComposing(false); setText(''); }}>Cancel</button>
+        </div>
       </div>
     )}
     </>

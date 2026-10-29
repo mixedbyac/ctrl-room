@@ -56,9 +56,9 @@ export async function GET(req) {
   let credit = null;
   try {
     const want = String(project.settings?.engineer || '').toLowerCase();
-    const { data: eps } = await db.from('engineer_profiles').select('email, full_name, display_name, credit, roles, photo_url, verified, is_main');
+    const { data: eps } = await db.from('engineer_profiles').select('*');
     const e = (want && (eps || []).find((x) => x.email === want)) || (eps || []).find((x) => x.is_main);
-    if (e) credit = { text: creditLine(e), verified: e.verified, photo: e.photo_url };
+    if (e) credit = { text: creditLine(e), verified: e.verified, photo: e.photo_url, profile: { display_name: e.display_name, full_name: e.full_name, roles: e.roles, credit: e.credit, photo_url: e.photo_url, bio: e.bio, instagram: e.instagram || null, verified: e.verified } };
   } catch {}
   return json({
     credit,

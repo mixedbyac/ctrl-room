@@ -1298,3 +1298,24 @@ a.driftc:hover { transform: scale(1.04); }
 .vbadge.pending { color: var(--muted); background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.1); }
 .tbadge.ok { background: rgba(245,213,71,.13); color: var(--sig); }
 .vok { color: var(--sig); }
+
+/* credit card: hover (or tap) “Mixed by …” to see who they are */
+.credit.hascard { position: relative; cursor: pointer; border-radius: 8px; outline: none; }
+.credit.hascard .ctext { text-decoration: underline dotted rgba(255,255,255,.3); text-underline-offset: 3px; }
+.ccard { position: absolute; z-index: 50; top: calc(100% + 8px); left: 0; width: min(290px, calc(100vw - 32px)); display: none; gap: 10px; padding: 14px; border-radius: 16px; text-align: left; white-space: normal;
+  background: rgba(22,22,25,.98); border: 1px solid rgba(255,255,255,.12); box-shadow: 0 24px 60px -14px rgba(0,0,0,.8); color: var(--ink); font-weight: 500; cursor: default; }
+.credit.open .ccard { display: grid; animation: npfade .14s; }
+@media (hover: hover) { .credit.hascard:hover .ccard, .credit.hascard:focus-within .ccard { display: grid; animation: npfade .14s; } .credit.hascard::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 10px; } }
+.cchead { display: flex; align-items: center; gap: 12px; }
+.ccav { width: 46px; height: 46px; flex: none; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: rgba(245,213,71,.14); color: var(--sig); font-weight: 800; font-size: 18px; }
+.ccav img { width: 100%; height: 100%; object-fit: cover; }
+.credit .ccav img { width: 100%; height: 100%; border-radius: 0; }
+.ccname { display: grid; min-width: 0; }
+.ccname b { display: flex; align-items: center; gap: 5px; font-size: 15.5px; }
+.ccname small { font-size: 12.5px; color: var(--muted); }
+.ccbio { font-size: 13.5px; line-height: 1.45; color: #c9c9cf; }
+.ccig { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 700; color: var(--sig); text-decoration: none; justify-self: start; }
+.ccig svg { width: 16px; height: 16px; }
+@media (max-width: 900px) {
+  .app .pinfo .ccard, .app .sinfo .ccard, .np .ccard, .lcredit .ccard { left: 50%; transform: translateX(-50%); }
+}

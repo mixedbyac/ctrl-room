@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { creditLine } from '@/lib/credit';
 
@@ -31,14 +31,45 @@ export const BlueCheck = ({ title = 'Verified' }) => (
 export const VerifiedSeal = BlueCheck;
 
 /** “Mixed & mastered by AC ✓” for a project. */
+/** The little card that opens from a credit: photo, name, what they do, bio, Instagram. */
+export function CreditCard({ p }) {
+  const who = p.display_name || p.full_name || (p.email || '').replace(/@.*/, '');
+  return (
+    <span className="ccard" role="dialog" aria-label={`About ${who}`}>
+      <span className="cchead">
+        <span className="ccav">{p.photo_url ? <img src={p.photo_url} alt="" /> : who[0]?.toUpperCase()}</span>
+        <span className="ccname"><b>{who}{p.verified && <BlueCheck title="Verified engineer" />}</b>
+          {p.full_name && p.display_name && p.full_name !== p.display_name && <small>{p.full_name}</small>}
+          <small>{creditLine({ ...p, credit: '' }).replace(/ by .*$/, '')}</small></span>
+      </span>
+      {p.bio && <span className="ccbio">{p.bio}</span>}
+      {p.instagram && <a className="ccig" href={`https://instagram.com/${p.instagram}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" /></svg>@{p.instagram}</a>}
+    </span>
+  );
+}
+
+/** “Mixed & mastered by AC ✓” for a project. Hover (or tap) for a little card about them. */
 export default function Credit({ project, profile: given, className = '' }) {
   const list = useProfiles();
   const p = given || engineerFor(project, list);
+  const [open, setOpen] = useState(false);
+  const box = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const off = (e) => { if (box.current && !box.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('pointerdown', off);
+    return () => document.removeEventListener('pointerdown', off);
+  }, [open]);
   if (!p) return null;
+  const hasMore = !!(p.bio || p.instagram || p.photo_url || p.full_name);
   return (
-    <span className={`credit ${className}`}>
+    <span ref={box} className={`credit ${hasMore ? 'hascard' : ''} ${open ? 'open' : ''} ${className}`}
+      tabIndex={hasMore ? 0 : undefined} onClick={(e) => { if (!hasMore) return; e.preventDefault(); e.stopPropagation(); setOpen(!open); }}
+      onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}>
       {p.photo_url ? <img src={p.photo_url} alt="" /> : null}
-      <span>{creditLine(p)}</span>{p.verified && <BlueCheck title="Verified engineer" />}
+      <span className="ctext">{creditLine(p)}</span>{p.verified && <BlueCheck title="Verified engineer" />}
+      {hasMore && <CreditCard p={p} />}
     </span>
   );
 }

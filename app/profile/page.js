@@ -24,7 +24,7 @@ export default function ProfilePage() {
   const toggleRole = (r) => setF((x) => ({ ...x, roles: x.roles.includes(r) ? x.roles.filter((y) => y !== r) : [...x.roles, r] }));
   const save = async (e) => {
     e.preventDefault(); setBusy(true); setMsg('');
-    try { const r = await api('/api/profile', { action: 'save', ...f }); setF((x) => ({ ...x, ...r.profile })); setMsg('Saved. Your credit shows on your projects.'); window.dispatchEvent(new Event('ctrl-room:profile')); }
+    try { const r = await api('/api/profile', { action: 'save', ...f, instagram: f.instagram_draft ?? f.instagram ?? '' }); setF((x) => ({ ...x, ...r.profile })); setMsg('Saved. Your credit shows on your projects.'); window.dispatchEvent(new Event('ctrl-room:profile')); }
     catch (er) { setMsg(er.message); }
     setBusy(false);
   };
@@ -62,7 +62,7 @@ export default function ProfilePage() {
           <div className="fld"><label>Profile picture</label>
             <div className="photorow">
               <button type="button" className="btn small" onClick={() => fileIn.current?.click()} disabled={busy}>Upload a photo</button>
-              <span className="muted small">or use your Instagram picture:</span>
+              <span className="muted small">Instagram (shows on your credit card; tap Use it for your picture):</span>
               <span className="igrow"><span className="igat">@</span><input value={f.instagram_draft ?? f.instagram ?? ''} onChange={(e) => setF((x) => ({ ...x, instagram_draft: e.target.value }))} placeholder="yourhandle" aria-label="Instagram username" autoCapitalize="none" />
                 <button type="button" className="btn small" disabled={busy || !(f.instagram_draft ?? f.instagram)} onClick={() => photo({ action: 'instagram', handle: f.instagram_draft ?? f.instagram })}>Use it</button></span>
               {f.photo_url && <button type="button" className="link small" onClick={() => setF((x) => ({ ...x, photo_url: '' }))}>Remove photo (then Save)</button>}

@@ -80,7 +80,9 @@ export async function POST(req) {
       roles: (Array.isArray(b.roles) ? b.roles : []).filter((r) => ['mix', 'master', 'record', 'produce'].includes(r)),
       bio: clean(b.bio, 600), photo_url: clean(b.photo_url, 500), verified, is_main: main, updated_at: new Date().toISOString(),
     };
-    const { data, error } = await db.from('engineer_profiles').upsert(row).select('*').single();
+    if ('instagram' in b) row.instagram = clean(String(b.instagram || '').replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/^@/, '').replace(/[/?#].*$/, ''), 30);
+    let { data, error } = await db.from('engineer_profiles').upsert(row).select('*').single();
+    if (error && /instagram/.test(error.message)) { delete row.instagram; ({ data, error } = await db.from('engineer_profiles').upsert(row).select('*').single()); }
     if (error) return fail(/engineer_profiles/.test(error.message) ? SQL : error.message, 500);
     await db.auth.admin.updateUserById(user.id, { user_metadata: { ...(user.user_metadata || {}), name: row.full_name || user.user_metadata?.name } }).catch(() => {});
     return json({ profile: data });

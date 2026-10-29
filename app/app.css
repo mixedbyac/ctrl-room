@@ -1462,3 +1462,10 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .notifyclient .btn svg { width: 15px; height: 15px; margin-right: 6px; }
 .nc-done { color: var(--ok); font-weight: 700; font-size: 13.5px; }
 .snote-act { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+
+/* switches line up: text takes the space, every switch sits in the same spot at the right, same size */
+.switch { flex: none !important; }
+.shrow { display: grid !important; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 16px; }
+.shrow > span { min-width: 0; }
+.shrow .switch { justify-self: end; }
+.invitem .invsw { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }

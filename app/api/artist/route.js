@@ -24,6 +24,27 @@ async function upsert(db, name, patch) {
   return res.data;
 }
 
+/** Rename an artist everywhere: projects, team, Portal sends and the artist page (merging into an existing page of that name). */
+async function renameArtist(db, from, to) {
+  await db.from('projects').update({ artist: to }).ilike('artist', from);
+  await db.from('uploads').update({ artist: to }).ilike('artist', from).then(() => {}, () => {});
+  const { data: ms } = await db.from('artist_members').select('*').ilike('artist', from);
+  for (const m of ms || []) {
+    const { error } = await db.from('artist_members').update({ artist: to }).eq('id', m.id);
+    if (error) await db.from('artist_members').delete().eq('id', m.id); // already on the other name's team
+  }
+  const { data: rows } = await db.from('artists').select('id, name').or(`name.ilike.${from.replace(/[,()]/g, '')},name.ilike.${to.replace(/[,()]/g, '')}`);
+  const old = (rows || []).find((r) => r.name.toLowerCase() === from.toLowerCase());
+  const target = (rows || []).find((r) => r.name.toLowerCase() === to.toLowerCase() && r.id !== old?.id);
+  if (old && target) {
+    const { data: full } = await db.from('artists').select('*').eq('id', old.id).single();
+    const { id, name, ...rest } = full || {};
+    await db.from('artists').update({ ...rest, updated_at: new Date().toISOString() }).eq('id', target.id);
+    await db.from('artists').delete().eq('id', old.id);
+  } else if (old) await db.from('artists').update({ name: to }).eq('id', old.id);
+  return to;
+}
+
 // Artist profiles. body: { name, action: 'spotify' | 'save' | 'image' | 'clear', ... }
 export async function POST(req) {
   const user = await userFrom(req);
@@ -40,12 +61,21 @@ export async function POST(req) {
       const { data: cur } = await db.from('artists').select('*').ilike('name', name).maybeSingle();
       // keep anything the artist wrote or uploaded themselves
       const patch = { spotify_id: sp.spotify_id, spotify_url: sp.spotify_url, listeners: sp.listeners, genres: sp.genres, followers: sp.followers };
-      const own = cur?.links || {};
-      if (!own.custom_name) patch.display_name = sp.display_name;
+      const own = { ...(cur?.links || {}) };
+      // Spotify wins for the name and bio (you can still edit them afterwards); your own photo/header stay
+      if (sp.display_name) { patch.display_name = sp.display_name; own.custom_name = false; }
+      if (sp.bio) { patch.bio = sp.bio; own.custom_bio = false; }
       if (!own.custom_image && sp.image_url) patch.image_url = sp.image_url;
       if (!own.custom_header) patch.header_url = sp.header_url || null;
-      if (!own.custom_bio && sp.bio) patch.bio = sp.bio;
-      return json({ artist: await upsert(db, name, patch), found: { header: !!sp.header_url, bio: !!sp.bio } });
+      patch.links = own;
+      const saved = await upsert(db, name, patch);
+      // the engineer: rename the artist everywhere to their Spotify name (projects, team, Portal sends)
+      let renamed = null;
+      if (sp.display_name && sp.display_name.trim() !== name && (await isEngineer(user))) {
+        renamed = await renameArtist(db, name, sp.display_name.trim()).catch(() => null);
+      }
+      const { data: fresh } = await db.from('artists').select('*').ilike('name', renamed || name).maybeSingle();
+      return json({ artist: fresh || saved, renamed, found: { header: !!sp.header_url, bio: !!sp.bio } });
     }
     if (b.action === 'save') {
       const { data: cur } = await db.from('artists').select('links').ilike('name', name).maybeSingle();

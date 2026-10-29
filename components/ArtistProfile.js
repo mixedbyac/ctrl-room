@@ -72,6 +72,7 @@ function ArtistEditor({ name, profile, onChange }) {
     try {
       const r = await api('/api/artist', { name, ...body });
       onChange(r.artist);
+      if (r.renamed) { window.location.href = `/artists?a=${encodeURIComponent(r.renamed)}`; return; }
       if (what === 'spotify') {
         setDn(r.artist.display_name || ''); setBio(r.artist.bio || ''); setUrl(r.artist.spotify_url || url);
         setMsg(`Pulled from Spotify.${r.found && !r.found.header ? ' No header image came through, so you can upload one below.' : ''}${r.found && !r.found.bio ? ' Spotify didn’t share a bio, so add one below.' : ''}`);

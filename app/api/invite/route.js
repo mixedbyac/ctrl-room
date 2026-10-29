@@ -11,7 +11,7 @@ export async function POST(req) {
   if (!user) return fail(why, 403);
   const b = await req.json().catch(() => ({}));
   if (b.check) return json({ email: !!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM), from: process.env.EMAIL_FROM || null, hasKey: !!process.env.RESEND_API_KEY, hasFrom: !!process.env.EMAIL_FROM });
-  const artist = String(b.artist || '').trim().slice(0, 100);
+  let artist = String(b.artist || '').trim().slice(0, 100);
   const emails = [...new Set((Array.isArray(b.emails) ? b.emails : String(b.emails || '').split(/[\s,;]+/)).map((e) => String(e).trim().toLowerCase()).filter(Boolean))].slice(0, 10);
   const role = ['Admin', 'Artist', 'Manager', 'Team'].includes(b.role) ? b.role : 'Admin';
   const spotify = String(b.spotify || '').trim().slice(0, 300);
@@ -26,9 +26,10 @@ export async function POST(req) {
   const { data: cur } = await db.from('artists').select('id, spotify_url').ilike('name', artist).maybeSingle();
   let row = { name: artist };
   if (spotifyArtistId(spotify) && !cur?.spotify_url) {
-    try { const sp = await fetchSpotifyArtist(spotify); row = { ...row, spotify_id: sp.spotify_id, spotify_url: sp.spotify_url, display_name: sp.display_name, image_url: sp.image_url, header_url: sp.header_url, bio: sp.bio, listeners: sp.listeners, genres: sp.genres, followers: sp.followers }; } catch {}
+    try { const sp = await fetchSpotifyArtist(spotify); if (sp.display_name && !cur) artist = sp.display_name.trim(); row = { ...row, name: artist, spotify_id: sp.spotify_id, spotify_url: sp.spotify_url, display_name: sp.display_name, image_url: sp.image_url, header_url: sp.header_url, bio: sp.bio, listeners: sp.listeners, genres: sp.genres, followers: sp.followers }; } catch {}
   }
-  const up = cur ? await db.from('artists').update({ ...row, name: undefined, updated_at: new Date().toISOString() }).eq('id', cur.id) : await db.from('artists').insert(row);
+  let up = cur ? await db.from('artists').update({ ...row, name: undefined, updated_at: new Date().toISOString() }).eq('id', cur.id) : await db.from('artists').insert(row);
+  if (up.error && /duplicate|unique/i.test(up.error.message)) up = await db.from('artists').update({ ...row, name: undefined, updated_at: new Date().toISOString() }).ilike('name', artist);
   if (up.error && !/column/i.test(up.error.message)) return fail(up.error.message, 500);
 
   const origin = req.headers.get('origin') || `https://${req.headers.get('host')}`;

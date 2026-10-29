@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site';
 import { userFrom, isEngineer, getConfig, setConfig, newToken, json, fail } from '@/lib/server';
 
 export const runtime = 'nodejs';
@@ -9,7 +10,7 @@ export async function POST(req) {
   const b = await req.json().catch(() => ({}));
   let token = await getConfig('calendar_token');
   if (!token || b.reset) { token = newToken() + newToken() + newToken(); await setConfig('calendar_token', token); }
-  const site = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;
+  const site = SITE_URL;
   const https = `${site}/api/calendar/${token}.ics`;
   return json({ https, webcal: https.replace(/^https?:/, 'webcal:') });
 }

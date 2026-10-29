@@ -1,4 +1,5 @@
 'use client';
+import { SITE_URL } from '@/lib/site';
 import { useEffect, useState } from 'react';
 import { supabase, api } from '@/lib/supabase';
 import { BlueCheck } from '@/components/Credit';
@@ -53,7 +54,7 @@ export default function ArtistTeam({ artist, projects }) {
     await supabase().from('artist_members').delete().eq('id', r.id);
     load();
   };
-  const invite = (em) => `${window.location.origin}/signup?email=${encodeURIComponent(em)}`;
+  const invite = (em) => `${SITE_URL}/signup?email=${encodeURIComponent(em)}`;
   const sendInvite = async (em) => {
     setMsg('Sending…');
     try {

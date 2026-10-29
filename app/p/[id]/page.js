@@ -1,4 +1,5 @@
 'use client';
+import { SITE_URL } from '@/lib/site';
 import NotifyClient from '@/components/NotifyClient';
 import ArtistName from '@/components/ArtistName';
 import Credit, { useProfiles } from '@/components/Credit';
@@ -384,7 +385,7 @@ function SharePanel({ p, onSaved }) {
   const [email, setEmail] = useState(p.client_email || '');
   const [phone, setPhone] = useState(p.phone || '');
   const [msg, setMsg] = useState('');
-  const link = typeof window !== 'undefined' ? `${window.location.origin}/p/${p.id}` : '';
+  const link = `${SITE_URL}/p/${p.id}`;
   const save = async () => {
     const { error } = await supabase().from('projects').update({ client_email: email.trim().toLowerCase() || null, phone: phone.trim() || null }).eq('id', p.id);
     setMsg(error ? error.message : 'Saved. Anyone signing in with this email can open the project.');

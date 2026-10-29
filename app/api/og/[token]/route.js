@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site';
 import { ImageResponse } from 'next/og';
 import { shareInfo } from '@/lib/sharemeta';
 
@@ -9,7 +10,7 @@ const hue = (seed) => Math.abs(Number(seed) || 7) % 360;
 // The preview card a share link shows in iMessage, Instagram DMs, WhatsApp, Slack…
 export async function GET(req, { params }) {
   const info = await shareInfo(params.token).catch(() => null);
-  const site = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;
+  const site = SITE_URL;
   const h = hue(info?.seed);
   const art = info?.cover
     ? <img src={info.cover} width={470} height={470} style={{ borderRadius: 28, objectFit: 'cover', boxShadow: '0 40px 80px rgba(0,0,0,.6)' }} />

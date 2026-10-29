@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site';
 import { admin, userFrom, isEngineer, json, fail } from '@/lib/server';
 import { emailClient } from '@/lib/invite';
 
@@ -14,6 +15,6 @@ export async function POST(req) {
   const { data: s } = await db.from('songs').select('id,title,project_id').eq('id', b.songId).single();
   if (!s) return fail('Unknown song.', 404);
   const { data: p } = await db.from('projects').select('*').eq('id', s.project_id).single();
-  const r = await emailClient(db, { song: s, project: p, body: String(b.body).trim(), origin: req.headers.get('origin') || '' });
+  const r = await emailClient(db, { song: s, project: p, body: String(b.body).trim(), origin: SITE_URL });
   return json(r);
 }

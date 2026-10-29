@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site';
 import { admin, userFrom, engineerFrom, jwtClaims, json, fail } from '@/lib/server';
 import { limit } from '@/lib/ratelimit';
 import { invitePerson } from '@/lib/invite';
@@ -73,7 +74,7 @@ export async function POST(req) {
     if (!/^\S+@\S+\.\S+$/.test(email)) return fail('Enter a valid email.');
     let u = await findUser(db, email), invited = false;
     if (!u) {
-      const origin = req.headers.get('origin') || `https://${req.headers.get('host')}`;
+      const origin = SITE_URL;
       const r = await invitePerson(db, { email, origin, artist: b.artist || '', invitedBy: '' });
       if (!r.user) return fail(r.reason || 'Couldn’t set up their account.', 500);
       u = r.user; invited = { sent: r.sent, link: r.link };

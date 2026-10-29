@@ -1,4 +1,5 @@
 'use client';
+import { SITE_URL } from '@/lib/site';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -22,7 +23,7 @@ export const useApp = () => useContext(Ctx);
 const PUBLIC = ['/login', '/signup', '/welcome', '/portal', '/l', '/protect'];
 // domains that show only the Portal (sendfileshere.com)
 export const PORTAL_HOSTS = (process.env.NEXT_PUBLIC_PORTAL_DOMAINS || 'sendfileshere.com,www.sendfileshere.com').split(',').map((h) => h.trim().toLowerCase());
-export const MAIN_SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://ctrl-room-eight.vercel.app';
+export const MAIN_SITE = SITE_URL;
 
 export default function AppShell({ children }) {
   const pathname = usePathname();

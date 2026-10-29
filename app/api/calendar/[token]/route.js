@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site';
 import { limit } from '@/lib/ratelimit';
 import { admin, getConfig } from '@/lib/server';
 
@@ -17,7 +18,7 @@ export async function GET(req, { params }) {
   const token = String(params.token || '').replace(/\.ics$/i, '');
   const want = await getConfig('calendar_token');
   if (!want || token !== want) return new Response('Not found', { status: 404 });
-  const site = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;
+  const site = SITE_URL;
   const db = admin();
   const { data: projects } = await db.from('projects').select('id,title,artist,type,release,archived,settings, songs(id,title,status,eta)').eq('archived', false);
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');

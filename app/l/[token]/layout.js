@@ -1,10 +1,11 @@
+import { SITE_URL } from '@/lib/site';
 import { shareInfo } from '@/lib/sharemeta';
 
 export const dynamic = 'force-dynamic';
 
 // Link previews for share links: the cover art with the song / project and artist name.
 export async function generateMetadata({ params }) {
-  const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://ctrl-room.app';
+  const site = SITE_URL;
   let info = null;
   try { info = await shareInfo(params.token); } catch {}
   if (!info) return { title: 'CTRL ROOM', description: 'Listen in CTRL ROOM.', robots: { index: false } };

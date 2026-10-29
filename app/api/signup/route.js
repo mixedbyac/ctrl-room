@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site';
 import { admin, json, fail } from '@/lib/server';
 import { limit } from '@/lib/ratelimit';
 import { notifyEngineers } from '@/lib/invite';
@@ -49,6 +50,6 @@ export async function POST(req) {
     } catch {}
   }
   // let the engineer know (email + text when set up)
-  await notifyEngineers(db, { name, email, artist, how: 'signup', origin: req.headers.get('origin') || `https://${req.headers.get('host')}` });
+  await notifyEngineers(db, { name, email, artist, how: 'signup', origin: SITE_URL });
   return json({ ok: true });
 }

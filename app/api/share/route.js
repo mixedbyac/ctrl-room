@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site';
 import { admin, userFrom, isEngineer, canSee, newToken, json, fail } from '@/lib/server';
 
 export const runtime = 'nodejs';
@@ -43,7 +44,7 @@ export async function POST(req) {
     token = newToken();
     await db.from(table).update({ share_token: token }).eq('id', b.id);
   }
-  const site = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;
+  const site = SITE_URL;
   out.url = `${site}/l/${token}`;
   return json(out);
 }

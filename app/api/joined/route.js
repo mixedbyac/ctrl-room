@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site';
 import { admin, userFrom, json, fail } from '@/lib/server';
 import { notifyEngineers } from '@/lib/invite';
 
@@ -10,7 +11,7 @@ export async function POST(req) {
   const db = admin();
   if (user.app_metadata?.joined_notified) return json({ ok: true });
   await db.auth.admin.updateUserById(user.id, { app_metadata: { ...(user.app_metadata || {}), joined_notified: true } });
-  const origin = req.headers.get('origin') || `https://${req.headers.get('host')}`;
+  const origin = SITE_URL;
   await notifyEngineers(db, { name: user.user_metadata?.name, email: user.email, artist: user.user_metadata?.artist, how: 'invite', origin });
   return json({ ok: true });
 }

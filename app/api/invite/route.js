@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site';
 import { admin, engineerFrom, json, fail } from '@/lib/server';
 import { fetchSpotifyArtist, spotifyArtistId } from '@/lib/spotify';
 import { invitePerson } from '@/lib/invite';
@@ -32,7 +33,7 @@ export async function POST(req) {
   if (up.error && /duplicate|unique/i.test(up.error.message)) up = await db.from('artists').update({ ...row, name: undefined, updated_at: new Date().toISOString() }).ilike('name', artist);
   if (up.error && !/column/i.test(up.error.message)) return fail(up.error.message, 500);
 
-  const origin = req.headers.get('origin') || `https://${req.headers.get('host')}`;
+  const origin = SITE_URL;
   const results = [];
   for (const email of emails) {
     const { error: mErr } = await db.from('artist_members').insert({ artist, email, role });

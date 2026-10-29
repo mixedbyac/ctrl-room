@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/lib/site';
 import { admin, userFrom, isEngineer, isOwner, json, fail } from '@/lib/server';
 import { invitePerson } from '@/lib/invite';
 
@@ -22,7 +23,7 @@ export async function POST(req) {
       const { error } = await db.from('app_config').insert({ key: `engineer_email:${Date.now()}`, value: email });
       if (error) return fail(error.message, 500);
       // invite-only: email them a link to set up their engineer account (or a sign-in link if they already have one)
-      const origin = req.headers.get('origin') || `https://${req.headers.get('host')}`;
+      const origin = SITE_URL;
       const r = await invitePerson(db, { email, origin, artist: '', invitedBy: user.email }).catch(() => null);
       if (r?.user) await db.auth.admin.updateUserById(r.user.id, { app_metadata: { ...(r.user.app_metadata || {}), needs_verify: false, vouched: true } });
       b.invite = r ? { sent: r.sent, link: r.link } : null;

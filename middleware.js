@@ -1,10 +1,11 @@
+import { SITE_URL } from '@/lib/site';
 import { NextResponse } from 'next/server';
 
 // sendfileshere.com (or any domain listed in PORTAL_DOMAINS) shows only the Portal.
 // Everything else on that domain hands off to the main app domain.
 const PORTAL_HOSTS = (process.env.PORTAL_DOMAINS || 'sendfileshere.com,www.sendfileshere.com')
   .split(',').map((h) => h.trim().toLowerCase()).filter(Boolean);
-const MAIN = process.env.NEXT_PUBLIC_SITE_URL || 'https://ctrl-room-eight.vercel.app';
+const MAIN = SITE_URL;
 
 export function middleware(req) {
   const host = (req.headers.get('host') || '').toLowerCase().split(':')[0];

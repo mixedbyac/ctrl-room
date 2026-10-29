@@ -1361,3 +1361,55 @@ a.driftc:hover { transform: scale(1.04); }
 .artistname span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px; }
 .eyebrow .artistname img, .eyebrow .artistname i { width: 16px; height: 16px; }
+
+/* ===== alignment pass: same rhythm everywhere ===== */
+/* section headers: one height, one gap, side by side columns start on the same line */
+.sechead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; min-height: 30px; margin: 0 0 14px; }
+.sechead .h2 { margin: 0; }
+.boxhead { margin-bottom: 14px; min-height: 30px; align-items: center; }
+.hsec > .h2, .asec > .h2 { margin: 0 0 14px; }
+.cols { align-items: start; }
+.invhome { margin: 0 0 28px; }
+/* list rows: same inset, same artwork size, so left edges line up between lists */
+.mini-row, .nitem { padding: 10px; border-radius: 14px; gap: 12px; grid-template-columns: 42px minmax(0, 1fr); }
+.mini-row img, .nitem .nart { width: 42px; height: 42px; border-radius: 9px; }
+.mini-row > span { min-width: 0; }
+.mini-row b, .mini-row small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.emptyday { padding: 10px; margin: 0; }
+/* project cards: identical heights, every line on the same baseline across the row */
+.shelf { align-items: start; }
+.pcard { grid-template-rows: auto auto auto auto auto; align-content: start; }
+.pcard b, .pcard .pc-sub { display: block; min-height: 1.35em; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pc-sub .artistname { vertical-align: top; }
+/* artist name inline with text: picture sits on the text line, not above or below it */
+.artistname { display: inline-flex; align-items: center; vertical-align: -0.32em; line-height: 1.2; }
+.psub, .eyebrow, .npsub, .pc-sub { line-height: 1.5; }
+/* due rows and day tiles: even sizes */
+.due { min-height: 76px; }
+.day { min-height: 74px; align-content: center; }
+@media (max-width: 900px) {
+  .cols { gap: 28px; }
+  .sechead { min-height: 28px; }
+  .shelf > * { flex: 0 0 calc((100vw - 32px - 14px) / 2); max-width: 220px; }
+}
+
+/* lists line up with their headings (the hover background still has room) */
+.mlist, .nlist { margin-left: -10px; margin-right: -10px; }
+@media (max-width: 900px) { .shelf { scroll-padding-inline: 16px; } }
+
+/* phone project page: everything centered under the cover */
+@media (max-width: 900px) {
+  .phero { grid-template-columns: minmax(0, 1fr) !important; justify-items: center; text-align: center; gap: 18px; padding-block: 8px 18px; }
+  .pinfo { display: grid; justify-items: center; gap: 8px; width: 100%; text-align: center; }
+  .pinfo h1, .pinfo .titlewrap { text-align: center; justify-content: center; margin-left: auto; margin-right: auto; }
+  .pinfo .psub, .pinfo .pcredit { margin: 0; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 0 6px; }
+  .pinfo .prow { justify-content: center; align-items: center; gap: 12px; width: 100%; }
+  .pinfo .prow .bigplay { margin: 0; }
+  .pinfo .deadline { justify-content: center; }
+  .tstats { justify-content: center; text-align: center; gap: 4px 12px; }
+  .tstats > * { text-align: center; }
+  .shero { justify-items: center; text-align: center; }
+  .sinfo { display: grid; justify-items: center; text-align: center; width: 100%; }
+  .sinfo .eyebrow, .sinfo .pcredit, .sinfo .meta, .sinfo .shbar { justify-content: center; }
+  .sinfo .vstack { width: 100%; text-align: left; }
+}

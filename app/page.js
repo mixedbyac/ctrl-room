@@ -140,9 +140,10 @@ function EngineerHome() {
           )}
         </section>
 
+        <UnpaidInvoices />
         <div className="cols hsec">
           <section>
-            <h2 className="h2 up" style={{ marginBottom: 12 }}>Waiting on clients</h2>
+            <div className="sechead"><h2 className="h2 up">Waiting on clients</h2></div>
             <ul className="mlist">
               {waiting.length ? waitingGroups(waiting).map(({ p, items }) => {
                 if (items.length === 1) {
@@ -163,8 +164,7 @@ function EngineerHome() {
             </ul>
           </section>
           <section>
-            <UnpaidInvoices />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, marginBottom: 12 }}><h2 className="h2 up" style={{ margin: 0 }}>Activity</h2><Link className="link small" href="/insights">Insights ›</Link></div>
+            <div className="sechead"><h2 className="h2 up">Activity</h2><Link className="link small" href="/insights">Insights ›</Link></div>
             <ul className="nlist" style={{ overflow: 'visible' }}>
               {activity.length ? activity.map((a) => <ActivityItem key={a.kind + a.x.id} a={a} />) : <li className="emptyday">Plays, notes and sign-offs will show up here.</li>}
             </ul>

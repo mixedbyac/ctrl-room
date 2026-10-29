@@ -1,7 +1,7 @@
 'use client';
 import ArtistName from '@/components/ArtistName';
 import Credit, { useProfiles } from '@/components/Credit';
-import { TitleInput, ArtistPicker } from '@/components/TitleCase';
+import { TitleInput, ArtistPicker, CaseButtons, CASES } from '@/components/TitleCase';
 import QualityBadge from '@/components/QualityBadge';
 import VersionStack, { StackIcon } from '@/components/VersionStack';
 import { InvoicePanel, InvoiceNotice, useInvoices, lockingInvoice } from '@/components/Invoices';
@@ -192,8 +192,7 @@ export default function ProjectPage() {
                   <span className="num">{i + 1}</span><svg viewBox="0 0 24 24">{pl.current?.song?.id === s.id && pl.playing ? <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" /> : <path d="M7 4.5v15l13-7.5z" />}</svg>
                   <span className="eq"><span /><span /><span /></span></button>
                 <Link className="ropen" href={`/s/${s.id}`} onClick={(e) => { if (renaming === s.id) return e.preventDefault(); if (vs.length) { e.preventDefault(); playSong({ ...s, versions: vs }); } }}>{canEdit && renaming === s.id
-                  ? <input className="rowedit ttl" defaultValue={s.title} autoFocus maxLength={120} aria-label="Rename song" onClick={(e) => e.preventDefault()} onFocus={(e) => e.target.select()}
-                      onBlur={(e) => renameSong(s, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } if (e.key === 'Escape') { e.currentTarget.value = s.title; e.currentTarget.blur(); } }} />
+                  ? <RowRename song={s} onDone={(t) => renameSong(s, t)} />
                   : <span className="t ttl">{s.title}</span>}<span className="rsub"><span className={`dot ${s.status}`}>{sub}</span>{last ? <span>· {shortDate(last.created_at)}</span> : null}</span></Link>
                 {cols.map((c) => cell[c.k])}
                 {canEdit && (
@@ -249,6 +248,18 @@ function Deadline({ p, eng, onSaved }) {
       ) : <span className="dlchip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>{text}</span>}
       {eng && due && <button className="dlclear" onClick={() => set('')} aria-label="Clear the deadline" title="Clear">✕</button>}
       {msg && <span className="ferr small">{msg}</span>}
+    </span>
+  );
+}
+
+/** Rename a song right in the tracklist, with the AA / Aa / A. / aa buttons. Enter saves, Esc cancels. */
+function RowRename({ song, onDone }) {
+  const [v, setV] = useState(song.title);
+  return (
+    <span className="rowrename titleedit-wrap" onClick={(e) => e.preventDefault()}>
+      <input className="rowedit ttl" value={v} autoFocus maxLength={120} aria-label="Rename song" onChange={(e) => setV(e.target.value)} onFocus={(e) => e.target.select()}
+        onBlur={() => onDone(v)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } if (e.key === 'Escape') { setV(song.title); onDone(song.title); } }} />
+      <CaseButtons value={v} onChange={setV} className="floating" />
     </span>
   );
 }
@@ -423,15 +434,25 @@ function AddMixes({ p, onSaved }) {
       </label>
       {rows.length > 0 && (
         <>
+          {rows.some((r) => r.state === 'ready' && !r.songId) && (
+            <div className="row-actions small muted" style={{ alignItems: 'center' }}>Style every new title:
+              <span className="casebtns" role="group" aria-label="Style every new title">
+                {CASES.map((c) => <button key={c.k} type="button" title={c.title} onClick={() => setRows((rs) => rs.map((r) => (r.state === 'ready' && !r.songId ? { ...r, title: c.fn(r.title) } : r)))}>{c.label}</button>)}
+              </span>
+            </div>
+          )}
           <ul className="act">
             {rows.map((r, i) => (
               <li key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.4fr) minmax(0,1fr) 70px', gap: 10, alignItems: 'center' }}>
                 <span className="small muted" style={{ overflowWrap: 'anywhere' }}>{r.file.name}</span>
                 {r.state === 'ready' ? (
-                  <select className="sinput" value={r.songId || 'new'} onChange={(e) => setRow(i, { songId: e.target.value === 'new' ? null : e.target.value })} aria-label="Which song">
-                    <option value="new">New song: {r.title}</option>
-                    {p.songs.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
-                  </select>
+                  <span style={{ display: 'grid', gap: 6, minWidth: 0 }}>
+                    <select className="sinput" value={r.songId || 'new'} onChange={(e) => setRow(i, { songId: e.target.value === 'new' ? null : e.target.value })} aria-label="Which song">
+                      <option value="new">New song: {r.title}</option>
+                      {p.songs.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
+                    </select>
+                    {!r.songId && <TitleInput className="sinput" value={r.title} onChange={(v) => setRow(i, { title: v })} ariaLabel="New song title" />}
+                  </span>
                 ) : <span className="small" style={{ color: r.state === 'error' ? 'var(--warn)' : r.state === 'done' ? 'var(--ok)' : 'var(--muted)' }}>{r.status}</span>}
                 <span className="mono small">{r.label || 'next'}</span>
               </li>

@@ -1445,3 +1445,4 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 }
 @media (max-width: 900px) { .sinfo .titlewrap { display: block; width: 100%; position: relative; padding: 0 30px; box-sizing: border-box; text-align: center; } .sinfo .titlewrap .titlepen { position: absolute; right: 0; top: 50%; transform: translateY(-50%); margin: 0; font-size: 15px; } }
 @media (max-width: 900px) { .aback { display: none !important; } } /* the top bar already has Back */
+.rowrename { position: relative; display: block; } .rowrename .casebtns.floating { top: calc(100% + 4px); }

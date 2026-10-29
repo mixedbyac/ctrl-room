@@ -1714,7 +1714,7 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 /* share link: mini player opens the full player (like the app) */
 .lminit { background: none; border: 0; color: inherit; text-align: left; cursor: pointer; padding: 0; font: inherit; }
 .sharenp { z-index: 60; }
-.npscrim { z-index: 59; }
+.npscrim.sharescrim { z-index: 59; }
 .sharenp .sharesquare { display: block; width: 100%; max-width: 360px; aspect-ratio: 1; justify-self: center; border-radius: 16px; object-fit: cover; box-shadow: 0 30px 60px -20px rgba(0,0,0,.8); transition: max-width .32s cubic-bezier(.2,.8,.2,1); }
 .sharenp.composing .sharesquare { max-width: 132px; }
 @media (min-width: 761px) { .sharenp .sharesquare { max-width: 240px; } .sharenp.composing .sharesquare { max-width: 110px; } }

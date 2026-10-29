@@ -86,7 +86,7 @@ function SharePlayer({ cur, p, name, artSrc, artSeed, playing, toggle, time, dur
   };
   return (
     <>
-      <div className="npscrim" onClick={onClose} aria-hidden="true" />
+      <div className="npscrim sharescrim" onClick={onClose} aria-hidden="true" />
       <div className={`np sharenp ${composing ? 'composing' : ''}`} role="dialog" aria-label="Now playing" ref={sheet}
         onTouchStart={(e) => { const el = sheet.current; if (!el || el.scrollTop > 0 || e.target.closest('.npwave, textarea, input')) return; drag.current = { y: e.touches[0].clientY, dy: 0 }; }}
         onTouchMove={(e) => { const d = drag.current; if (!d) return; d.dy = Math.max(0, e.touches[0].clientY - d.y); if (d.dy > 4) { sheet.current.style.transition = 'none'; sheet.current.style.transform = `translateY(${d.dy}px)`; } }}

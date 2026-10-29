@@ -143,11 +143,20 @@ function EngineerHome() {
           <section>
             <h2 className="h2 up" style={{ marginBottom: 12 }}>Waiting on clients</h2>
             <ul className="mlist">
-              {waiting.length ? waiting.map(({ p, s }) => {
-                const last = latestMix(s.versions || []);
+              {waiting.length ? waitingGroups(waiting).map(({ p, items }) => {
+                if (items.length === 1) {
+                  const s = items[0].s, last = latestMix(s.versions || []);
+                  return (
+                    <li key={s.id}><Link className="mini-row" href={`/s/${s.id}`}><Cover {...artOf(s, p)} size={80} />
+                      <span><b>{s.title}</b><small>{p.artist}{last ? ` · ${last.label} sent ${fmtDate(last.created_at)}` : ''}</small></span></Link></li>
+                  );
+                }
+                // several songs from one project: show the project once
+                const total = (p.songs || []).length;
+                const lastAt = items.map(({ s }) => latestMix(s.versions || [])?.created_at).filter(Boolean).sort().at(-1);
                 return (
-                  <li key={s.id}><Link className="mini-row" href={`/s/${s.id}`}><Cover {...artOf(s, p)} size={80} />
-                    <span><b>{s.title}</b><small>{p.artist}{last ? ` · ${last.label} sent ${fmtDate(last.created_at)}` : ''}</small></span></Link></li>
+                  <li key={p.id}><Link className="mini-row" href={`/p/${p.id}`}><Cover seed={p.seed} path={p.cover_path} size={80} />
+                    <span><b>{p.title}</b><small>{p.artist} · {items.length === total ? `all ${total} songs` : `${items.length} of ${total} songs`}{lastAt ? ` · sent ${fmtDate(lastAt)}` : ''}</small></span></Link></li>
                 );
               }) : <li className="emptyday">No one owes you a listen right now.</li>}
             </ul>
@@ -164,6 +173,13 @@ function EngineerHome() {
       </section>
     </>
   );
+}
+
+/** Songs waiting on the client, grouped by project (in the order they first appear). */
+function waitingGroups(list) {
+  const m = new Map();
+  list.forEach((x) => { if (!m.has(x.p.id)) m.set(x.p.id, { p: x.p, items: [] }); m.get(x.p.id).items.push(x); });
+  return [...m.values()];
 }
 
 function ActivityItem({ a }) {

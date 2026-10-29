@@ -1319,3 +1319,8 @@ a.driftc:hover { transform: scale(1.04); }
 @media (max-width: 900px) {
   .app .pinfo .ccard, .app .sinfo .ccard, .np .ccard, .lcredit .ccard { left: 50%; transform: translateX(-50%); }
 }
+/* credit line ~5% smaller */
+.credit { font-size: 12.8px; gap: 5px; }
+.credit > img { width: 19px; height: 19px; }
+.credit > .bluecheck { width: 16px; height: 16px; }
+.credit.big { font-size: 14.3px; }

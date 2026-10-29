@@ -1497,3 +1497,49 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .rows.selecting .ropen { cursor: pointer; }
 .rows.selecting .rowwrap:has(.rcheck input:checked) .row { background: rgba(245,213,71,.08); border-radius: 12px; }
 @media (max-width: 900px) { .selbar.on { justify-content: center; } .selacts { justify-content: center; } }
+
+/* player: quieter comment button + note box */
+.npcomment { background: transparent !important; border: 1px solid rgba(255,255,255,.14); color: rgba(255,255,255,.78); font-weight: 600; padding: 6px 12px; transition: border-color .15s, color .15s, background .15s; }
+.npcomment:hover { color: #fff; border-color: rgba(255,255,255,.3); background: rgba(255,255,255,.05) !important; }
+.npcomment svg { width: 17px; height: 17px; opacity: .9; }
+@media (max-width: 760px) { .npcomment { padding: 8px; border-radius: 50%; } .npcomment svg { width: 19px; height: 19px; } }
+.npcompose.inline { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); padding: 8px; border-radius: 14px; }
+.npcompose.inline:focus-within { border-color: rgba(255,255,255,.2); background: rgba(255,255,255,.06); }
+.npcompose.inline textarea { background: transparent; border: 0; padding: 8px 6px; }
+.nc-time { background: transparent; color: var(--sig); padding: 0 6px 0 4px; height: 34px; font-size: 13px; }
+.nc-send { width: 34px; height: 34px; }
+.nc-send svg { width: 16px; height: 16px; }
+.nc-sub { font-size: 11.5px; color: rgba(255,255,255,.45); }
+.nppin { width: 2px; background: var(--sig); box-shadow: none; opacity: .9; }
+.nppin::before { width: 8px; height: 8px; left: -3px; top: -4px; }
+
+/* player: bottom tabs (Up next · Notes · Progress · Details) */
+.npdeck { display: grid; gap: 12px; margin-top: 6px; }
+.np.composing .npdeck { display: none; }
+.npdtabs { display: flex; gap: 4px; padding: 3px; border-radius: 12px; background: rgba(255,255,255,.06); }
+.npdtabs button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 34px; border-radius: 9px; border: 0; background: none; color: rgba(255,255,255,.6); font-size: 13px; font-weight: 650; cursor: pointer; }
+.npdtabs button[aria-selected="true"] { background: rgba(255,255,255,.12); color: #fff; }
+.npdtabs i { font-style: normal; font-size: 11px; font-weight: 800; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; display: inline-grid; place-items: center; background: var(--sig); color: #0f0f10; }
+.npnotes { display: grid; gap: 4px; }
+.npnote { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; align-items: start; text-align: left; padding: 9px 10px; border-radius: 12px; background: none; border: 0; color: inherit; cursor: pointer; }
+.npnote:hover { background: rgba(255,255,255,.06); }
+.npnote.done { opacity: .5; }
+.npnt { font-size: 12.5px; color: var(--sig); padding-top: 1px; }
+.npnb { display: grid; gap: 2px; min-width: 0; }
+.npnb b { font-size: 12px; color: rgba(255,255,255,.55); font-weight: 650; }
+.npnb span { font-size: 14px; line-height: 1.4; color: #f4f4f5; overflow-wrap: anywhere; }
+.npempty { margin: 6px 4px; font-size: 13.5px; color: rgba(255,255,255,.55); }
+.npmore { justify-self: start; margin: 4px 10px 0; font-size: 13px; font-weight: 650; color: var(--sig); text-decoration: none; }
+.npprog { list-style: none; margin: 0; padding: 4px 6px; display: grid; gap: 0; }
+.npprog li { position: relative; display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 9px 0; color: rgba(255,255,255,.45); font-size: 14px; }
+.npprog li:not(:last-child)::after { content: ""; position: absolute; left: 7px; top: 27px; bottom: -9px; width: 2px; background: rgba(255,255,255,.1); }
+.npprog li.done:not(:last-child)::after { background: rgba(114,211,156,.5); }
+.npdot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(255,255,255,.2); background: #0f0f10; }
+.npprog li.done { color: #f4f4f5; }
+.npprog li.done .npdot { border-color: var(--ok); background: var(--ok); }
+.npprog li.cur .npdot { box-shadow: 0 0 0 4px rgba(114,211,156,.18); }
+.npprog li span:last-child { font-size: 12.5px; color: rgba(255,255,255,.5); }
+.npdetails { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.npdetails div { padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.05); display: grid; gap: 2px; }
+.npdetails dt { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.45); }
+.npdetails dd { margin: 0; font-size: 14px; color: #f4f4f5; }

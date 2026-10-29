@@ -350,6 +350,8 @@ function NowPlaying() {
   const pl = usePlayer();
   const c = pl.current, v = pl.version;
   const [upNext, setUpNext] = useState([]);
+  const [deck, setDeck] = useState('next');
+  const [songNotes, setSongNotes] = useState([]);
   const close = () => pl.setExpanded(false);
   const sheet = useRef(null), drag = useRef(null); // swipe down to close (phones)
   const composeBox = useRef(null);
@@ -396,6 +398,13 @@ function NowPlaying() {
       setUpNext(ids.map((id) => byId[id]).filter(Boolean));
     });
   }, [pl.queue.join(','), c.song.id]); // eslint-disable-line
+  useEffect(() => { if (upNext.length <= 1 && deck === 'next') setDeck('notes'); }, [upNext.length]); // eslint-disable-line
+  useEffect(() => {
+    let live = true;
+    supabase().from('notes').select('id, t, body, author_name, from_client, version_id, resolved, parent_id, created_at').eq('song_id', c.song.id).is('parent_id', null).order('t', { ascending: true, nullsFirst: false })
+      .then(({ data }) => { if (live) setSongNotes(data || []); });
+    return () => { live = false; };
+  }, [c.song.id, posted]); // eslint-disable-line
   const vi = c.versions.findIndex((x) => x.id === c.versionId);
   const flip = () => { const prev = c.versions[vi - 1] || c.versions[vi + 1]; if (prev) pl.switchVersion(prev.id); };
   return (
@@ -476,9 +485,14 @@ function NowPlaying() {
           <button className="npskip" onClick={() => pl.seek(Math.min(pl.duration || 0, pl.time + 15))} aria-label="Forward 15 seconds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 11-3-6.7L21 8" /><path d="M21 3v5h-5" /><text x="12" y="15.5" textAnchor="middle" fontSize="7.5" fontWeight="700" fill="currentColor" stroke="none">15</text></svg></button>
         </div>
         {posted && <p className="npposted" role="status">{posted}</p>}
-        {upNext.length > 1 && (
-          <div className="npqueue">
-            <p className="nplabel">Up next</p>
+        <div className="npdeck">
+          <div className="npdtabs" role="tablist" aria-label="More about this song">
+            {upNext.length > 1 && <button role="tab" aria-selected={deck === 'next'} onClick={() => setDeck('next')}>Up next</button>}
+            <button role="tab" aria-selected={deck === 'notes'} onClick={() => setDeck('notes')}>Notes{songNotes.length ? <i>{songNotes.length}</i> : null}</button>
+            <button role="tab" aria-selected={deck === 'progress'} onClick={() => setDeck('progress')}>Progress</button>
+            <button role="tab" aria-selected={deck === 'details'} onClick={() => setDeck('details')}>Details</button>
+          </div>
+          {deck === 'next' && upNext.length > 1 && (
             <div className="npq">
               {upNext.map((s, n) => (
                 <button key={s.id} className={`npqi ${s.id === c.song.id ? 'on' : ''}`} onClick={() => (s.id === c.song.id ? pl.toggle() : pl.play({ songId: s.id, queue: pl.queue }))}>
@@ -489,8 +503,36 @@ function NowPlaying() {
                 </button>
               ))}
             </div>
-          </div>
-        )}
+          )}
+          {deck === 'notes' && (
+            <div className="npnotes">
+              {songNotes.length ? songNotes.map((n) => (
+                <button key={n.id} className={`npnote ${n.resolved ? 'done' : ''}`} onClick={() => { if (n.version_id && n.version_id !== c.versionId) pl.switchVersion(n.version_id); if (n.t != null) pl.seek(n.t); }}>
+                  <span className="npnt mono">{n.t != null ? mmss(n.t) : '—'}</span>
+                  <span className="npnb"><b>{n.author_name || (n.from_client ? 'Client' : 'Engineer')}{n.version_id ? ` · ${c.versions.find((v) => v.id === n.version_id)?.label || ''}` : ''}</b><span>{n.body}</span></span>
+                </button>
+              )) : <p className="npempty">No notes yet. Tap Comment at the moment you hear something.</p>}
+              <Link className="npmore" href={`/s/${c.song.id}#notes`} onClick={close}>All notes &amp; replies ›</Link>
+            </div>
+          )}
+          {deck === 'progress' && (
+            <ol className="npprog">
+              {[['Files received', c.song.received_at], ['Mixing', c.song.mixing_at], ['Ready to review', c.versions.some((v) => !/^demo/i.test(v.label)) ? (c.versions.filter((v) => !/^demo/i.test(v.label)).at(-1)?.created_at || '').slice(0, 10) : null], ['Approved', c.song.approved_at ? String(c.song.approved_at).slice(0, 10) : null]].map(([k, d], i, all) => {
+                const doneStep = !!d, cur = doneStep && !all[i + 1]?.[1];
+                return <li key={k} className={`${doneStep ? 'done' : ''} ${cur ? 'cur' : ''}`}><span className="npdot" /><b>{k}</b><span>{d ? new Date(`${String(d).slice(0, 10)}T12:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}</span></li>;
+              })}
+            </ol>
+          )}
+          {deck === 'details' && (
+            <dl className="npdetails">
+              {[
+                ['Version', v?.label], ['Length', v?.duration ? mmss(v.duration) : null], ['BPM', c.song.bpm], ['Key', c.song.musical_key],
+                ['Format', v?.file_format ? [v.file_format, v.sample_rate ? `${(v.sample_rate / 1000).toFixed(1).replace(/\.0$/, '')} kHz` : '', v.bit_depth ? `${v.bit_depth}-bit` : ''].filter(Boolean).join(' · ') : null],
+                ['Versions', c.versions.length], ['Delivered', v?.created_at ? new Date(v.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : null],
+              ].filter(([, x]) => x != null && x !== '').map(([k, x]) => <div key={k}><dt>{k}</dt><dd className="mono">{x}</dd></div>)}
+            </dl>
+          )}
+        </div>
       </div>
     </div>
     </>

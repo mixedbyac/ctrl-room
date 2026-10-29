@@ -159,11 +159,14 @@ function EmailSetup() {
       <b>Email invites {st && (st.email ? <span className="tbadge ok">✓ On · from {st.from}</span> : <span className="tbadge warn">Not set up</span>)}</b>
       <span className="muted small">CTRL ROOM sends sign-up invites to artists itself. Until this is set up, you get an invite link to copy and text instead.</span>
       {st && !st.email && (
+        <p className="small" style={{ margin: 0 }}>CTRL ROOM sees: <b>RESEND_API_KEY</b> {st.hasKey ? '✓ found' : '✗ missing'} · <b>EMAIL_FROM</b> {st.hasFrom ? '✓ found' : '✗ missing'}</p>
+      )}
+      {st && !st.email && (
         <ol className="small" style={{ margin: 0, paddingLeft: 18, lineHeight: 1.6 }}>
           <li>Make a free account at <a className="link" href="https://resend.com" target="_blank" rel="noopener noreferrer">resend.com</a>.</li>
-          <li>Domains › Add domain › <b>art-house.us</b>, then add the DNS records it shows in Squarespace (Domains › DNS).</li>
+          <li>Domains › Add domain, and wait for it to say <b>Verified</b>.</li>
           <li>API Keys › Create API key (Sending access).</li>
-          <li>In Vercel › ctrl-room › Settings › Environment Variables, add <code>RESEND_API_KEY</code> (the key) and <code>EMAIL_FROM</code> = <code>CTRL ROOM &lt;hello@art-house.us&gt;</code>, then Redeploy.</li>
+          <li>In Vercel › ctrl-room › Settings › Environment Variables, add <code>RESEND_API_KEY</code> (the key) and <code>EMAIL_FROM</code> = <code>CTRL ROOM &lt;mix@ctrl-room.app&gt;</code>, then Redeploy.</li>
         </ol>
       )}
     </div>

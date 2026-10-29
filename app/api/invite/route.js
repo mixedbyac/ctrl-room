@@ -10,7 +10,7 @@ export async function POST(req) {
   const { user, why } = await engineerFrom(req);
   if (!user) return fail(why, 403);
   const b = await req.json().catch(() => ({}));
-  if (b.check) return json({ email: !!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM), from: process.env.EMAIL_FROM || null });
+  if (b.check) return json({ email: !!(process.env.RESEND_API_KEY && process.env.EMAIL_FROM), from: process.env.EMAIL_FROM || null, hasKey: !!process.env.RESEND_API_KEY, hasFrom: !!process.env.EMAIL_FROM });
   const artist = String(b.artist || '').trim().slice(0, 100);
   const emails = [...new Set((Array.isArray(b.emails) ? b.emails : String(b.emails || '').split(/[\s,;]+/)).map((e) => String(e).trim().toLowerCase()).filter(Boolean))].slice(0, 10);
   const role = ['Admin', 'Artist', 'Manager', 'Team'].includes(b.role) ? b.role : 'Admin';

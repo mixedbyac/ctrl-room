@@ -5,6 +5,7 @@ import { useApp, TopBar } from '@/components/AppShell';
 import Credit, { BlueCheck } from '@/components/Credit';
 import { ROLES, creditLine } from '@/lib/credit';
 import { TitleInput } from '@/components/TitleCase';
+import { shrink } from '@/components/ArtistProfile';
 
 export default function ProfilePage() {
   const { eng, session } = useApp();
@@ -26,6 +27,13 @@ export default function ProfilePage() {
     catch (er) { setMsg(er.message); }
     setBusy(false);
   };
+  const photo = async (body) => {
+    setBusy(true); setMsg('');
+    try { const r = await api('/api/profile', body); setF((x) => ({ ...x, photo_url: r.profile.photo_url, instagram: r.profile.instagram || x.instagram })); setMsg('Photo updated.'); window.dispatchEvent(new Event('ctrl-room:profile')); }
+    catch (er) { setMsg(er.message); }
+    setBusy(false);
+  };
+  const pick = (e) => { const file = e.target.files?.[0]; e.target.value = ''; if (file) shrink(file, 800).then((dataUrl) => photo({ action: 'photo', dataUrl })).catch((er) => setMsg(er.message)); };
   const preview = { ...f, credit: f.credit, email: session.user.email };
   return (
     <>
@@ -33,7 +41,11 @@ export default function ProfilePage() {
       <section className="page">
         <div className="hhead"><h1 className="up">Your profile</h1><p className="lede">How you’re credited on every project you work on.</p></div>
         <div className="profcard">
-          <span className="profav">{f.photo_url ? <img src={f.photo_url} alt="" /> : (f.display_name || f.full_name || session.user.email)[0].toUpperCase()}</span>
+          <label className="profav" title="Change your photo">
+            {f.photo_url ? <img src={f.photo_url} alt="" /> : (f.display_name || f.full_name || session.user.email)[0].toUpperCase()}
+            <span className="profcam" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg></span>
+            <input type="file" accept="image/*" className="vh" onChange={pick} disabled={busy} />
+          </label>
           <div>
             <b className="profname">{f.display_name || f.full_name || 'Your name'}{f.verified && <BlueCheck title="Verified engineer" />}</b>
             <span className="profmail">{session.user.email} · {f.verified ? <span className="vok">Verified</span> : <span className="vno">Not verified yet. Sign in with an email link or confirm your email to get the blue check.</span>}</span>
@@ -48,7 +60,14 @@ export default function ProfilePage() {
           <div className="fld"><label>What you do</label>
             <div className="rolepick">{ROLES.map(([k, l]) => <label key={k} className={`rolechip ${f.roles.includes(k) ? 'on' : ''}`}><input type="checkbox" checked={f.roles.includes(k)} onChange={() => toggleRole(k)} />{l}</label>)}</div></div>
           <div className="fld"><label htmlFor="pf-c">Credit <span className="opt">leave blank for “{creditLine({ ...f, credit: '' })}”</span></label><input id="pf-c" value={f.credit || ''} onChange={set('credit')} placeholder={creditLine({ ...f, credit: '' })} maxLength={120} /></div>
-          <div className="fld"><label htmlFor="pf-p">Photo link <span className="opt">optional, a square picture</span></label><input id="pf-p" type="url" value={f.photo_url || ''} onChange={set('photo_url')} placeholder="https://…" /></div>
+          <div className="fld"><label>Profile picture</label>
+            <div className="photorow">
+              <label className="btn small">Upload a photo<input type="file" accept="image/*" className="vh" onChange={pick} disabled={busy} /></label>
+              <span className="muted small">or use your Instagram picture:</span>
+              <span className="igrow"><span className="igat">@</span><input value={f.instagram_draft ?? f.instagram ?? ''} onChange={(e) => setF((x) => ({ ...x, instagram_draft: e.target.value }))} placeholder="yourhandle" aria-label="Instagram username" autoCapitalize="none" />
+                <button type="button" className="btn small" disabled={busy || !(f.instagram_draft ?? f.instagram)} onClick={() => photo({ action: 'instagram', handle: f.instagram_draft ?? f.instagram })}>Use it</button></span>
+              {f.photo_url && <button type="button" className="link small" onClick={() => setF((x) => ({ ...x, photo_url: '' }))}>Remove photo (then Save)</button>}
+            </div></div>
           <div className="fld"><label htmlFor="pf-b">About you <span className="opt">optional</span></label><textarea id="pf-b" rows={3} value={f.bio || ''} onChange={set('bio')} maxLength={600} /></div>
           <div className="row-actions"><button className="btn primary" disabled={busy}>{busy ? 'Saving…' : 'Save profile'}</button></div>
           {msg && <p className="toast-inline" style={{ margin: 0 }}>{msg}</p>}

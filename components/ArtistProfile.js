@@ -8,7 +8,7 @@ import { hashStr } from '@/lib/art';
 const initials = (n) => n.split(/\s+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 
 /** Shrink an image in the browser before upload (keeps headers sharp, files small). */
-function shrink(file, max) {
+export function shrink(file, max) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {

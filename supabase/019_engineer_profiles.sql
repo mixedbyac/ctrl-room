@@ -16,3 +16,4 @@ alter table engineer_profiles enable row level security;
 drop policy if exists ep_read on engineer_profiles;
 create policy ep_read on engineer_profiles for select using (auth.role() = 'authenticated');
 -- writes only happen through CTRL ROOM's server (it checks you're an engineer and whether your email is verified)
+alter table engineer_profiles add column if not exists instagram text;

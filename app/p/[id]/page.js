@@ -13,7 +13,7 @@ import { useParams } from 'next/navigation';
 import { supabase, api } from '@/lib/supabase';
 import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
-import { fmtDate, shortDate, statusText, mmss, latestMix, mixesOf, currentMix, fmtBytes } from '@/lib/format';
+import { fmtDate, shortDate, statusText, mmss, latestMix, mixesOf, currentMix, fmtBytes, todayISO } from '@/lib/format';
 import { parseMixName, matchSong } from '@/lib/filename';
 import { deliverFile } from '@/lib/deliver';
 import { usePlayer } from '@/components/Player';
@@ -134,6 +134,7 @@ export default function ProjectPage() {
           </div>
           <div className="pinfo">
             <EditableTitle value={p.title} canEdit={canEdit} label="project" onSave={async (t) => { if (viaAdmin) await api('/api/admin', { action: 'title', projectId: p.id, title: t }); else await supabase().from('projects').update({ title: t }).eq('id', p.id); load(); reloadProjects(); }} />
+            <Deadline p={p} eng={eng} onSaved={load} />
             <p className="psub">{p.artist} · {p.type} · {p.songs.length} song{p.songs.length === 1 ? '' : 's'} · {approved} approved{p.release ? ` · out ${fmtDate(p.release)}` : ''}</p>
             <div className="prow">
               {firstPlayable && <button className="bigplay" onClick={() => (pl.current?.project?.id === p.id ? pl.toggle() : playSong(firstPlayable))} aria-label={projectPlaying ? 'Pause' : 'Play the project'}>
@@ -215,6 +216,36 @@ export default function ProjectPage() {
         {eng && <NerdStuff songs={p.songs} />}
       </section>
     </>
+  );
+}
+
+/** The project's final deadline: a chip with a countdown. The engineer taps it to set or change the date. */
+function Deadline({ p, eng, onSaved }) {
+  const due = p.settings?.due || '';
+  const input = useRef(null);
+  const [msg, setMsg] = useState('');
+  const left = due ? Math.round((new Date(`${due}T12:00:00`) - new Date(`${todayISO()}T12:00:00`)) / 86400000) : null;
+  const done = p.songs.length > 0 && p.songs.every((s) => s.status === 'approved');
+  const set = async (d) => {
+    const settings = { ...(p.settings || {}) }; if (d) settings.due = d; else delete settings.due;
+    const { error } = await supabase().from('projects').update({ settings }).eq('id', p.id);
+    setMsg(error ? error.message : ''); if (!error) onSaved();
+  };
+  if (!due && !eng) return null;
+  const tone = done ? 'done' : left == null ? 'none' : left < 0 ? 'late' : left <= 3 ? 'soon' : 'ok';
+  const text = !due ? 'Add a final deadline' : done ? `Done · deadline was ${fmtDate(due)}` : left < 0 ? `${-left} day${left === -1 ? '' : 's'} late · was due ${fmtDate(due)}` : left === 0 ? 'Due today' : `Due ${fmtDate(due)} · ${left} day${left === 1 ? '' : 's'} left`;
+  return (
+    <span className={`deadline ${tone}`}>
+      {eng ? (
+        <label className="dlchip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
+          {text}
+          <input ref={input} type="date" value={due} onChange={(e) => set(e.target.value)} aria-label="Final deadline" />
+        </label>
+      ) : <span className="dlchip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>{text}</span>}
+      {eng && due && <button className="dlclear" onClick={() => set('')} aria-label="Clear the deadline" title="Clear">✕</button>}
+      {msg && <span className="ferr small">{msg}</span>}
+    </span>
   );
 }
 
@@ -301,12 +332,13 @@ function AddSong({ p, onSaved }) {
 }
 
 function EditProject({ p, onSaved }) {
-  const [f, setF] = useState({ title: p.title, artist: p.artist, type: p.type, release: p.release || '' });
+  const [f, setF] = useState({ title: p.title, artist: p.artist, type: p.type, release: p.release || '', due: p.settings?.due || '' });
   const [err, setErr] = useState('');
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const save = async (e) => {
     e.preventDefault();
-    const { error } = await supabase().from('projects').update({ title: f.title.trim(), artist: f.artist.trim(), type: f.type, release: f.release || null }).eq('id', p.id);
+    const settings = { ...(p.settings || {}) }; if (f.due) settings.due = f.due; else delete settings.due;
+    const { error } = await supabase().from('projects').update({ title: f.title.trim(), artist: f.artist.trim(), type: f.type, release: f.release || null, settings }).eq('id', p.id);
     if (error) return setErr(error.message);
     onSaved();
   };
@@ -318,6 +350,7 @@ function EditProject({ p, onSaved }) {
         <div className="fld"><label htmlFor="ep-t">Title</label><TitleInput id="ep-t" value={f.title} onChange={(v) => setF((x) => ({ ...x, title: v }))} /></div>
         <div className="fld"><label htmlFor="ep-a">Artist</label><ArtistPicker id="ep-a" value={f.artist} onChange={(v) => setF((x) => ({ ...x, artist: v }))} /></div>
         <div className="fld"><label htmlFor="ep-ty">Type</label><select id="ep-ty" value={f.type} onChange={set('type')}><option>Single</option><option>EP</option><option>Album</option><option>Mixtape</option></select></div>
+        <div className="fld"><label htmlFor="ep-d">Final deadline <span className="opt">everything done by</span></label><input id="ep-d" type="date" value={f.due} onChange={set('due')} /></div>
         <div className="fld"><label htmlFor="ep-r">Release date</label><input id="ep-r" type="date" value={f.release} onChange={set('release')} /></div>
       </div>
       {err && <p className="ferr">{err}</p>}

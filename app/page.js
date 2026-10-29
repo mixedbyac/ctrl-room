@@ -195,7 +195,7 @@ function ActivityItem({ a }) {
 }
 
 function NewProject({ onDone }) {
-  const [f, setF] = useState({ title: '', artist: '', type: 'Single', client_email: '', phone: '', release: '' });
+  const [f, setF] = useState({ title: '', artist: '', type: 'Single', client_email: '', phone: '', release: '', due: '' });
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
@@ -205,7 +205,7 @@ function NewProject({ onDone }) {
     setBusy(true);
     const { data, error } = await supabase().from('projects').insert({
       title: f.title.trim(), artist: f.artist.trim(), type: f.type, client_email: f.client_email.trim().toLowerCase() || null,
-      phone: f.phone.trim() || null, release: f.release || null, seed: Math.floor(Math.random() * 1e9),
+      phone: f.phone.trim() || null, release: f.release || null, seed: Math.floor(Math.random() * 1e9), ...(f.due ? { settings: { due: f.due } } : {}),
     }).select('id').single();
     setBusy(false);
     if (error) return setErr(error.message);
@@ -219,6 +219,7 @@ function NewProject({ onDone }) {
         <div className="fld"><label htmlFor="np-e">Client email <span className="opt">they sign in with this</span></label><input id="np-e" type="email" value={f.client_email} onChange={set('client_email')} /></div>
         <div className="fld"><label htmlFor="np-p">Client phone <span className="opt">for texts</span></label><input id="np-p" type="tel" value={f.phone} onChange={set('phone')} /></div>
         <div className="fld"><label htmlFor="np-ty">Type</label><select id="np-ty" value={f.type} onChange={set('type')}><option>Single</option><option>EP</option><option>Album</option><option>Mixtape</option></select></div>
+        <div className="fld"><label htmlFor="np-d">Final deadline <span className="opt">optional, everything done by</span></label><input id="np-d" type="date" value={f.due} onChange={set('due')} /></div>
         <div className="fld"><label htmlFor="np-r">Release date <span className="opt">optional</span></label><input id="np-r" type="date" value={f.release} onChange={set('release')} /></div>
       </div>
       {err && <p className="ferr">{err}</p>}

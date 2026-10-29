@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase, api } from '@/lib/supabase';
 
 /** Where an invite email lands: pick a name and a password, then you're in. */
 export default function Welcome() {
@@ -26,6 +26,7 @@ export default function Welcome() {
     const { error } = await supabase().auth.updateUser({ password: pw, data: { name: name.trim() } });
     setBusy(false);
     if (error) return setErr(error.message);
+    await api('/api/joined', {}).catch(() => {}); // tell the engineer they joined
     router.replace('/');
   };
   const artist = user?.user_metadata?.artist;

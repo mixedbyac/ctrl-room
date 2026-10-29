@@ -1217,3 +1217,17 @@ a.driftc:hover { transform: scale(1.04); }
   .npcompose.sheet.compact { animation-name: ncupm; }
   .npcompose.sheet.compact .muted.small { display: inline; }
 }
+
+/* project final deadline chip */
+.deadline { display: inline-flex; align-items: center; gap: 4px; margin: 2px 0 4px; }
+.dlchip { position: relative; display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); color: var(--ink); cursor: pointer; }
+.dlchip svg { width: 15px; height: 15px; }
+.dlchip input[type="date"] { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+.deadline.none .dlchip { color: var(--muted); border-style: dashed; }
+.deadline.ok .dlchip { color: var(--ink); }
+.deadline.soon .dlchip { color: var(--sig); background: rgba(245,213,71,.12); border-color: rgba(245,213,71,.35); }
+.deadline.late .dlchip { color: #ff6b7d; background: rgba(201,56,74,.14); border-color: rgba(201,56,74,.4); }
+.deadline.done .dlchip { color: var(--ok); background: rgba(114,211,156,.12); border-color: rgba(114,211,156,.3); }
+.dlclear { width: 26px; height: 26px; border-radius: 50%; border: 0; background: none; color: var(--faint); cursor: pointer; font-size: 12px; }
+.dlclear:hover { color: var(--ink); background: rgba(255,255,255,.07); }
+@media (max-width: 900px) { .app .pinfo .deadline { justify-content: center; } }

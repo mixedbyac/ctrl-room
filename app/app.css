@@ -1469,3 +1469,13 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .shrow > span { min-width: 0; }
 .shrow .switch { justify-self: end; }
 .invitem .invsw { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+
+/* drag mixes onto the project page, or onto a song to stack its next version */
+.page.filedrop { position: relative; }
+.pagedrop { position: fixed; z-index: 70; left: 50%; bottom: 28px; transform: translateX(-50%); display: grid; gap: 2px; text-align: center; padding: 14px 22px; border-radius: 16px; background: rgba(22,22,25,.96); border: 1px solid rgba(245,213,71,.5); box-shadow: 0 24px 60px -12px rgba(0,0,0,.8); pointer-events: none; animation: npfade .12s; max-width: calc(100vw - 32px); }
+.pagedrop b { color: var(--sig); font-size: 16px; }
+.pagedrop span { color: var(--muted); font-size: 13px; }
+.page.filedrop .rows { outline: 2px dashed rgba(245,213,71,.35); outline-offset: 8px; border-radius: 14px; }
+.rowwrap.fileover { position: relative; }
+.rowwrap.fileover .row { background: rgba(245,213,71,.1); box-shadow: inset 0 0 0 2px rgba(245,213,71,.6); border-radius: 12px; }
+.rowwrap.fileover::after { content: attr(data-stack); position: absolute; right: 12px; top: -12px; z-index: 5; font-size: 12px; font-weight: 700; color: #0f0f10; background: var(--sig); padding: 4px 10px; border-radius: 999px; pointer-events: none; white-space: nowrap; }

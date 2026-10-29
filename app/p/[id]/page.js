@@ -38,6 +38,8 @@ export default function ProjectPage() {
   const dragSong = useRef(null);
   const [dragOver, setDragOver] = useState(null);
   const [stacks, setStacks] = useState({}); // song id -> open
+  const [fileOver, setFileOver] = useState(null); // song row a file is being dragged over
+  const [pageOver, setPageOver] = useState(false);
   const [noteCounts, setNoteCounts] = useState({});
   const toggleStack = (sid) => setStacks((x) => ({ ...x, [sid]: !x[sid] }));
   const renameSong = async (song, raw) => {
@@ -128,7 +130,11 @@ export default function ProjectPage() {
   return (
     <>
       <TopBar crumbs={crumbs} />
-      <section className="page">
+      <section className={`page ${pageOver ? 'filedrop' : ''}`}
+        onDragOver={(e) => { if (eng && !dragSong.current && [...(e.dataTransfer?.types || [])].includes('Files')) { e.preventDefault(); setPageOver(true); } }}
+        onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setPageOver(false); }}
+        onDrop={(e) => { if (eng && e.dataTransfer?.files?.length) { e.preventDefault(); setPageOver(false); window.dispatchEvent(new CustomEvent('ctrl-room:add-mixes', { detail: { files: [...e.dataTransfer.files] } })); } }}>
+        {pageOver && <div className="pagedrop" aria-hidden="true"><b>Drop mixes</b><span>They go to the matching songs. Drop on a song to stack it as that song’s next version.</span></div>}
         <div className="phero">
           <div className="sleevewrap">
             <div className="record"><div className="vinyl spin"><Cover as="div" seed={p.seed} path={p.cover_path} size={240} className="lbl" /></div></div>
@@ -185,10 +191,10 @@ export default function ProjectPage() {
               peak: <span key="peak" className={`cell mono ${last?.peak_db != null && last.peak_db > -0.1 ? 'hot' : ''}`} data-col="peak" title={last?.peak_db != null ? `${last.peak_db} dBFS sample peak` : ''}>{last?.peak_db != null ? last.peak_db.toFixed(1) : <span className="dim">—</span>}</span>,
             };
             return (
-              <div key={s.id} className={`rowwrap ${dragOver === s.id ? 'dragover' : ''}`} draggable={canEdit && renaming !== s.id}
+              <div key={s.id} className={`rowwrap ${dragOver === s.id ? 'dragover' : ''} ${fileOver === s.id ? 'fileover' : ''}`} data-stack={`Drop to add as the next version of ${s.title}`} draggable={canEdit && renaming !== s.id}
                 onDragStart={(e) => { if (!canEdit) return; dragSong.current = s.id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', s.id); }}
-                onDragOver={(e) => { if (dragSong.current) { e.preventDefault(); setDragOver(s.id); } }} onDragLeave={() => setDragOver((x) => (x === s.id ? null : x))}
-                onDrop={(e) => { if (dragSong.current) { e.preventDefault(); onDropRow(s.id); } }} onDragEnd={() => { dragSong.current = null; setDragOver(null); }}><div className={`row ${vs.length ? '' : 'nomix'} ${stacks[s.id] ? 'stackopen' : ''} ${pl.current?.song?.id === s.id ? 'cur' : ''} ${pl.current?.song?.id === s.id && pl.playing ? 'live' : ''}`} style={{ '--i': i }}>
+                onDragOver={(e) => { if (dragSong.current) { e.preventDefault(); setDragOver(s.id); } else if (eng && [...(e.dataTransfer?.types || [])].includes('Files')) { e.preventDefault(); e.stopPropagation(); setFileOver(s.id); setPageOver(false); } }} onDragLeave={() => { setDragOver((x) => (x === s.id ? null : x)); setFileOver((x) => (x === s.id ? null : x)); }}
+                onDrop={(e) => { if (dragSong.current) { e.preventDefault(); onDropRow(s.id); } else if (eng && e.dataTransfer?.files?.length) { e.preventDefault(); e.stopPropagation(); setFileOver(null); setPageOver(false); window.dispatchEvent(new CustomEvent('ctrl-room:add-mixes', { detail: { files: [...e.dataTransfer.files], songId: s.id } })); } }} onDragEnd={() => { dragSong.current = null; setDragOver(null); }}><div className={`row ${vs.length ? '' : 'nomix'} ${stacks[s.id] ? 'stackopen' : ''} ${pl.current?.song?.id === s.id ? 'cur' : ''} ${pl.current?.song?.id === s.id && pl.playing ? 'live' : ''}`} style={{ '--i': i }}>
                 <button className="rplay" onClick={() => vs.length && playSong({ ...s, versions: vs })} disabled={!vs.length} aria-label={vs.length ? `Play ${s.title}` : 'No mix yet'}>
                   <span className="num">{i + 1}</span><svg viewBox="0 0 24 24">{pl.current?.song?.id === s.id && pl.playing ? <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" /> : <path d="M7 4.5v15l13-7.5z" />}</svg>
                   <span className="eq"><span /><span /><span /></span></button>
@@ -287,8 +293,7 @@ function AddPlus({ onPick, unpaid }) {
       {unpaid && !open && <span className="gdot" aria-label="unpaid invoice" />}
       {open && (
         <div className="plusmenu" role="menu">
-          <Row k="mixes" icon="↑" title="Add mixes" sub="Pick files, they go straight in" />
-          <Row k="add" icon="♪" title="Add a song" sub="A new song in this project" />
+          <Row k="mixes" icon="↑" title="Add files / mixes" sub="Pick files, they go straight in (or drag them onto the page)" />
           <Row k="share" icon="@" title="Client access" sub="Who can open it, downloads" />
           <Row k="invoice" icon="$" title="Invoices" sub="Attach, show, lock until paid" dot={unpaid} />
           <Row k="edit" icon="✎" title="Edit details" sub="Title, artist, type, release" />
@@ -422,13 +427,18 @@ function AddMixes({ p, onSaved }) {
     setBusy(false);
     onSaved();
   };
-  const pick = (list) => {
+  useEffect(() => {
+    const on = (e) => pick(e.detail?.files, e.detail?.songId);
+    window.addEventListener('ctrl-room:add-mixes', on);
+    return () => window.removeEventListener('ctrl-room:add-mixes', on);
+  });
+  const pick = (list, forceSong = null) => {
     const files = Array.from(list || []).filter((f) => f.size > 0 && /\.(wav|aiff?|mp3|m4a|flac)$/i.test(f.name))
       .sort((x, y) => x.name.localeCompare(y.name, undefined, { numeric: true }));
     if (!files.length) return;
     const batch = files.map((file, i) => {
       const parsed = parseMixName(file.name, { artist: p.artist, project: p.title });
-      const song = matchSong(p.songs, parsed.title);
+      const song = forceSong ? p.songs.find((x) => x.id === forceSong) : matchSong(p.songs, parsed.title);
       return { id: `${Date.now()}-${i}-${Math.random()}`, file, title: parsed.title || file.name.replace(/\.[^.]+$/, ''), label: parsed.label, songId: song?.id || null, state: 'waiting', status: 'Waiting…' };
     });
     setRows((rs) => [...rs, ...batch]);
@@ -439,7 +449,7 @@ function AddMixes({ p, onSaved }) {
   return (
     <div className={`panel addmixes ${hot ? 'hot' : ''}`} style={{ marginBottom: 24 }}
       onDragOver={(e) => { e.preventDefault(); setHot(true); }} onDragLeave={() => setHot(false)}
-      onDrop={(e) => { e.preventDefault(); setHot(false); pick(e.dataTransfer?.files); }}>
+      onDrop={(e) => { e.preventDefault(); e.stopPropagation(); setHot(false); pick(e.dataTransfer?.files); }}>
       <div className="row-actions" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
         <h3 style={{ margin: 0 }}>{busy ? 'Adding mixes…' : 'Mixes added'}</h3>
         <span className="row-actions">

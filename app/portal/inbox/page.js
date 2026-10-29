@@ -63,7 +63,7 @@ export default function Inbox() {
             <article key={u.id} className="ucard">
               <Cover seed={u.projects?.seed} path={u.projects?.cover_path} size={120} />
               <div style={{ minWidth: 0 }}>
-                <h3 className="up">{u.projects?.title || 'Project'}{!u.downloaded_at && <span className="new">NEW</span>}</h3>
+                <h3 className="ttl">{u.projects?.title || 'Project'}{!u.downloaded_at && <span className="new">NEW</span>}</h3>
                 <div className="m">{u.name} · {u.artist}{u.phone ? ` · ${u.phone}` : ''} · {u.email} · {ago(u.created_at)}</div>
                 {u.message && <p className="msgq">“{u.message}”</p>}
                 <ul className="songsent">

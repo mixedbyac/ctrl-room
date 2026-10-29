@@ -98,7 +98,7 @@ export default function SongMenu({ song, versions = [], project, eng, canEdit, q
             </>
           ) : (
             <>
-              <p className="spoptitle up">{song.title}</p>
+              <p className="spoptitle ttl">{song.title}</p>
               {has && <button role="menuitem" onClick={() => { shut(); onPlay ? onPlay() : isCur ? pl.toggle() : pl.play({ songId: song.id, project, queue }); }}>{isCur && pl.playing ? 'Pause' : 'Play'}</button>}
               {has && <button role="menuitem" onClick={() => { shut(); onComment?.(); }}>Add a comment</button>}
               {has && onVersions && <button role="menuitem" onClick={() => { shut(); onVersions(); }}>{versionsOpen ? 'Hide versions' : `Versions (${versions.length})`}</button>}

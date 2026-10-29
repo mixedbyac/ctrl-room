@@ -225,7 +225,7 @@ export default function Portal() {
               <Cover seed={mode === 'new' ? seed : project?.seed} path={mode === 'new' ? null : project?.cover_path} size={480} alt="Project cover" />
               {mode === 'new' && !sending && <button type="button" className="shuf" onClick={() => setSeed(Math.floor(Math.random() * 1e9))}>Shuffle cover</button>}
             </div>
-            <div><p className="sumt up">{mode === 'new' ? (autoTitle || 'Your mix') : project?.title}</p>
+            <div><p className="sumt ttl">{mode === 'new' ? (autoTitle || 'Your mix') : project?.title}</p>
               <p className="sums">{mode === 'new' ? `${autoType}${f.artist.trim() ? ` · ${f.artist.trim()}` : ''}` : project?.artist}{f.deadline ? ` · needed by ${fmtDate(f.deadline)}` : ''}</p></div>
             <ul className="sumsongs">
               {songs.map((s, i) => <li key={s.k}><span>{s.title || `Song ${i + 1}`}</span><small>{s.files.length ? `${s.files.length} · ${fmtBytes(s.files.reduce((n, x) => n + x.size, 0))}` : 'no files yet'}</small></li>)}

@@ -1126,3 +1126,16 @@ a.driftc:hover { transform: scale(1.04); }
 .invicon.ok { color: var(--ok); }
 .btn.quiet.danger { background: none; color: #ff6b7d; border-color: rgba(201,56,74,.45); } .btn.quiet.danger:hover { background: rgba(201,56,74,.12); } .adelete { margin-top: 28px; }
 .remember { display: flex; align-items: center; gap: 8px; justify-content: center; margin: 4px 0; font-size: 14px; color: var(--muted); }
+
+/* title style buttons (AA / Aa / A. / aa) and the artist picker */
+.titleinput { display: flex; align-items: center; gap: 6px; width: 100%; }
+.titleinput input { flex: 1 1 auto; min-width: 0; }
+.casebtns { display: inline-flex; flex: none; gap: 2px; padding: 2px; border-radius: 9px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); }
+.casebtns button { min-width: 30px; height: 28px; padding: 0 6px; border-radius: 7px; font-size: 12px; font-weight: 700; color: var(--muted); background: none; border: 0; cursor: pointer; letter-spacing: .02em; }
+.casebtns button:hover { color: var(--ink); background: rgba(255,255,255,.08); }
+.casebtns button[aria-pressed="true"] { color: var(--ink); background: rgba(255,255,255,.12); }
+.artistpick { display: grid; gap: 4px; justify-items: start; width: 100%; }
+.casebtns.floating { position: absolute; z-index: 5; top: calc(100% + 6px); left: 0; background: rgba(22,22,25,.96); }
+.titleedit-wrap { position: relative; }
+@media (max-width: 760px) { .casebtns button { min-width: 34px; height: 32px; } }
+.ttl { letter-spacing: -.02em; font-weight: 750; } /* song and project titles show exactly as typed (style them with AA / Aa / aa) */

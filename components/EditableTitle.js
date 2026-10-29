@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { CaseButtons } from '@/components/TitleCase';
 
 /** A big title the engineer can rename in place: tap ✎ (or double-click), Enter saves, Esc cancels. */
 export default function EditableTitle({ value, canEdit, onSave, label = 'title', className = '' }) {
@@ -11,15 +12,15 @@ export default function EditableTitle({ value, canEdit, onSave, label = 'title',
     if (!t || t === value) return setDraft(value);
     await onSave(t);
   };
-  if (!canEdit) return <h1 className={`up ${className}`}>{value}</h1>;
+  if (!canEdit) return <h1 className={`ttl ${className}`}>{value}</h1>;
   if (editing) {
-    return <h1 className={`up ${className}`}><input className="titleedit up" value={draft} autoFocus maxLength={120} aria-label={`Rename ${label}`}
+    return <h1 className={`ttl titleedit-wrap ${className}`}><CaseButtons value={draft} onChange={setDraft} className="floating" /><input className="titleedit ttl" value={draft} autoFocus maxLength={120} aria-label={`Rename ${label}`}
       onChange={(e) => setDraft(e.target.value)} onBlur={save} onFocus={(e) => e.target.select()}
       onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { setDraft(value); setEditing(false); } }} /></h1>;
   }
   const start = () => { setDraft(value); setEditing(true); };
   return (
-    <h1 className={`up titlewrap ${className}`} onDoubleClick={start}>{value}
+    <h1 className={`ttl titlewrap ${className}`} onDoubleClick={start}>{value}
       <button className="titlepen" onClick={start} aria-label={`Rename ${label}`} title={`Rename ${label}`}>✎</button>
     </h1>
   );

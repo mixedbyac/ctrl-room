@@ -1,4 +1,5 @@
 'use client';
+import { TitleInput, ArtistPicker } from '@/components/TitleCase';
 import QualityBadge from '@/components/QualityBadge';
 import VersionStack, { StackIcon } from '@/components/VersionStack';
 import { InvoicePanel, InvoiceNotice, useInvoices, lockingInvoice } from '@/components/Invoices';
@@ -192,9 +193,9 @@ export default function ProjectPage() {
                   <span className="num">{i + 1}</span><svg viewBox="0 0 24 24">{pl.current?.song?.id === s.id && pl.playing ? <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" /> : <path d="M7 4.5v15l13-7.5z" />}</svg>
                   <span className="eq"><span /><span /><span /></span></button>
                 <Link className="ropen" href={`/s/${s.id}`} onClick={(e) => { if (renaming === s.id) return e.preventDefault(); if (vs.length) { e.preventDefault(); playSong({ ...s, versions: vs }); } }}>{canEdit && renaming === s.id
-                  ? <input className="rowedit up" defaultValue={s.title} autoFocus maxLength={120} aria-label="Rename song" onClick={(e) => e.preventDefault()} onFocus={(e) => e.target.select()}
+                  ? <input className="rowedit ttl" defaultValue={s.title} autoFocus maxLength={120} aria-label="Rename song" onClick={(e) => e.preventDefault()} onFocus={(e) => e.target.select()}
                       onBlur={(e) => renameSong(s, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } if (e.key === 'Escape') { e.currentTarget.value = s.title; e.currentTarget.blur(); } }} />
-                  : <span className="t up">{s.title}</span>}<span className="rsub"><span className={`dot ${s.status}`}>{sub}</span>{last ? <span>· {shortDate(last.created_at)}</span> : null}</span></Link>
+                  : <span className="t ttl">{s.title}</span>}<span className="rsub"><span className={`dot ${s.status}`}>{sub}</span>{last ? <span>· {shortDate(last.created_at)}</span> : null}</span></Link>
                 {cols.map((c) => cell[c.k])}
                 {canEdit && (
                   <span className="rtools">
@@ -267,7 +268,7 @@ function AddSong({ p, onSaved }) {
   };
   return (
     <form className="panel inline-form" onSubmit={add} style={{ marginBottom: 24 }}>
-      <div className="fld"><label htmlFor="as-t">Song title</label><input id="as-t" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus /></div>
+      <div className="fld"><label htmlFor="as-t">Song title</label><TitleInput id="as-t" value={title} onChange={setTitle} autoFocus /></div>
       <div className="fld" style={{ flex: '0 1 200px' }}><label htmlFor="as-d">First mix due <span className="opt">optional</span></label><input id="as-d" type="date" value={eta} onChange={(e) => setEta(e.target.value)} /></div>
       <button className="btn primary">Add song</button>
       {err && <p className="ferr" style={{ width: '100%' }}>{err}</p>}
@@ -290,8 +291,8 @@ function EditProject({ p, onSaved }) {
   return (
     <form className="panel" onSubmit={save} style={{ marginBottom: 24 }}>
       <div className="two">
-        <div className="fld"><label htmlFor="ep-t">Title</label><input id="ep-t" value={f.title} onChange={set('title')} /></div>
-        <div className="fld"><label htmlFor="ep-a">Artist</label><input id="ep-a" value={f.artist} onChange={set('artist')} /></div>
+        <div className="fld"><label htmlFor="ep-t">Title</label><TitleInput id="ep-t" value={f.title} onChange={(v) => setF((x) => ({ ...x, title: v }))} /></div>
+        <div className="fld"><label htmlFor="ep-a">Artist</label><ArtistPicker id="ep-a" value={f.artist} onChange={(v) => setF((x) => ({ ...x, artist: v }))} /></div>
         <div className="fld"><label htmlFor="ep-ty">Type</label><select id="ep-ty" value={f.type} onChange={set('type')}><option>Single</option><option>EP</option><option>Album</option><option>Mixtape</option></select></div>
         <div className="fld"><label htmlFor="ep-r">Release date</label><input id="ep-r" type="date" value={f.release} onChange={set('release')} /></div>
       </div>

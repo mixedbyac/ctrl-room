@@ -1,4 +1,5 @@
 'use client';
+import { TitleInput, ArtistPicker } from '@/components/TitleCase';
 import { selectWithVersions } from '@/lib/embed';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -97,7 +98,7 @@ function EngineerHome() {
             {list.length ? list.map(({ p, s }) => (
               <Link key={s.id} className="due" href={`/s/${s.id}`}>
                 <Cover {...artOf(s, p)} size={120} />
-                <span className="dt"><b className="up">{s.title}</b><span>{p.title} · {p.artist}</span></span>
+                <span className="dt"><b className="ttl">{s.title}</b><span>{p.title} · {p.artist}</span></span>
                 <span className="dw">
                   <span className={`dot ${s.status}`}>{s.eta < today ? `Overdue · ${fmtDate(s.eta)}` : mixesOf(s.versions).length ? nextLabel(s.versions) : 'First mix'}</span>
                   <span className="dsub">{statusText(s, s.versions)}</span>
@@ -119,7 +120,7 @@ function EngineerHome() {
                 return (
                   <Link key={p.id} className="pcard" href={`/p/${p.id}`}>
                     <span className="pc-art"><span className="pc-rec" /><Cover seed={p.seed} path={p.cover_path} size={360} /></span>
-                    <b className="up">{p.title}</b>
+                    <b className="ttl">{p.title}</b>
                     <span className="pc-sub">{p.artist} · {p.type}</span>
                     <span className="pc-bar"><i style={{ width: `${n ? (ap / n) * 100 : 0}%` }} /></span>
                     <span className="pc-sub">{ap} of {n} approved{next ? ` · next due ${next === today ? 'today' : fmtDate(next)}` : ''}</span>
@@ -207,8 +208,8 @@ function NewProject({ onDone }) {
   return (
     <form className="panel" onSubmit={save} style={{ marginBottom: 20 }}>
       <div className="two">
-        <div className="fld"><label htmlFor="np-t">Project title</label><input id="np-t" value={f.title} onChange={set('title')} /></div>
-        <div className="fld"><label htmlFor="np-a">Artist</label><input id="np-a" value={f.artist} onChange={set('artist')} /></div>
+        <div className="fld"><label htmlFor="np-t">Project title</label><TitleInput id="np-t" value={f.title} onChange={(v) => setF((x) => ({ ...x, title: v }))} /></div>
+        <div className="fld"><label htmlFor="np-a">Artist</label><ArtistPicker id="np-a" value={f.artist} onChange={(v) => setF((x) => ({ ...x, artist: v }))} /></div>
         <div className="fld"><label htmlFor="np-e">Client email <span className="opt">they sign in with this</span></label><input id="np-e" type="email" value={f.client_email} onChange={set('client_email')} /></div>
         <div className="fld"><label htmlFor="np-p">Client phone <span className="opt">for texts</span></label><input id="np-p" type="tel" value={f.phone} onChange={set('phone')} /></div>
         <div className="fld"><label htmlFor="np-ty">Type</label><select id="np-ty" value={f.type} onChange={set('type')}><option>Single</option><option>EP</option><option>Album</option><option>Mixtape</option></select></div>
@@ -239,7 +240,7 @@ function ClientHome() {
               return (
                 <Link key={p.id} className="pcard" href={`/p/${p.id}`}>
                   <span className="pc-art"><span className="pc-rec" /><Cover seed={p.seed} path={p.cover_path} size={360} /></span>
-                  <b className="up">{p.title}</b>
+                  <b className="ttl">{p.title}</b>
                   <span className="pc-sub">{p.artist} · {n} song{n === 1 ? '' : 's'}</span>
                   <span className="pc-sub" style={{ color: rv ? 'var(--sig)' : undefined }}>{rv ? `${rv} mix${rv > 1 ? 'es' : ''} ready for you` : 'In the works'}</span>
                 </Link>

@@ -1,4 +1,5 @@
 'use client';
+import { CaseButtons } from '@/components/TitleCase';
 import QualityBadge from '@/components/QualityBadge';
 import InlineText from '@/components/InlineText';
 import CommentList from '@/components/Comments';
@@ -580,14 +581,14 @@ function SongTitle({ song, eng, viaAdmin, reload }) {
     else await supabase().from('songs').update({ title: t }).eq('id', song.id);
     reload();
   };
-  if (!eng) return <h1 className="up">{song.title}</h1>;
+  if (!eng) return <h1 className="ttl">{song.title}</h1>;
   if (editing) {
-    return <h1 className="up"><input className="titleedit up" value={draft} autoFocus maxLength={120} aria-label="Song title"
+    return <h1 className="ttl titleedit-wrap"><CaseButtons value={draft} onChange={setDraft} className="floating" /><input className="titleedit ttl" value={draft} autoFocus maxLength={120} aria-label="Song title"
       onChange={(e) => setDraft(e.target.value)} onBlur={save}
       onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { setDraft(song.title); setEditing(false); } }} /></h1>;
   }
   return (
-    <h1 className="up titlewrap">{song.title}
+    <h1 className="ttl titlewrap">{song.title}
       <button className="titlepen" onClick={() => { setDraft(song.title); setEditing(true); }} aria-label="Rename song" title="Rename song">✎</button>
     </h1>
   );

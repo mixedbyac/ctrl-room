@@ -133,7 +133,7 @@ export default function SharedListen() {
           </div>
           <div className="linfo">
             <p className="leyebrow">{data.kind === 'song' ? `${p.title} · ${p.type}` : `${p.type}${p.release ? ` · ${new Date(p.release + 'T12:00').getFullYear()}` : ''}`}</p>
-            <h1 className="up">{data.kind === 'song' ? cur?.title || 'Nothing to play yet' : p.title}</h1>
+            <h1 className="ttl">{data.kind === 'song' ? cur?.title || 'Nothing to play yet' : p.title}</h1>
             <div className="lartist">{ar?.image_url && <img src={ar.image_url} alt="" />}<span>{name}</span>{cur && <QualityBadge v={cur.version} size="md" />}</div>
             {cur ? <>
               {data.kind === 'project' && <p className="lnow">{playing ? 'Playing' : 'Up'}: <b>{cur.title}</b></p>}

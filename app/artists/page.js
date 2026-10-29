@@ -87,7 +87,7 @@ function Artists() {
           <section className="asec"><h2 className="h2 up">Working on</h2><div className="duelist">
             {st.live.length ? [...st.live].sort((x, y) => (x.s.eta || '9').localeCompare(y.s.eta || '9')).map(({ p, s }) => (
               <Link key={s.id} className="due" href={`/s/${s.id}`}><Cover {...artOf(s, p)} size={120} />
-                <span className="dt"><b className="up">{s.title}</b><span>{p.title} · {p.type}</span></span>
+                <span className="dt"><b className="ttl">{s.title}</b><span>{p.title} · {p.type}</span></span>
                 <span className="dw"><span className={`dot ${s.status}`}>{statusText(s, s.versions)}</span><span className="dsub">{s.eta ? `Due ${s.eta === today ? 'today' : fmtDate(s.eta)}` : 'No due date'}</span></span>
                 <span className="chev" aria-hidden="true">›</span></Link>
             )) : <p className="emptyday">Nothing in progress. Every song is signed off.</p>}
@@ -95,7 +95,7 @@ function Artists() {
           <section className="asec"><h2 className="h2 up">Projects</h2><div className="shelf">
             {artist.projects.map((p) => { const n = p.songs?.length || 0, ap = (p.songs || []).filter((s) => s.status === 'approved').length;
               return <Link key={p.id} className="pcard" href={`/p/${p.id}`}><span className="pc-art"><span className="pc-rec" /><Cover seed={p.seed} path={p.cover_path} size={360} /></span>
-                <b className="up">{p.title}</b><span className="pc-sub">{p.type}{p.release ? ` · out ${fmtDate(p.release)}` : ''}</span>
+                <b className="ttl">{p.title}</b><span className="pc-sub">{p.type}{p.release ? ` · out ${fmtDate(p.release)}` : ''}</span>
                 <span className="pc-bar"><i style={{ width: `${n ? (ap / n) * 100 : 0}%` }} /></span><span className="pc-sub">{ap} of {n} approved</span></Link>; })}
           </div></section>
           {eng && <ArtistTeam artist={artist.name} projects={artist.projects} />}

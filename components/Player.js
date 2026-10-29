@@ -374,7 +374,7 @@ function NowPlaying() {
         <Cover as="div" {...artOf(c.song, c.project)} size={900} className="npsquare" />
         <div className="nphead">
           <div className="nphead-t">
-            <h2 className="up">{c.song.title}</h2>
+            <h2 className="ttl">{c.song.title}</h2>
             <p className="npsub">{c.project.artist} · {c.project.title}</p>
           </div>
           <button className="npcomment" onClick={() => { setPinAt(pl.time); setComposing(true); }} aria-label="Add a comment at this moment">

@@ -1,4 +1,5 @@
 'use client';
+import { TitleInput, ArtistPicker, CASES } from '@/components/TitleCase';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
@@ -120,12 +121,19 @@ export default function QuickDrop({ projects, onDone }) {
 
       {groups.length > 0 && (
         <div className="panel" style={{ marginTop: 12 }}>
+          {!busy && (
+            <div className="row-actions small muted" style={{ alignItems: 'center' }}>Style every title:
+              <span className="casebtns" role="group" aria-label="Style every title">
+                {CASES.map((c) => <button key={c.k} type="button" title={c.title} onClick={() => setGroups((gs) => gs.map((g) => ({ ...g, title: c.fn(g.title), files: g.files.map((f) => (f.state === 'ready' ? { ...f, title: c.fn(f.title) } : f)) })))}>{c.label}</button>)}
+              </span>
+            </div>
+          )}
           {groups.map((g, gi) => {
             const options = projects.filter((p) => !p.archived && (!g.artist || norm(p.artist) === norm(g.artist)));
             return (
               <div key={g.key} style={{ display: 'grid', gap: 10, paddingBottom: 14, borderBottom: '1px solid var(--line)' }}>
                 <div className="two">
-                  <div className="fld"><label>Artist</label><input value={g.artist} disabled={busy} onChange={(e) => setGroup(gi, { artist: e.target.value })} placeholder="Who's it for?" /></div>
+                  <div className="fld"><label>Artist</label><ArtistPicker value={g.artist} disabled={busy} extra={knownArtists} onChange={(v) => setGroup(gi, { artist: v })} /></div>
                   <div className="fld"><label>Project</label>
                     <select value={g.target} disabled={busy} onChange={(e) => setGroup(gi, { target: e.target.value })}>
                       <option value="new">New project</option>
@@ -134,7 +142,7 @@ export default function QuickDrop({ projects, onDone }) {
                 </div>
                 {g.target === 'new' && (
                   <div className="two">
-                    <div className="fld"><label>New project title</label><input value={g.title} disabled={busy} onChange={(e) => setGroup(gi, { title: e.target.value })} /></div>
+                    <div className="fld"><label>New project title</label><TitleInput value={g.title} disabled={busy} onChange={(v) => setGroup(gi, { title: v })} /></div>
                     <div className="fld"><label>Type</label><select value={g.type} disabled={busy} onChange={(e) => setGroup(gi, { type: e.target.value })}><option>Single</option><option>EP</option><option>Album</option><option>Mixtape</option></select></div>
                   </div>
                 )}
@@ -143,7 +151,7 @@ export default function QuickDrop({ projects, onDone }) {
                     <li key={fi} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr) 64px', gap: 10, alignItems: 'center' }}>
                       <span className="small muted" style={{ overflowWrap: 'anywhere' }}>{f.file.name}</span>
                       {f.state === 'ready'
-                        ? <input className="sinput" value={f.title} onChange={(e) => setFile(gi, fi, { title: e.target.value })} aria-label="Song title" />
+                        ? <TitleInput className="sinput" value={f.title} onChange={(v) => setFile(gi, fi, { title: v })} ariaLabel="Song title" />
                         : <span className="small" style={{ color: f.state === 'error' ? 'var(--warn)' : f.state === 'done' ? 'var(--ok)' : 'var(--muted)' }}>{f.status}</span>}
                       <span className="mono small">{f.label || 'next'}{f.note ? ` · ${f.note}` : ''}</span>
                     </li>

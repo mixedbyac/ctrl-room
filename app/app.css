@@ -1780,3 +1780,4 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .sidelinks { display: grid; gap: 0; padding: 0 0 0 8px; }
 .sidelinks a, .sidelinks button { display: block; text-align: left; padding: 6px 8px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--muted); background: none; border: 0; cursor: pointer; text-decoration: none; }
 .sidelinks a:hover, .sidelinks button:hover { color: var(--ink); background: var(--s1); }
+.settabs { margin: 0 0 22px; } @media (min-width: 901px) { .settabs { justify-content: flex-start; } } .setsec { display: grid; gap: 0; }

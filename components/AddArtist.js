@@ -38,7 +38,7 @@ export default function AddArtist({ onDone }) {
       <div className="row-actions"><button className="btn primary small" disabled={busy}>{busy ? 'Adding…' : f.emails.trim() ? 'Add & send invite' : 'Add artist'}</button></div>
       {res && (
         <div className="aaresults">
-          <p className="toast-inline" style={{ margin: 0 }}>{res.artist} added.{!res.email ? ' Emails aren’t set up yet, so copy each invite link and text it (see Security › Email invites).' : ''}</p>
+          <p className="toast-inline" style={{ margin: 0 }}>{res.artist} added.{!res.email ? ' Emails aren’t set up yet, so copy each invite link and text it (see Settings › Studio).' : ''}</p>
           {res.results.map((r) => (
             <div key={r.email} className="share-link">
               <span><b>{r.email}</b> · {say(r)}{r.texted ? ' · texted' : ''}{r.verified ? ' · ✓ Verified' : ''}{r.message ? `. ${r.message}` : ''}</span>

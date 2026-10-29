@@ -3,9 +3,20 @@ import { useEffect, useState } from 'react';
 import { supabase, api } from '@/lib/supabase';
 import { ENGINEER_KINDS, CLIENT_KINDS, prefOf } from '@/lib/notify';
 import { useApp, TopBar } from '@/components/AppShell';
+import ProfileForm from '@/components/ProfileForm';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function SecurityPage() {
+export default function SettingsPage() { return <Suspense fallback={null}><Settings /></Suspense>; }
+
+function Settings() {
   const { session, eng } = useApp();
+  const router = useRouter();
+  const params = useSearchParams();
+  const tabs = [['profile', eng ? 'Profile' : 'Account'], ['notifications', 'Notifications'], ['security', 'Security'], ...(eng ? [['studio', 'Studio']] : [])];
+  const hashTab = typeof window !== 'undefined' && window.location.hash === '#notifications' ? 'notifications' : null;
+  const tab = tabs.some(([k]) => k === params.get('tab')) ? params.get('tab') : hashTab || 'profile';
+  const go = (k) => router.replace(`/settings?tab=${k}`, { scroll: false });
   const [factors, setFactors] = useState(null);
   const [enroll, setEnroll] = useState(null); // { id, qr, secret }
   const [code, setCode] = useState('');
@@ -52,9 +63,15 @@ export default function SecurityPage() {
   const on = factors && factors.length > 0;
   return (
     <>
-      <TopBar crumbs={[{ label: 'Home', href: '/' }, { label: 'Security' }]} />
+      <TopBar crumbs={[{ label: 'Home', href: '/' }, { label: 'Settings' }]} />
       <section className="page">
-        <div className="hhead"><h1 className="up">Security</h1><p className="lede">Keep your account, and your music, locked to you.</p></div>
+        <div className="hhead"><h1 className="up">Settings</h1></div>
+        <div className="npdtabs settabs" role="tablist" aria-label="Settings">
+          {tabs.map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => go(k)}>{l}</button>)}
+        </div>
+        {tab === 'profile' && (eng ? <ProfileForm /> : <AccountBasics session={session} />)}
+        {tab === 'notifications' && <NotifySettings eng={eng} session={session} />}
+        {tab === 'security' && <>
         <div className="panel secpanel">
           <div className="shrow">
             <span><b>Two-step verification</b><span className="muted small">{on ? 'On. Signing in also needs a code from your authenticator app.' : 'Off. Turn it on so a stolen password isn’t enough to get in.'}</span></span>
@@ -82,7 +99,11 @@ export default function SecurityPage() {
           ))}
           {msg && <p className="toast-inline" style={{ margin: 0 }}>{msg}</p>}
         </div>
-        {eng && (
+        <RememberedDevices />
+        <ProtectionInfo eng={eng} />
+        </>}
+        {tab === 'studio' && eng && <>
+        {(
           <div className="panel secpanel">
             <div className="shrow"><span><b>Daily check</b><span className="muted small">Every morning CTRL ROOM checks the database, music storage, sign-in, Dropbox and email, and emails you if something breaks.</span></span>
               {health && <span className={`secbadge ${health.ok ? 'on' : ''}`}>{health.ok ? 'ALL GOOD' : 'PROBLEM'}</span>}</div>
@@ -92,22 +113,10 @@ export default function SecurityPage() {
                   <li className="when"><small>Last checked {new Date(health.at).toLocaleString()}</small></li></ul>}
           </div>
         )}
-        <NotifySettings eng={eng} session={session} />
-        <RememberedDevices />
-        {eng && <EmailSetup />}
-        {eng && <Engineers />}
-        {eng && <LoginCovers />}
-        <div className="panel secpanel">
-          <b>How your music is protected</b>
-          <ul className="seclist">
-            <li>Mixes are stored privately. Every play uses a link that expires, made only for people on that project.</li>
-            <li>Other artists can never see your projects. The database checks this on every request, not just the website.</li>
-            <li>New accounts confirm their email before any project unlocks.</li>
-            <li>Share links only play the current mix, never notes or other versions, and {eng ? 'you can turn them off or reset them' : 'your engineer can turn them off'} any time.</li>
-            <li>Everything travels encrypted (HTTPS), and the site blocks being embedded or scripted by other sites.</li>
-          </ul>
-          <a className="link small" href="/protect">Read how CTRL ROOM protects your music ›</a>
-        </div>
+        <EmailSetup />
+        <Engineers />
+        <LoginCovers />
+        </>}
       </section>
     </>
   );
@@ -161,6 +170,43 @@ function NotifySettings({ eng, session }) {
       </div>
       {msg && <p className="toast-inline" style={{ margin: 0 }}>{msg}</p>}
     </div>
+  );
+}
+
+function ProtectionInfo({ eng }) {
+  return (
+<div className="panel secpanel">
+      <b>How your music is protected</b>
+      <ul className="seclist">
+        <li>Mixes are stored privately. Every play uses a link that expires, made only for people on that project.</li>
+        <li>Other artists can never see your projects. The database checks this on every request, not just the website.</li>
+        <li>New accounts confirm their email before any project unlocks.</li>
+        <li>Share links only play the current mix, never notes or other versions, and {eng ? 'you can turn them off or reset them' : 'your engineer can turn them off'} any time.</li>
+        <li>Everything travels encrypted (HTTPS), and the site blocks being embedded or scripted by other sites.</li>
+      </ul>
+      <a className="link small" href="/protect">Read how CTRL ROOM protects your music ›</a>
+    </div>
+  );
+}
+
+/** Artists: your name and email. */
+function AccountBasics({ session }) {
+  const [name, setName] = useState(session?.user?.user_metadata?.name || '');
+  const [msg, setMsg] = useState('');
+  const verified = !session?.user?.app_metadata?.needs_verify;
+  const save = async (e) => {
+    e.preventDefault();
+    const { error } = await supabase().auth.updateUser({ data: { name: name.trim() } });
+    setMsg(error ? error.message : 'Saved.');
+  };
+  return (
+    <form className="panel secpanel" onSubmit={save}>
+      <b>Your account</b>
+      <div className="fld"><label htmlFor="ac-n">Your name</label><input id="ac-n" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" /></div>
+      <div className="fld"><label>Email</label><input value={session?.user?.email || ''} disabled /><span className="muted small">{verified ? '✓ Verified' : 'Not confirmed yet'}</span></div>
+      <div className="row-actions"><button className="btn small primary">Save</button></div>
+      {msg && <p className="toast-inline" style={{ margin: 0 }}>{msg}</p>}
+    </form>
   );
 }
 

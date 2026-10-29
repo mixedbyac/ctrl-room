@@ -11,7 +11,7 @@ export default function SideMe({ session, eng, signOut }) {
   const verified = eng ? !!prof?.verified || !!session.user.email_confirmed_at : !session.user.app_metadata?.needs_verify;
   return (
     <div className="sideme">
-      <Link href={eng ? '/profile' : '/security'} className="sidemecard" title={eng ? 'Your profile' : 'Your account'}>
+      <Link href="/settings" className="sidemecard" title="Settings">
         <span className="sideav">{prof?.photo_url ? <img src={prof.photo_url} alt="" /> : (name[0] || '?').toUpperCase()}</span>
         <span className="sidewho">
           <b>{name}{verified && <BlueCheck title="Verified" />}</b>
@@ -20,8 +20,7 @@ export default function SideMe({ session, eng, signOut }) {
         </span>
       </Link>
       <nav className="sidelinks">
-        {eng && <Link href="/profile">Your profile</Link>}
-        <Link href="/security">Security</Link>
+        <Link href="/settings">Settings</Link>
         <button type="button" onClick={signOut}>Sign out</button>
       </nav>
     </div>

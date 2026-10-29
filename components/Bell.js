@@ -61,7 +61,7 @@ export default function Bell() {
       </button>
       {open && (
         <div className="bellpop" role="dialog" aria-label="Notifications">
-          <div className="bellhead"><b>Notifications</b><Link href="/security#notifications" onClick={() => setOpen(false)}>Settings</Link></div>
+          <div className="bellhead"><b>Notifications</b><Link href="/settings?tab=notifications" onClick={() => setOpen(false)}>Settings</Link></div>
           <div className="belllist">
             {items.length ? items.map((x) => (
               <Link key={x.id} href={x.href} className={`bellitem ${seen && x.at <= seen ? '' : 'new'}`} onClick={() => setOpen(false)}>

@@ -53,7 +53,8 @@ export default function SharedListen() {
   const [quick, setQuick] = useState(null); // phone mini player comment: { at, body, name }
   const [quickMsg, setQuickMsg] = useState('');
   useEffect(() => { const on = (e) => setCanComment(!!e.detail?.enabled); window.addEventListener('ctrl-room:link-comments', on); return () => window.removeEventListener('ctrl-room:link-comments', on); }, []);
-  const [allSongs, setAllSongs] = useState(false); // long projects: show the first few songs so comments stay close // big player scrolled away: show the mini bar
+  const [allSongs, setAllSongs] = useState(false);
+  const openQuick = (at) => setQuick({ at, body: '', name: (() => { try { return localStorage.getItem('ctrl-room:guest-name') || ''; } catch { return ''; } })() }); // long projects: show the first few songs so comments stay close // big player scrolled away: show the mini bar
   const mainRef = useRef(null);
   const [time, setTime] = useState(0);
   const [dur, setDur] = useState(0);
@@ -173,13 +174,20 @@ export default function SharedListen() {
               {data.kind === 'project' && <p className="lnow">{playing ? 'Playing' : 'Up'}: <b>{cur.title}</b></p>}
               <div><Wave peaks={cur.version.peaks} time={time} duration={dur} onSeek={seek} />
                 <div className="nptimes mono"><span>{mmss(time)}</span><span>{cur.approved ? 'Final mix' : 'Mix in progress'}</span><span>{mmss(dur)}</span></div></div>
+              {canComment && <button className="lcommentbtn" onClick={() => { if (!playing) toggle(); openQuick(time); }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-7l-4 3v-3H5a1 1 0 01-1-1V6a1 1 0 011-1z" /></svg>Comment at {mmss(time)}</button>}
             </> : <p className="muted">There’s nothing to play here yet.</p>}
               {data.kind === 'project' && songs.length > 1 && (
                 <ol className="ltracks">
                   {songs.map((s, i) => (allSongs || songs.length <= 7 || i < 6 || i === idx) && (
                     <li key={s.id}><button className={`${i === idx ? 'on' : ''} ${i === idx && playing ? 'live' : ''}`} onClick={() => pick(i)} aria-label={i === idx && playing ? `Pause ${s.title}` : `Play ${s.title}`}>
                       <span className="mono ln"><span className="lnum">{i + 1}</span><svg viewBox="0 0 24 24" aria-hidden="true">{i === idx && playing ? PAUSE : PLAY}</svg></span>
-                      <span className="lt">{s.title}{s.approved && <em className="lfinal">Final</em>}</span><span className="mono muted">{mmss(s.version.duration || 0)}</span>
+                      <span className="lt">{s.title}{s.approved && <em className="lfinal">Final</em>}</span>
+                      {canComment && <span className="lrowc" role="button" tabIndex={0} aria-label={`Comment on ${s.title}`} title="Comment on this song"
+                        onClick={(e) => { e.stopPropagation(); if (i !== idx) pick(i); else if (!playing) toggle(); openQuick(i === idx ? time : 0); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); e.currentTarget.click(); } }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-7l-4 3v-3H5a1 1 0 01-1-1V6a1 1 0 011-1z" /></svg></span>}
+                      <span className="mono muted">{mmss(s.version.duration || 0)}</span>
                     </button></li>
                   ))}
                 </ol>
@@ -210,18 +218,18 @@ export default function SharedListen() {
         <p className="lfoot">Shared privately with CTRL ROOM. Please don’t repost unreleased music.</p>
         <PoweredBy />
       </div>
-      {cur && mainGone && (
+      {cur && (mainGone || quick) && (
         <div className={`lmini ${playing ? 'playing' : ''}`} role="region" aria-label="Now playing">
           <button className="lminiart" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="Back to the player"><Art src={cur.cover || p.cover} seed={cur.seed ?? p.seed} size={120} className="lminiimg" /></button>
           <span className="lminit"><b>{cur.title}</b><span>{name}</span></span>
           <button className="lminibtn" onClick={toggle} aria-label={playing ? 'Pause' : 'Play'}><svg viewBox="0 0 24 24">{playing ? PAUSE : PLAY}</svg></button>
-          {canComment && <button className={`lminibtn ${quick ? 'on' : ''}`} onClick={() => setQuick(quick ? null : { at: time, body: '', name: (() => { try { return localStorage.getItem('ctrl-room:guest-name') || ''; } catch { return ''; } })() })} aria-label="Comment at this moment">
+          {canComment && <button className={`lminibtn ${quick ? 'on' : ''}`} onClick={() => (quick ? setQuick(null) : openQuick(time))} aria-label="Comment at this moment">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ fill: 'none' }}><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-7l-4 3v-3H5a1 1 0 01-1-1V6a1 1 0 011-1z" /></svg></button>}
           {songs.length > 1 && idx < songs.length - 1 && <button className="lminibtn" onClick={() => pick(idx + 1)} aria-label="Next song"><svg viewBox="0 0 24 24"><path d="M13 12L4 5.5v13zM22 12l-9-6.5v13z" /></svg></button>}
           <span className="lminiprog" style={{ width: `${dur ? Math.min(100, (time / dur) * 100) : 0}%` }} />
         </div>
       )}
-      {cur && mainGone && quick && (
+      {cur && quick && (
         <div className="lquick" role="dialog" aria-label={`Comment on ${cur.title}`}>
           {!quick.name && <input className="lqname" placeholder="Your name" value={quick.nameDraft || ''} onChange={(e) => setQuick({ ...quick, nameDraft: e.target.value })} maxLength={40} aria-label="Your name" />}
           <div className="lqrow">

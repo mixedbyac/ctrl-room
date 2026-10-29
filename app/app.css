@@ -1695,3 +1695,19 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .lqmsg, .lqtoast { margin: 0; font-size: 12.5px; color: rgba(255,255,255,.7); }
 .lqtoast { position: fixed; z-index: 41; left: 50%; transform: translateX(-50%); bottom: calc(86px + env(safe-area-inset-bottom, 0px)); background: rgba(28,28,31,.95); padding: 8px 14px; border-radius: 999px; }
 @media (min-width: 901px) { .lquick, .lqtoast { display: none !important; } }
+
+/* share links: comment from the player everywhere (phones and computers) */
+@media (min-width: 901px) {
+  .lmini { display: flex !important; }
+  .lquick { display: grid !important; }
+  .lqtoast { display: block !important; }
+  .lpage .lcomments .composer { display: none; } /* write comments from the player instead */
+}
+.ltracks button { grid-template-columns: 34px minmax(0, 1fr) auto auto; }
+.lrowc { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; color: rgba(255,255,255,.5); cursor: pointer; }
+.lrowc svg { width: 17px; height: 17px; }
+.lrowc:hover { color: var(--sig); background: rgba(245,213,71,.1); }
+.lcommentbtn { justify-self: start; display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,.14); background: none; color: rgba(255,255,255,.8); font-size: 13.5px; font-weight: 650; cursor: pointer; }
+.lcommentbtn svg { width: 16px; height: 16px; }
+.lcommentbtn:hover { color: var(--sig); border-color: rgba(245,213,71,.45); }
+@media (max-width: 900px) { .lcommentbtn { justify-self: center; } }

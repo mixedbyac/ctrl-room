@@ -4,6 +4,35 @@ export const runtime = 'nodejs';
 const SQL = 'Engineer profiles need a quick database update: run supabase/019_engineer_profiles.sql in Supabase.';
 const clean = (v, n) => (v == null ? null : String(v).trim().slice(0, n) || null);
 
+const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
+async function grab(url, headers = {}) {
+  const r = await fetch(url, { headers: { 'User-Agent': UA, ...headers }, redirect: 'follow' }).catch(() => null);
+  const type = r?.headers.get('content-type') || '';
+  if (!r || !r.ok || !/^image\//.test(type)) return null;
+  const buf = Buffer.from(await r.arrayBuffer());
+  return buf.length > 500 ? { buf, type: type.split(';')[0] } : null;
+}
+/** A public Instagram account's profile picture, trying a few routes (Instagram blocks some servers). */
+async function instagramPicture(handle) {
+  // 1) Instagram's own web profile data
+  try {
+    const r = await fetch(`https://i.instagram.com/api/v1/users/web_profile_info/?username=${encodeURIComponent(handle)}`, { headers: { 'User-Agent': UA, 'x-ig-app-id': '936619743392459', Accept: 'application/json' } });
+    if (r.ok) {
+      const j = await r.json();
+      const u = j?.data?.user?.profile_pic_url_hd || j?.data?.user?.profile_pic_url;
+      if (u) { const img = await grab(u); if (img) return img; }
+    }
+  } catch {}
+  // 2) the profile page's preview image
+  try {
+    const html = await fetch(`https://www.instagram.com/${encodeURIComponent(handle)}/`, { headers: { 'User-Agent': UA, 'Accept-Language': 'en-US' } }).then((r) => (r.ok ? r.text() : ''));
+    const m = html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i) || html.match(/content="([^"]+)"[^>]+property="og:image"/i);
+    if (m) { const img = await grab(m[1].replace(/&amp;/g, '&')); if (img) return img; }
+  } catch {}
+  // 3) unavatar (a public avatar service)
+  return grab(`https://unavatar.io/instagram/${encodeURIComponent(handle)}?fallback=false`);
+}
+
 // Engineer profile. { action: 'get' } your own · { action: 'save', full_name, display_name, credit, roles, bio, photo_url }
 export async function POST(req) {
   const { user, why } = await engineerFrom(req);
@@ -28,10 +57,14 @@ export async function POST(req) {
     } else {
       const handle = String(b.handle || '').trim().replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/^@/, '').replace(/[/?#].*$/, '');
       if (!/^[a-z0-9._]{1,30}$/i.test(handle)) return fail('That doesn’t look like an Instagram username.');
-      // unavatar fetches the public Instagram profile picture
-      url = `https://unavatar.io/instagram/${handle}?fallback=false`;
-      const chk = await fetch(url, { method: 'GET', redirect: 'follow' }).catch(() => null);
-      if (!chk || !chk.ok || !/^image\//.test(chk.headers.get('content-type') || '')) return fail('Couldn’t get that Instagram picture (the account may be private). Upload a photo instead.');
+      // grab the public profile picture and keep our own copy (Instagram's picture links expire)
+      const img = await instagramPicture(handle);
+      if (!img) return fail('Instagram didn’t hand over the picture right now (it often blocks automatic requests). Upload a photo instead, or try again in a bit.');
+      const ext = /png/.test(img.type) ? 'png' : /webp/.test(img.type) ? 'webp' : 'jpg';
+      const path = `engineers/${email.replace(/[^a-z0-9]+/g, '-')}/instagram-${Date.now()}.${ext}`;
+      const up = await db.storage.from('art').upload(path, img.buf, { contentType: img.type, upsert: true });
+      if (up.error) return fail(up.error.message, 500);
+      url = db.storage.from('art').getPublicUrl(path).data.publicUrl;
       b.instagram = handle;
     }
     const { data: cur } = await db.from('engineer_profiles').select('*').eq('email', email).maybeSingle();

@@ -40,6 +40,11 @@ export default function ProjectPage() {
   const [stacks, setStacks] = useState({}); // song id -> open
   const [fileOver, setFileOver] = useState(null); // song row a file is being dragged over
   const [pageOver, setPageOver] = useState(false);
+  const [selecting, setSelecting] = useState(false);
+  const [sel, setSel] = useState(() => new Set());
+  const [selMsg, setSelMsg] = useState('');
+  const [selBusy, setSelBusy] = useState(false);
+  const toggleSel = (sid) => setSel((x) => { const n = new Set(x); n.has(sid) ? n.delete(sid) : n.add(sid); return n; });
   const [noteCounts, setNoteCounts] = useState({});
   const toggleStack = (sid) => setStacks((x) => ({ ...x, [sid]: !x[sid] }));
   const renameSong = async (song, raw) => {
@@ -124,6 +129,34 @@ export default function ProjectPage() {
     if (pl.current?.song?.id !== s.id) await pl.play({ songId: s.id, project: p, queue });
     pl.openComment();
   };
+  // select songs: approve them all (client or engineer) or delete them (engineer)
+  const pickedSongs = p.songs.filter((x) => sel.has(x.id));
+  const approvable = pickedSongs.map((x) => ({ s: x, v: currentMix(x, x.versions || []) })).filter(({ s: x, v }) => v && !/^demo/i.test(v.label) && !(x.status === 'approved' && x.approved_version === v.id));
+  const approveSelected = async () => {
+    if (!approvable.length) return setSelMsg('Nothing to approve in what you picked (it’s already approved, or there’s no mix yet).');
+    if (!window.confirm(`Approve ${approvable.length} song${approvable.length > 1 ? 's' : ''} as final? ${approvable.map(({ s: x, v }) => `${x.title} ${v.label}`).join(', ')}`)) return;
+    setSelBusy(true); setSelMsg('');
+    let ok = 0, bad = [];
+    for (const { s: x, v } of approvable) {
+      const { error } = await supabase().rpc('approve_version', { p_song: x.id, p_version: v.id });
+      if (error) bad.push(`${x.title}: ${error.message}`); else ok++;
+    }
+    setSelBusy(false); setSel(new Set()); setSelecting(false);
+    setSelMsg(bad.length ? `Approved ${ok}. Couldn’t approve ${bad.join('; ')}` : `Approved ${ok} song${ok > 1 ? 's' : ''}. Your engineer has been told.`);
+    load();
+  };
+  const deleteSelected = async () => {
+    if (!pickedSongs.length) return;
+    if (!window.confirm(`Delete ${pickedSongs.length} song${pickedSongs.length > 1 ? 's' : ''} for good? Every version, note and file goes too. ${pickedSongs.map((x) => x.title).join(', ')}`)) return;
+    setSelBusy(true); setSelMsg('');
+    const sb = supabase();
+    const paths = pickedSongs.flatMap((x) => (x.versions || []).map((v) => v.storage_path).filter(Boolean));
+    if (paths.length) await sb.storage.from('mixes').remove(paths).catch(() => {});
+    const { error } = await sb.from('songs').delete().in('id', pickedSongs.map((x) => x.id));
+    setSelBusy(false); setSel(new Set()); setSelecting(false);
+    setSelMsg(error ? error.message : `Deleted ${pickedSongs.length} song${pickedSongs.length > 1 ? 's' : ''}.`);
+    load();
+  };
   const projectPlaying = pl.playing && pl.current?.project?.id === p.id;
   const crumbs = eng ? [{ label: 'Home', href: '/' }, { label: p.title }] : [{ label: 'Projects', href: '/' }, { label: p.title }];
 
@@ -166,7 +199,25 @@ export default function ProjectPage() {
 
         {p.songs.length > 0 && <TrackStats songs={p.songs} eng={eng} onMeasured={load} />}
         {p.songs.length > 0 && <ColumnPicker cols={availCols} shown={shownCols} onChange={saveCols} />}
-        <div className="rows dyn" style={{ '--tpl': tpl }}>
+        {p.songs.length > 0 && (
+          <div className={`selbar ${selecting ? 'on' : ''}`}>
+            {!selecting ? (
+              <button className="btn small quiet" onClick={() => { setSelecting(true); setSelMsg(''); }}>Select</button>
+            ) : (
+              <>
+                <label className="selall"><input type="checkbox" checked={sel.size === p.songs.length} ref={(el) => { if (el) el.indeterminate = sel.size > 0 && sel.size < p.songs.length; }}
+                  onChange={(e) => setSel(e.target.checked ? new Set(p.songs.map((x) => x.id)) : new Set())} /> {sel.size ? `${sel.size} selected` : 'Select all'}</label>
+                <span className="selacts">
+                  <button className="btn small primary" disabled={!sel.size || selBusy} onClick={approveSelected}>{selBusy ? '…' : `Approve${sel.size ? ` ${sel.size}` : ''}`}</button>
+                  {eng && <button className="btn small danger" disabled={!sel.size || selBusy} onClick={deleteSelected}>Delete{sel.size ? ` ${sel.size}` : ''}</button>}
+                  <button className="btn small quiet" onClick={() => { setSelecting(false); setSel(new Set()); }}>Cancel</button>
+                </span>
+              </>
+            )}
+            {selMsg && <span className="toast-inline selmsg">{selMsg}</span>}
+          </div>
+        )}
+        <div className={`rows dyn ${selecting ? 'selecting' : ''}`} style={{ '--tpl': tpl }}>
           {p.songs.length > 0 && (
             <div className="rowhead" aria-hidden="true">
               <span>#</span><span>Title</span>
@@ -195,10 +246,12 @@ export default function ProjectPage() {
                 onDragStart={(e) => { if (!canEdit) return; dragSong.current = s.id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', s.id); }}
                 onDragOver={(e) => { if (dragSong.current) { e.preventDefault(); setDragOver(s.id); } else if (eng && [...(e.dataTransfer?.types || [])].includes('Files')) { e.preventDefault(); e.stopPropagation(); setFileOver(s.id); setPageOver(false); } }} onDragLeave={() => { setDragOver((x) => (x === s.id ? null : x)); setFileOver((x) => (x === s.id ? null : x)); }}
                 onDrop={(e) => { if (dragSong.current) { e.preventDefault(); onDropRow(s.id); } else if (eng && e.dataTransfer?.files?.length) { e.preventDefault(); e.stopPropagation(); setFileOver(null); setPageOver(false); window.dispatchEvent(new CustomEvent('ctrl-room:add-mixes', { detail: { files: [...e.dataTransfer.files], songId: s.id } })); } }} onDragEnd={() => { dragSong.current = null; setDragOver(null); }}><div className={`row ${vs.length ? '' : 'nomix'} ${stacks[s.id] ? 'stackopen' : ''} ${pl.current?.song?.id === s.id ? 'cur' : ''} ${pl.current?.song?.id === s.id && pl.playing ? 'live' : ''}`} style={{ '--i': i }}>
-                <button className="rplay" onClick={() => vs.length && playSong({ ...s, versions: vs })} disabled={!vs.length} aria-label={vs.length ? `Play ${s.title}` : 'No mix yet'}>
+                {selecting ? (
+                  <label className="rcheck"><input type="checkbox" checked={sel.has(s.id)} onChange={() => toggleSel(s.id)} aria-label={`Select ${s.title}`} /></label>
+                ) : <button className="rplay" onClick={() => vs.length && playSong({ ...s, versions: vs })} disabled={!vs.length} aria-label={vs.length ? `Play ${s.title}` : 'No mix yet'}>
                   <span className="num">{i + 1}</span><svg viewBox="0 0 24 24">{pl.current?.song?.id === s.id && pl.playing ? <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" /> : <path d="M7 4.5v15l13-7.5z" />}</svg>
-                  <span className="eq"><span /><span /><span /></span></button>
-                <Link className="ropen" href={`/s/${s.id}`} onClick={(e) => { if (renaming === s.id) return e.preventDefault(); if (vs.length) { e.preventDefault(); playSong({ ...s, versions: vs }); } }}>{canEdit && renaming === s.id
+                  <span className="eq"><span /><span /><span /></span></button>}
+                <Link className="ropen" href={`/s/${s.id}`} onClick={(e) => { if (selecting) { e.preventDefault(); toggleSel(s.id); return; } if (renaming === s.id) return e.preventDefault(); if (vs.length) { e.preventDefault(); playSong({ ...s, versions: vs }); } }}>{canEdit && renaming === s.id
                   ? <RowRename song={s} onDone={(t) => renameSong(s, t)} />
                   : <span className="t ttl">{s.title}</span>}<span className="rsub"><span className={`dot ${s.status}`}>{sub}</span>{last ? <span>· {shortDate(last.created_at)}</span> : null}</span></Link>
                 {cols.map((c) => cell[c.k])}

@@ -1485,3 +1485,15 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .panelx svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
 .panelx:hover { color: var(--ink); background: rgba(255,255,255,.12); }
 .panelshell > .panel > h3:first-child, .panelshell > .panel > .row-actions:first-child { padding-right: 44px; }
+
+/* select songs: approve all / delete */
+.selbar { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; margin: 0 0 8px; min-height: 36px; }
+.selbar.on { justify-content: space-between; padding: 8px 10px; border-radius: 14px; background: rgba(245,213,71,.07); border: 1px solid rgba(245,213,71,.25); }
+.selall { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; font-size: 14px; cursor: pointer; }
+.selall input, .rcheck input { width: 20px; height: 20px; accent-color: var(--sig); cursor: pointer; }
+.selacts { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+.selmsg { flex-basis: 100%; margin: 0; }
+.rcheck { display: grid; place-items: center; height: 100%; cursor: pointer; }
+.rows.selecting .ropen { cursor: pointer; }
+.rows.selecting .rowwrap:has(.rcheck input:checked) .row { background: rgba(245,213,71,.08); border-radius: 12px; }
+@media (max-width: 900px) { .selbar.on { justify-content: center; } .selacts { justify-content: center; } }

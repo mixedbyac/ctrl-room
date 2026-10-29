@@ -157,12 +157,12 @@ export default function ProjectPage() {
           </div>
         </div>
 
-        {eng && panel === 'share' && <SharePanel p={p} onSaved={load} />}
-        {eng && panel === 'invoice' && <InvoicePanel project={p} firstSongId={p.songs[0]?.id} onChange={inv.load} />}
+        {eng && panel === 'share' && <PanelShell onClose={() => setPanel(null)}><SharePanel p={p} onSaved={load} /></PanelShell>}
+        {eng && panel === 'invoice' && <PanelShell onClose={() => setPanel(null)}><InvoicePanel project={p} firstSongId={p.songs[0]?.id} onChange={inv.load} /></PanelShell>}
         {!eng && <InvoiceNotice list={inv.list} />}
         {eng && <AddMixes p={p} onSaved={load} />}
-        {eng && panel === 'add' && <AddSong p={p} onSaved={() => { load(); setPanel(null); }} />}
-        {eng && panel === 'edit' && <EditProject p={p} onSaved={() => { load(); reloadProjects(); setPanel(null); }} />}
+        {eng && panel === 'add' && <PanelShell onClose={() => setPanel(null)}><AddSong p={p} onSaved={() => { load(); setPanel(null); }} /></PanelShell>}
+        {eng && panel === 'edit' && <PanelShell onClose={() => setPanel(null)}><EditProject p={p} onSaved={() => { load(); reloadProjects(); setPanel(null); }} /></PanelShell>}
 
         {p.songs.length > 0 && <TrackStats songs={p.songs} eng={eng} onMeasured={load} />}
         {p.songs.length > 0 && <ColumnPicker cols={availCols} shown={shownCols} onChange={saveCols} />}
@@ -268,6 +268,30 @@ function RowRename({ song, onDone }) {
         onBlur={() => onDone(v)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } if (e.key === 'Escape') { setV(song.title); onDone(song.title); } }} />
       <CaseButtons value={v} onChange={setV} className="floating" />
     </span>
+  );
+}
+
+/** A window opened from the + menu: an ✕ in the corner, and clicking anywhere else (or Esc) closes it. */
+function PanelShell({ onClose, children }) {
+  const box = useRef(null);
+  useEffect(() => {
+    const off = (e) => {
+      if (!box.current || box.current.contains(e.target)) return;
+      if (e.target.closest('.addplus, .ctxmenu, .spop, .sharepop, .ccard')) return; // the + menu and other popups
+      onClose();
+    };
+    const esc = (e) => { if (e.key === 'Escape') onClose(); };
+    const t = setTimeout(() => document.addEventListener('pointerdown', off), 0); // not the tap that opened it
+    document.addEventListener('keydown', esc);
+    return () => { clearTimeout(t); document.removeEventListener('pointerdown', off); document.removeEventListener('keydown', esc); };
+  }, [onClose]);
+  return (
+    <div className="panelshell" ref={box}>
+      <button type="button" className="panelx" onClick={onClose} aria-label="Close" title="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+      </button>
+      {children}
+    </div>
   );
 }
 

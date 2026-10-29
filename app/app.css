@@ -1479,3 +1479,9 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .rowwrap.fileover { position: relative; }
 .rowwrap.fileover .row { background: rgba(245,213,71,.1); box-shadow: inset 0 0 0 2px rgba(245,213,71,.6); border-radius: 12px; }
 .rowwrap.fileover::after { content: attr(data-stack); position: absolute; right: 12px; top: -12px; z-index: 5; font-size: 12px; font-weight: 700; color: #0f0f10; background: var(--sig); padding: 4px 10px; border-radius: 999px; pointer-events: none; white-space: nowrap; }
+/* + menu windows: ✕ in the corner */
+.panelshell { position: relative; animation: npfade .14s; }
+.panelx { position: absolute; z-index: 3; top: 12px; right: 12px; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); color: var(--muted); cursor: pointer; }
+.panelx svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
+.panelx:hover { color: var(--ink); background: rgba(255,255,255,.12); }
+.panelshell > .panel > h3:first-child, .panelshell > .panel > .row-actions:first-child { padding-right: 44px; }

@@ -1,5 +1,6 @@
 import { limit } from '@/lib/ratelimit';
 import { admin, json, fail, sendText, dropboxFolder } from '@/lib/server';
+import { portalReceipt } from '@/lib/invite';
 
 export const runtime = 'nodejs';
 
@@ -34,6 +35,11 @@ export async function POST(req) {
     }
   }
 
+  // “your files were sent” email to whoever sent them (once per send)
+  if (total && up.email && !b.noReceipt) {
+    const bytes = songs.reduce((n, s) => n + (s.bytes || 0), 0);
+    await portalReceipt(db, { up, project: p, songs, total, bytes }).catch(() => {});
+  }
   if (process.env.ENGINEER_PHONE && total) {
     await sendText(process.env.ENGINEER_PHONE, `CTRL ROOM: ${up.name} (${up.artist}) sent ${total} file${total > 1 ? 's' : ''} for ${p?.title}.`);
   }

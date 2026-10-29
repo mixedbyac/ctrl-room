@@ -12,7 +12,8 @@ const OLD_HOSTS = (process.env.OLD_HOSTS || 'ctrl-room-eight.vercel.app').split(
 
 export function middleware(req) {
   const host = (req.headers.get('host') || '').toLowerCase().split(':')[0];
-  if (OLD_HOSTS.includes(host) && !req.nextUrl.pathname.startsWith('/api/dropbox/callback')) {
+  // pages move to ctrl-room.app; API calls are left alone so a tab still open on the old address keeps working (and saving)
+  if (OLD_HOSTS.includes(host) && !req.nextUrl.pathname.startsWith('/api/')) {
     const { pathname, search } = req.nextUrl;
     return NextResponse.redirect(new URL(pathname + search, MAIN), 308);
   }

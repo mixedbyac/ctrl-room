@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { api } from '@/lib/supabase';
+import { api, supabase } from '@/lib/supabase';
 import { useApp } from '@/components/AppShell';
 import Credit, { BlueCheck } from '@/components/Credit';
 import { ROLES, creditLine } from '@/lib/credit';
@@ -15,7 +15,13 @@ export default function ProfileForm() {
   const fileIn = useRef(null);
   useEffect(() => {
     if (!session || !eng) return;
-    api('/api/profile', { action: 'get' }).then((r) => setF({ full_name: '', display_name: '', credit: '', bio: '', photo_url: '', roles: ['mix'], ...r.profile, roles: r.profile?.roles?.length ? r.profile.roles : ['mix'] })).catch((e) => { setMsg(e.message); setF({ roles: ['mix'] }); });
+    const fill = (pr) => setF({ full_name: '', display_name: '', credit: '', bio: '', photo_url: '', ...pr, roles: pr?.roles?.length ? pr.roles : ['mix'] });
+    api('/api/profile', { action: 'get' }).then((r) => fill(r.profile)).catch(async (e) => {
+      // couldn't reach the profile service: load what's saved straight from the database so nothing looks lost
+      const { data } = await supabase().from('engineer_profiles').select('*').eq('email', (session.user.email || '').toLowerCase()).maybeSingle();
+      fill(data || {});
+      setMsg(`Couldn’t confirm your profile with the server (${e.message}). What’s shown is what’s saved. Refresh and try again before saving.`);
+    });
   }, [session, eng]);
   if (!session) return null;
   if (!eng) return null;

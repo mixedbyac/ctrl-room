@@ -256,15 +256,16 @@ function RememberedDevices() {
 
 function EmailSetup() {
   const [st, setSt] = useState(null);
-  useEffect(() => { api('/api/invite', { check: true }).then(setSt).catch(() => setSt({ email: false })); }, []);
+  useEffect(() => { api('/api/invite', { check: true }).then(setSt).catch((e) => setSt({ email: null, error: e.message })); }, []);
   return (
     <div className="panel secpanel" id="email">
-      <b>Email invites {st && (st.email ? <span className="tbadge ok">✓ On · from {st.from}</span> : <span className="tbadge warn">Not set up</span>)}</b>
+      <b>Email invites {st && (st.email ? <span className="tbadge ok">✓ On · from {st.from}</span> : st.email === null ? <span className="tbadge">Couldn’t check</span> : <span className="tbadge warn">Not set up</span>)}</b>
+      {st?.error && <span className="ferr small">Couldn’t check the email setup: {st.error}. Your settings are still saved; refresh to try again.</span>}
       <span className="muted small">CTRL ROOM sends sign-up invites to artists itself. Until this is set up, you get an invite link to copy and text instead.</span>
-      {st && !st.email && (
+      {st && st.email === false && (
         <p className="small" style={{ margin: 0 }}>CTRL ROOM sees: <b>RESEND_API_KEY</b> {st.hasKey ? '✓ found' : '✗ missing'} · <b>EMAIL_FROM</b> {st.hasFrom ? '✓ found' : '✗ missing'}</p>
       )}
-      {st && !st.email && (
+      {st && st.email === false && (
         <ol className="small" style={{ margin: 0, paddingLeft: 18, lineHeight: 1.6 }}>
           <li>Make a free account at <a className="link" href="https://resend.com" target="_blank" rel="noopener noreferrer">resend.com</a>.</li>
           <li>Domains › Add domain, and wait for it to say <b>Verified</b>.</li>

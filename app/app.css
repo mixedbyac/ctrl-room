@@ -1544,3 +1544,17 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .npdetails dt { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.45); }
 .npdetails dd { margin: 0; font-size: 14px; color: #f4f4f5; }
 .npprog li { text-align: left; } .npprog li b { justify-self: start; font-weight: 650; } .npdetails dd { font-family: inherit; font-weight: 650; }
+
+/* phones: the project cover always shows (no absolute positioning tricks) */
+@media (max-width: 900px) {
+  .app .phero .sleevewrap { aspect-ratio: auto !important; height: auto; display: block; width: min(300px, 78vw); max-width: none; margin: 0 auto; }
+  .app .phero .sleevewrap .sleeve { position: relative !important; inset: auto !important; display: block; width: 100% !important; aspect-ratio: 1; transform: none !important; }
+  .app .phero .sleevewrap .sleeve img { width: 100%; height: 100%; object-fit: cover; display: block; }
+}
+/* phones: the playing song shows a clear pause / play button you can tap */
+@media (max-width: 900px) {
+  .row.cur .rplay .num, .row.cur .rplay .eq { display: none !important; }
+  .row.cur .rplay svg { display: block !important; width: 20px; height: 20px; fill: var(--sig); }
+  .row.cur .rplay { color: var(--sig); }
+  .row.cur .ropen .t { color: var(--sig); }
+}

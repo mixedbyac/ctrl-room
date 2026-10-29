@@ -1675,3 +1675,4 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 }
 @media (min-width: 901px) { .ltop { position: absolute; top: 24px; left: calc(28px - max(0px, (100vw - 1180px) / 2)); } }
 .linfo .ltracks { max-width: none; width: 100%; } @media (min-width: 901px) { .lprog, .ldetails { margin-top: -30px !important; } }
+@media (min-width: 901px) { .lpage .lcomments { max-width: 960px; width: 100%; } }

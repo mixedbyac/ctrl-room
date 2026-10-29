@@ -1580,3 +1580,4 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .npbubble b { color: var(--sig); font-weight: 700; margin-right: 4px; }
 @keyframes npbub { from { opacity: 0; transform: translateY(6px); } }
 @media (max-width: 760px) { .npbubble { width: 200px; left: clamp(0px, calc(var(--x) - 100px), calc(100% - 200px)); } }
+.ltabs { margin: 28px 0 12px; max-width: 520px; } .lprog, .ldetails { max-width: 520px; margin: 0 0 20px; } @media (max-width: 900px) { .ltabs, .lprog, .ldetails { margin-left: auto; margin-right: auto; } }

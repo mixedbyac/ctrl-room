@@ -48,7 +48,9 @@ export async function GET(req) {
       cover = c?.signedUrl || null;
     }
     list.push({ id: s.id, title: s.title, seed: artSeed, cover, approved: s.status === 'approved',
-      version: { id: v.id, label: v.label, duration: v.duration, peaks: v.peaks, url: u.signedUrl, file_format: v.file_format, bit_depth: v.bit_depth, sample_rate: v.sample_rate } });
+      bpm: s.bpm || null, key: s.musical_key || null, versions: vs.filter((x) => !isDemo(x)).length,
+      steps: { received: s.received_at || null, mixing: s.mixing_at || null, review: (vs.filter((x) => !isDemo(x)).at(-1)?.created_at || '').slice(0, 10) || null, approved: s.approved_at ? String(s.approved_at).slice(0, 10) : null },
+      version: { id: v.id, label: v.label, duration: v.duration, peaks: v.peaks, url: u.signedUrl, file_format: v.file_format, bit_depth: v.bit_depth, sample_rate: v.sample_rate, created_at: v.created_at } });
   }
   let pcover = null;
   if (project.cover_path) { const { data: c } = await db.storage.from('mixes').createSignedUrl(project.cover_path, 60 * 60 * 6); pcover = c?.signedUrl || null; }

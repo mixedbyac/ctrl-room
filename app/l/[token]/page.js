@@ -42,6 +42,7 @@ function Wave({ peaks, time, duration, onSeek }) {
 
 export default function SharedListen() {
   const { token } = useParams();
+  const [ltab, setLtab] = useState('songs');
   const [data, setData] = useState(undefined);
   const [err, setErr] = useState('');
   const [idx, setIdx] = useState(0);
@@ -59,6 +60,7 @@ export default function SharedListen() {
 
   const songs = data?.songs || [];
   const cur = songs[idx];
+  useEffect(() => { if (data && ltab === 'songs' && (data.kind === 'song' || songs.length < 2)) setLtab('progress'); }, [data]); // eslint-disable-line
 
   const report = useCallback((final) => {
     const t = track.current; if (!t || t.creating) return;
@@ -162,7 +164,30 @@ export default function SharedListen() {
             </> : <p className="muted">There’s nothing to play here yet.</p>}
           </div>
         </div>
-        {data.kind === 'project' && songs.length > 0 && (
+        {cur && (
+          <div className="npdtabs ltabs" role="tablist" aria-label="More about this song">
+            {data.kind === 'project' && songs.length > 1 && <button role="tab" aria-selected={ltab === 'songs'} onClick={() => setLtab('songs')}>Songs</button>}
+            <button role="tab" aria-selected={ltab === 'progress'} onClick={() => setLtab('progress')}>Progress</button>
+            <button role="tab" aria-selected={ltab === 'details'} onClick={() => setLtab('details')}>Details</button>
+          </div>
+        )}
+        {cur && ltab === 'progress' && (
+          <ol className="npprog lprog">
+            {[['Files received', cur.steps?.received], ['Mixing', cur.steps?.mixing], ['Ready to review', cur.steps?.review], ['Approved', cur.steps?.approved]].map(([k, d], i, all) => {
+              const done = !!d, here = done && !all[i + 1]?.[1];
+              return <li key={k} className={`${done ? 'done' : ''} ${here ? 'cur' : ''}`}><span className="npdot" /><b>{k}</b><span>{d ? new Date(`${String(d).slice(0, 10)}T12:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}</span></li>;
+            })}
+          </ol>
+        )}
+        {cur && ltab === 'details' && (
+          <dl className="npdetails ldetails">
+            {[['Version', cur.version.label], ['Length', cur.version.duration ? mmss(cur.version.duration) : null], ['BPM', cur.bpm], ['Key', cur.key],
+              ['Format', cur.version.file_format ? [cur.version.file_format, cur.version.sample_rate ? `${(cur.version.sample_rate / 1000).toFixed(1).replace(/\.0$/, '')} kHz` : '', cur.version.bit_depth ? `${cur.version.bit_depth}-bit` : ''].filter(Boolean).join(' · ') : null],
+              ['Status', cur.approved ? 'Final mix' : 'Mix in progress'], ['Updated', cur.version.created_at ? new Date(cur.version.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : null]]
+              .filter(([, x]) => x != null && x !== '').map(([k, x]) => <div key={k}><dt>{k}</dt><dd>{x}</dd></div>)}
+          </dl>
+        )}
+        {data.kind === 'project' && songs.length > 0 && (ltab === 'songs' || songs.length < 2) && ltab !== 'progress' && ltab !== 'details' && (
           <ol className="ltracks">
             {songs.map((s, i) => (
               <li key={s.id}><button className={i === idx ? 'on' : ''} onClick={() => pick(i)}>

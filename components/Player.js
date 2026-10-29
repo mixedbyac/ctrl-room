@@ -1,6 +1,7 @@
 'use client';
 import ArtistName from '@/components/ArtistName';
 import Credit from '@/components/Credit';
+import { SongProgress, SongDetails } from '@/components/SongInfo';
 import QualityBadge from '@/components/QualityBadge';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -531,23 +532,12 @@ function NowPlaying() {
               <Link className="npmore" href={`/s/${c.song.id}#notes`} onClick={close}>All notes &amp; replies ›</Link>
             </div>
           )}
-          {deck === 'progress' && (
-            <ol className="npprog">
-              {[['Files received', c.song.received_at], ['Mixing', c.song.mixing_at], ['Ready to review', c.versions.some((v) => !/^demo/i.test(v.label)) ? (c.versions.filter((v) => !/^demo/i.test(v.label)).at(-1)?.created_at || '').slice(0, 10) : null], ['Approved', c.song.approved_at ? String(c.song.approved_at).slice(0, 10) : null]].map(([k, d], i, all) => {
-                const doneStep = !!d, cur = doneStep && !all[i + 1]?.[1];
-                return <li key={k} className={`${doneStep ? 'done' : ''} ${cur ? 'cur' : ''}`}><span className="npdot" /><b>{k}</b><span>{d ? new Date(`${String(d).slice(0, 10)}T12:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}</span></li>;
-              })}
-            </ol>
-          )}
-          {deck === 'details' && (
-            <dl className="npdetails">
-              {[
-                ['Version', v?.label], ['Length', v?.duration ? mmss(v.duration) : null], ['BPM', c.song.bpm], ['Key', c.song.musical_key],
-                ['Format', v?.file_format ? [v.file_format, v.sample_rate ? `${(v.sample_rate / 1000).toFixed(1).replace(/\.0$/, '')} kHz` : '', v.bit_depth ? `${v.bit_depth}-bit` : ''].filter(Boolean).join(' · ') : null],
-                ['Versions', c.versions.length], ['Delivered', v?.created_at ? new Date(v.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : null],
-              ].filter(([, x]) => x != null && x !== '').map(([k, x]) => <div key={k}><dt>{k}</dt><dd className="mono">{x}</dd></div>)}
-            </dl>
-          )}
+          {deck === 'progress' && <SongProgress steps={{ received: c.song.received_at, mixing: c.song.mixing_at, review: (c.versions.filter((x) => !/^demo/i.test(x.label)).at(-1)?.created_at || '').slice(0, 10) || null, approved: c.song.approved_at }} />}
+          {deck === 'details' && <SongDetails rows={[
+            ['Version', v?.label], ['Length', v?.duration ? mmss(v.duration) : null], ['BPM', c.song.bpm], ['Key', c.song.musical_key],
+            ['Format', v?.file_format ? [v.file_format, v.sample_rate ? `${(v.sample_rate / 1000).toFixed(1).replace(/\.0$/, '')} kHz` : '', v.bit_depth ? `${v.bit_depth}-bit` : ''].filter(Boolean).join(' · ') : null],
+            ['Versions', c.versions.length], ['Delivered', v?.created_at ? new Date(v.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : null],
+          ]} />}
         </div>
       </div>
     </div>

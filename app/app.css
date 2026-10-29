@@ -1618,3 +1618,35 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 
 /* share links: the mini player is for phones only */
 @media (min-width: 901px) { .lmini { display: none !important; } .lpage { padding-bottom: 0; } }
+
+/* Progress + Details v2: calm cards */
+.sinfo-card { border-radius: 16px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); }
+.sprog { padding: 16px 16px 6px; display: grid; gap: 14px; }
+.sprog-head { display: grid; gap: 3px; }
+.sprog-head b { font-size: 17px; font-weight: 750; color: #fff; }
+.sprog-head span { font-size: 12.5px; color: rgba(255,255,255,.55); }
+.sprog-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+.sprog-bar i { height: 5px; border-radius: 3px; background: rgba(255,255,255,.1); }
+.sprog-bar i.on { background: var(--sig); }
+.sprog-steps { list-style: none; margin: 0; padding: 0; display: grid; }
+.sprog-steps li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid rgba(255,255,255,.06); font-size: 14px; color: rgba(255,255,255,.45); text-align: left; }
+.sprog-steps li b { font-weight: 600; }
+.sprog-steps li.done { color: rgba(255,255,255,.85); }
+.sprog-steps li.cur b { color: #fff; font-weight: 750; }
+.sdot { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 900; border: 1.5px solid rgba(255,255,255,.18); color: #0f0f10; }
+.sprog-steps li.done .sdot { background: var(--sig); border-color: var(--sig); }
+.sdate { font-size: 12.5px; color: rgba(255,255,255,.5); font-variant-numeric: tabular-nums; }
+.sdetails { margin: 0; padding: 4px 16px; display: grid; }
+.sdetails div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 11px 0; border-top: 1px solid rgba(255,255,255,.06); }
+.sdetails div:first-child { border-top: 0; }
+.sdetails dt { font-size: 13.5px; color: rgba(255,255,255,.55); }
+.sdetails dd { margin: 0; font-size: 14.5px; font-weight: 650; color: #fff; text-align: right; font-variant-numeric: tabular-nums; }
+.lprog, .ldetails { max-width: 520px; }
+/* share link song list: calmer rows, a Final tag */
+.ltracks { gap: 0; border-radius: 16px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); padding: 4px; max-width: 520px; }
+.ltracks li + li button { border-top: 1px solid rgba(255,255,255,.05); }
+.ltracks button { border-radius: 12px; padding: 13px 12px; }
+.ltracks button.on { background: rgba(245,213,71,.08); }
+.lfinal { font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--ok); background: rgba(114,211,156,.12); padding: 2px 7px; border-radius: 999px; margin-left: 8px; vertical-align: 2px; }
+@media (max-width: 900px) { .ltracks, .lprog, .ldetails { margin-left: auto; margin-right: auto; width: 100%; } }
+.sprog-steps li b { justify-self: start; text-align: left; }

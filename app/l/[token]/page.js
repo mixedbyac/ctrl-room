@@ -8,6 +8,7 @@ import Cover from '@/components/Cover';
 import { mmss, deviceName } from '@/lib/format';
 import SpotifyMark from '@/components/SpotifyMark';
 import LinkComments from '@/components/LinkComments';
+import { SongProgress, SongDetails } from '@/components/SongInfo';
 import PoweredBy from '@/components/PoweredBy';
 
 const PLAY = <path d="M7 4.5v15l13-7.5z" />;
@@ -178,28 +179,16 @@ export default function SharedListen() {
             <button role="tab" aria-selected={ltab === 'details'} onClick={() => setLtab('details')}>Details</button>
           </div>
         )}
-        {cur && ltab === 'progress' && (
-          <ol className="npprog lprog">
-            {[['Files received', cur.steps?.received], ['Mixing', cur.steps?.mixing], ['Ready to review', cur.steps?.review], ['Approved', cur.steps?.approved]].map(([k, d], i, all) => {
-              const done = !!d, here = done && !all[i + 1]?.[1];
-              return <li key={k} className={`${done ? 'done' : ''} ${here ? 'cur' : ''}`}><span className="npdot" /><b>{k}</b><span>{d ? new Date(`${String(d).slice(0, 10)}T12:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}</span></li>;
-            })}
-          </ol>
-        )}
-        {cur && ltab === 'details' && (
-          <dl className="npdetails ldetails">
-            {[['Version', cur.version.label], ['Length', cur.version.duration ? mmss(cur.version.duration) : null], ['BPM', cur.bpm], ['Key', cur.key],
-              ['Format', cur.version.file_format ? [cur.version.file_format, cur.version.sample_rate ? `${(cur.version.sample_rate / 1000).toFixed(1).replace(/\.0$/, '')} kHz` : '', cur.version.bit_depth ? `${cur.version.bit_depth}-bit` : ''].filter(Boolean).join(' · ') : null],
-              ['Status', cur.approved ? 'Final mix' : 'Mix in progress'], ['Updated', cur.version.created_at ? new Date(cur.version.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : null]]
-              .filter(([, x]) => x != null && x !== '').map(([k, x]) => <div key={k}><dt>{k}</dt><dd>{x}</dd></div>)}
-          </dl>
-        )}
+        {cur && ltab === 'progress' && <div className="lprog"><SongProgress steps={cur.steps || {}} /></div>}
+        {cur && ltab === 'details' && <div className="ldetails"><SongDetails rows={[['Version', cur.version.label], ['Length', cur.version.duration ? mmss(cur.version.duration) : null], ['BPM', cur.bpm], ['Key', cur.key],
+          ['Format', cur.version.file_format ? [cur.version.file_format, cur.version.sample_rate ? `${(cur.version.sample_rate / 1000).toFixed(1).replace(/\.0$/, '')} kHz` : '', cur.version.bit_depth ? `${cur.version.bit_depth}-bit` : ''].filter(Boolean).join(' · ') : null],
+          ['Status', cur.approved ? 'Final mix' : 'Mix in progress'], ['Updated', cur.version.created_at ? new Date(cur.version.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : null]]} /></div>}
         {data.kind === 'project' && songs.length > 0 && (ltab === 'songs' || songs.length < 2) && ltab !== 'progress' && ltab !== 'details' && (
           <ol className="ltracks">
             {songs.map((s, i) => (
               <li key={s.id}><button className={i === idx ? 'on' : ''} onClick={() => pick(i)}>
                 <span className="mono ln">{i === idx && playing ? <span className="eq"><span /><span /><span /></span> : i + 1}</span>
-                <span className="lt">{s.title}</span><span className="mono muted">{mmss(s.version.duration || 0)}</span>
+                <span className="lt">{s.title}{s.approved && <em className="lfinal">Final</em>}</span><span className="mono muted">{mmss(s.version.duration || 0)}</span>
               </button></li>
             ))}
           </ol>

@@ -45,7 +45,7 @@ export default function ProfileForm() {
             {f.photo_url ? <img src={f.photo_url} alt="" /> : (f.display_name || f.full_name || session.user.email)[0].toUpperCase()}
           </span>
           <div>
-            <b className="profname">{f.display_name || f.full_name || 'Your name'}{f.verified && <BlueCheck title="Verified engineer" />}</b>
+            <b className="profname">{f.display_name || f.full_name || 'Your name'}{f.verified && <BlueCheck kind="engineer" />}</b>
             <span className="profmail">{session.user.email} · {f.verified ? <span className="vok">Verified</span> : <span className="vno">Not verified yet. Sign in with an email link or confirm your email to get the blue check.</span>}</span>
             <Credit profile={preview} className="big" />
           </div>

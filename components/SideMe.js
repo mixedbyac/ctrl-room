@@ -16,7 +16,7 @@ export default function SideMe({ session, eng, signOut }) {
       <Link href="/settings" className="sidemecard" title="Settings">
         <span className="sideav">{photo ? <img src={photo} alt="" /> : (name[0] || '?').toUpperCase()}</span>
         <span className="sidewho">
-          <b>{name}{verified && <BlueCheck title="Verified" tone={eng ? 'gold' : 'gray'} />}</b>
+          <b>{name}{verified && <BlueCheck kind={eng ? 'engineer' : 'user'} />}</b>
           <small>{email}</small>
           <small className="siderole">{eng ? 'Engineer' : 'Artist'}</small>
         </span>

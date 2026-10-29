@@ -273,7 +273,7 @@ export default function SharedListen() {
             <h1 className="ttl">{data.kind === 'song' ? cur?.title || 'Nothing to play yet' : p.title}</h1>
             <div className="lartist">{ar?.image_url && <img src={ar.image_url} alt="" />}<span>{name}</span>{cur && <QualityBadge v={cur.version} size="md" />}</div>
             {data.credit && (data.credit.profile ? <p className="lcredit"><Credit profile={data.credit.profile} /></p>
-              : <p className="credit lcredit">{data.credit.photo && <img src={data.credit.photo} alt="" />}<span>{data.credit.text}</span>{data.credit.verified && <BlueCheck title="Verified engineer" />}</p>)}
+              : <p className="credit lcredit">{data.credit.photo && <img src={data.credit.photo} alt="" />}<span>{data.credit.text}</span>{data.credit.verified && <BlueCheck kind="engineer" />}</p>)}
             {cur ? <>
               {data.kind === 'project' && <p className="lnow">{playing ? 'Playing' : 'Up'}: <b>{cur.title}</b></p>}
               <div><Wave peaks={cur.version.peaks} time={time} duration={dur} onSeek={seek} />

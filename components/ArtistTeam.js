@@ -36,7 +36,7 @@ export default function ArtistTeam({ artist, projects }) {
     if (st === 'unconfirmed') return <span className="row-actions"><span className="tbadge warn">Not confirmed</span><button className="btn small" onClick={() => confirmAcct(em)}>Verify</button></span>;
     if (st === 'invited') return <span className="row-actions"><span className="tbadge">Invited, hasn’t joined</span><button className="btn small" onClick={() => confirmAcct(em)}>Verify</button></span>;
     if (st === 'none') return <span className="row-actions"><span className="tbadge">No account yet</span><button className="btn small" onClick={() => confirmAcct(em)} title="Marks them verified and emails an invite to join">Verify &amp; invite</button></span>;
-    if (st === 'confirmed') return <span className="tbadge ok" title="Signed up with this email and confirmed it"><BlueCheck title="Verified" tone="gray" /> Verified</span>;
+    if (st === 'confirmed') return <span className="tbadge ok" title="Signed up with this email and confirmed it"><BlueCheck kind="user" /> Verified</span>;
     return null;
   };
   const add = async (e) => {

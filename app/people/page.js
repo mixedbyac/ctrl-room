@@ -54,7 +54,7 @@ export default function PeoplePage() {
               <li key={p.email} className="pplrow">
                 <span className="pplav">{p.photo ? <img src={p.photo} alt="" /> : (p.name || p.email)[0].toUpperCase()}</span>
                 <span className="pplmain">
-                  <b>{p.name || p.email.replace(/@.*/, '')}{p.state === 'verified' && <BlueCheck title={p.engineer ? 'Verified engineer' : p.artists.some((a) => /^artist$/i.test(a.role)) ? 'Verified artist' : 'Verified'} tone={p.engineer || p.artists.some((a) => /^artist$/i.test(a.role)) ? 'gold' : 'gray'} />}{p.engineer && <em className="pplrole">Engineer</em>}</b>
+                  <b>{p.name || p.email.replace(/@.*/, '')}{p.state === 'verified' && <BlueCheck kind={p.engineer ? 'engineer' : p.artists.some((a) => /^artist$/i.test(a.role)) ? 'artist' : 'user'} />}{p.engineer && <em className="pplrole">Engineer</em>}</b>
                   <small>{p.email}</small>
                   <span className="pplmeta">
                     {p.artists.length ? p.artists.map((a) => <span key={a.artist} className="pplchip">{a.artist}<i>{a.role}</i></span>) : <span className="pplnone">{p.artistHint ? `Signed up as “${p.artistHint}”` : 'Not on an artist yet'}</span>}

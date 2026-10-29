@@ -1,0 +1,29 @@
+'use client';
+import Link from 'next/link';
+import { useProfiles, BlueCheck } from '@/components/Credit';
+
+/** Bottom of the sidebar: your picture, name, email and role, then Your profile / Security / Sign out, all lined up. */
+export default function SideMe({ session, eng, signOut }) {
+  const list = useProfiles();
+  const email = session.user.email || '';
+  const prof = eng ? list.find((p) => p.email === email.toLowerCase()) : null;
+  const name = prof?.display_name || prof?.full_name || session.user.user_metadata?.name || email.replace(/@.*/, '');
+  const verified = eng ? !!prof?.verified || !!session.user.email_confirmed_at : !session.user.app_metadata?.needs_verify;
+  return (
+    <div className="sideme">
+      <Link href={eng ? '/profile' : '/security'} className="sidemecard" title={eng ? 'Your profile' : 'Your account'}>
+        <span className="sideav">{prof?.photo_url ? <img src={prof.photo_url} alt="" /> : (name[0] || '?').toUpperCase()}</span>
+        <span className="sidewho">
+          <b>{name}{verified && <BlueCheck title="Verified" />}</b>
+          <small>{email}</small>
+          <small className="siderole">{eng ? 'Engineer' : 'Artist'}</small>
+        </span>
+      </Link>
+      <nav className="sidelinks">
+        {eng && <Link href="/profile">Your profile</Link>}
+        <Link href="/security">Security</Link>
+        <button type="button" onClick={signOut}>Sign out</button>
+      </nav>
+    </div>
+  );
+}

@@ -13,6 +13,7 @@ import TabBar from '@/components/TabBar';
 import ProjectMenu from '@/components/ProjectMenu';
 import ProjectFolders from '@/components/ProjectFolders';
 import Bell from '@/components/Bell';
+import SideMe from '@/components/SideMe';
 import EnterAnimation, { LogoLoader } from '@/components/EnterAnimation';
 import VerifyBanner from '@/components/VerifyBanner';
 import UpdateWatcher, { getSeen } from '@/components/UpdateWatcher';
@@ -182,10 +183,7 @@ export default function AppShell({ children }) {
           <div className="sidefoot">
             {session ? (
               <>
-                <p className="demo">{session.user.email}{eng ? ' · Engineer' : ''}{!eng && !session.user.app_metadata?.needs_verify && <span className="vbadge mine" title="Your email is confirmed">✓ Verified</span>}</p>
-                {eng && <Link className="seclink" href="/profile">Your profile</Link>}
-                <Link className="seclink" href="/security">Security</Link>
-                <button className="btn small" onClick={signOut}>Sign out</button>
+                <SideMe session={session} eng={eng} signOut={signOut} />
               </>
             ) : (
               <Link className="btn small" href="/login">Sign in</Link>

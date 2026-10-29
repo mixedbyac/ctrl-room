@@ -61,6 +61,7 @@ export default function LinkComments({ token, songId, versionId, time, seek }) {
         </div>
       </div>
       {err && <p className="ferr">{err}</p>}
+      {!state.notes?.length && <p className="lcempty">No comments yet. Tap the comment button in the player to leave one at any moment.</p>}
       <CommentList notes={[...state.notes].sort((a, b) => (a.t ?? -1) - (b.t ?? -1))} reactions={state.reactions} me={me} numbers={nums}
         nameOf={(n) => n.author_name || 'Guest'} canResolve={false} canDelete={() => false} actions={actions} seek={(t) => seek(t)} />
     </section>

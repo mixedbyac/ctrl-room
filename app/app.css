@@ -1604,3 +1604,4 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .lminiprog { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--sig); transition: width .25s linear; }
 .lpage { padding-bottom: 90px; }
 .lmini.playing .lminiart img, .lmini.playing .lminiart .lminiimg { animation-play-state: running; }
+.npdtabs button { min-width: 0; white-space: nowrap; } @media (max-width: 760px) { .npdtabs { gap: 4px; padding: 4px; } .npdtabs button { padding: 0 6px; font-size: 13px; } }

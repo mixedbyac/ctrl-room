@@ -1651,3 +1651,26 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 @media (max-width: 900px) { .ltracks, .lprog, .ldetails { margin-left: auto; margin-right: auto; width: 100%; } }
 .sprog-steps li b { justify-self: start; text-align: left; }
 .linfo .ltracks { margin-top: 18px; } .ltabs { margin-top: 32px; }
+
+/* track numbers act like a player: hover shows play, the playing song shows pause (app + share links) */
+.ltracks .ln { position: relative; display: grid; place-items: center; width: 24px; height: 24px; }
+.ltracks .ln svg { display: none; width: 16px; height: 16px; fill: currentColor; }
+.ltracks button:hover .ln .lnum, .ltracks button.on .ln .lnum { display: none; }
+.ltracks button:hover .ln svg, .ltracks button.on .ln svg { display: block; }
+.ltracks button.on .ln { color: var(--sig); }
+.row.cur .rplay .num, .row.cur .rplay .eq { display: none !important; }
+.row.cur .rplay svg { display: block !important; fill: var(--sig); width: 17px; height: 17px; }
+.row:hover .rplay svg { fill: var(--ink); }
+.row.cur:hover .rplay svg { fill: var(--sig); }
+
+/* share link on a computer: logo in the far corner, roomier layout, centered Progress / Details */
+@media (min-width: 901px) {
+  .lwrap { max-width: 1180px; padding: 26px 40px 60px; gap: 48px; }
+  .ltop { position: fixed; top: 22px; left: 28px; z-index: 5; }
+  .lmain { grid-template-columns: minmax(0, 440px) minmax(0, 1fr); gap: 72px; margin-top: 40px; }
+  .linfo { gap: 20px; }
+  .ltabs, .lprog, .ldetails { margin-left: auto !important; margin-right: auto !important; width: 100%; max-width: 560px; }
+  .ltabs { justify-content: center; }
+  .lpage .lcomments, .lpage .cthreads, .lpage .lcomm { max-width: 760px; margin-left: auto; margin-right: auto; }
+}
+@media (min-width: 901px) { .ltop { position: absolute; top: 24px; left: calc(28px - max(0px, (100vw - 1180px) / 2)); } }

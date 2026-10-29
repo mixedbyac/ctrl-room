@@ -8,6 +8,7 @@ import Cover from '@/components/Cover';
 import { mmss, deviceName } from '@/lib/format';
 import SpotifyMark from '@/components/SpotifyMark';
 import LinkComments from '@/components/LinkComments';
+import NoteComposer from '@/components/NoteComposer';
 import { SongProgress, SongDetails } from '@/components/SongInfo';
 import PoweredBy from '@/components/PoweredBy';
 
@@ -62,16 +63,25 @@ function SharePlayer({ cur, p, name, artSrc, artSeed, playing, toggle, time, dur
   }, [token, cur.id, cur.version.id, canComment]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => { const k = (e) => { if (e.key === 'Escape') onClose(); }; document.addEventListener('keydown', k); document.body.style.overflow = 'hidden'; return () => { document.removeEventListener('keydown', k); document.body.style.overflow = ''; }; }, [onClose]);
+  // keep the note box above the phone keyboard, smoothly
+  useEffect(() => {
+    if (!composing) return;
+    const vv = window.visualViewport; if (!vv) return;
+    const fit = () => document.documentElement.style.setProperty('--kb', `${Math.max(0, window.innerHeight - vv.height - vv.offsetTop)}px`);
+    fit(); vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit);
+    requestAnimationFrame(() => sheet.current?.scrollTo({ top: 0, behavior: 'smooth' }));
+    return () => { vv.removeEventListener('resize', fit); vv.removeEventListener('scroll', fit); document.documentElement.style.setProperty('--kb', '0px'); };
+  }, [composing]);
   const timed = notes.filter((n) => n.t != null).sort((a, b) => a.t - b.t);
   const active = [...timed].reverse().find((n) => time >= n.t && time - n.t < 4.5) || null;
-  const post = async () => {
-    if (!body.trim()) return;
-    if (!nm.trim()) return setMsg('Add your name first.');
+  const post = async (text, at) => {
+    if (!text?.trim()) return false;
+    if (!nm.trim()) { setMsg('Add your name first.'); return false; }
     try { localStorage.setItem('ctrl-room:guest-name', nm.trim()); } catch {}
-    const r = await fetch('/api/share/notes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ t: token, songId: cur.id, versionId: cur.version.id, guestId: guestId(), name: nm.trim(), action: 'post', body, at: pinAt }) });
+    const r = await fetch('/api/share/notes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ t: token, songId: cur.id, versionId: cur.version.id, guestId: guestId(), name: nm.trim(), action: 'post', body: text, at }) });
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) return setMsg(j.error || 'Couldn’t post that.');
-    setBody(''); setComposing(false); setMsg(`Posted at ${mmss(pinAt)}.`); setTimeout(() => setMsg(''), 2500);
+    if (!r.ok) { setMsg(j.error || 'Couldn’t post that.'); return false; }
+    setComposing(false); setMsg(at == null ? 'General note posted.' : `Posted at ${mmss(at)}.`); setTimeout(() => setMsg(''), 2500);
     load(); window.dispatchEvent(new Event('ctrl-room:link-notes'));
   };
   return (
@@ -96,23 +106,15 @@ function SharePlayer({ cur, p, name, artSrc, artSeed, playing, toggle, time, dur
           <div>
             <div className="npwavewrap">
               <Wave peaks={cur.version.peaks} time={time} duration={dur} onSeek={seek} />
-              {composing && dur > 0 && <span className="nppin" style={{ left: `${Math.min(100, (pinAt / dur) * 100)}%` }} aria-hidden="true" />}
+              {composing && pinAt != null && dur > 0 && <span className="nppin" style={{ left: `${Math.min(100, (pinAt / dur) * 100)}%` }} aria-hidden="true" />}
               {dur > 0 && timed.map((n) => <button key={n.id} className={`npmark ${active?.id === n.id ? 'on' : ''}`} style={{ left: `${Math.min(100, (n.t / dur) * 100)}%` }} onClick={() => seek(n.t)} aria-label={`${n.author_name || 'Note'} at ${mmss(n.t)}`}><span>{initials2(n.author_name)}</span></button>)}
               {active && !composing && dur > 0 && <span className="npbubble" key={active.id} style={{ '--x': `${Math.min(100, (active.t / dur) * 100)}%` }}><b>{active.author_name || 'Listener'}</b> {active.body}</span>}
             </div>
             <div className="nptimes mono"><span>{mmss(time)}</span><span className="npfmt">{cur.approved ? 'Final mix' : 'Mix in progress'}</span><span className="npdur">{mmss(dur)}</span><span className="npleft">-{mmss(Math.max(0, dur - time))}</span></div>
           </div>
           {composing && (
-            <div className="npcompose inline compact" role="group" aria-label="Add a comment">
-              {!hadName && <input className="lqname" placeholder="Your name" value={nm} onChange={(e) => setNm(e.target.value)} maxLength={40} aria-label="Your name" />}
-              <div className="nc-row">
-                <button className="nc-time mono" onClick={() => setPinAt(time)} title="Tap to set it to right now">{mmss(pinAt)}</button>
-                <textarea autoFocus rows={1} enterKeyHint="send" value={body} placeholder="Add a note…" aria-label="Comment" onChange={(e) => setBody(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); post(); } if (e.key === 'Escape') setComposing(false); }} />
-                <button className="nc-send" disabled={!body.trim()} onClick={post} aria-label="Post"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6" /></svg></button>
-              </div>
-              <div className="nc-sub"><span>On {cur.version.label} · tap the time to set it to now</span><button onClick={() => setComposing(false)}>Cancel</button></div>
-            </div>
+            <NoteComposer now={time} start={pinAt} duration={dur} label={`On ${cur.version.label}`} onAt={(t) => setPinAt(t)} onCancel={() => setComposing(false)} onPost={(b, at) => post(b, at)}
+              nameField={!hadName ? <input className="lqname" placeholder="Your name" value={nm} onChange={(e) => setNm(e.target.value)} maxLength={40} aria-label="Your name" /> : null} />
           )}
           {msg && <p className="npposted" role="status">{msg}</p>}
           <div className="npctl">

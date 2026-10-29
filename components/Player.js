@@ -1,6 +1,7 @@
 'use client';
 import ArtistName from '@/components/ArtistName';
 import Credit from '@/components/Credit';
+import NoteComposer from '@/components/NoteComposer';
 import { SongProgress, SongDetails } from '@/components/SongInfo';
 import QualityBadge from '@/components/QualityBadge';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
@@ -374,16 +375,17 @@ function NowPlaying() {
     return () => { vv.removeEventListener('resize', fit); vv.removeEventListener('scroll', fit); document.documentElement.style.setProperty('--kb', '0px'); };
   }, [composing]);
   useEffect(() => { if (composing) requestAnimationFrame(() => sheet.current?.scrollTo({ top: 0, behavior: 'smooth' })); }, [composing]);
-  const postComment = async () => {
-    if (!text.trim()) return;
+  const postComment = async (bodyIn, atIn) => {
+    const text = bodyIn ?? '';
+    if (!text.trim()) return false;
     setPosting(true);
     const sb = supabase();
     const { data: sess } = await sb.auth.getSession();
     const name = sess.session?.user?.user_metadata?.name || null;
-    const { error } = await sb.from('notes').insert({ song_id: c.song.id, version_id: c.versionId, t: Math.round(pinAt * 10) / 10, body: text.trim(), author_name: pl.eng ? (name ? `${name} (Engineer)` : 'Engineer') : name, from_client: !pl.eng });
+    const { error } = await sb.from('notes').insert({ song_id: c.song.id, version_id: c.versionId, t: atIn == null ? null : Math.round(atIn * 10) / 10, body: text.trim(), author_name: pl.eng ? (name ? `${name} (Engineer)` : 'Engineer') : name, from_client: !pl.eng });
     setPosting(false);
-    if (error) { setPosted(error.message); return; }
-    setComposing(false); setText(''); setPosted(`Comment added at ${mmss(pinAt)} on ${pl.version?.label || 'this mix'}.`);
+    if (error) { setPosted(error.message); return false; }
+    setComposing(false); setText(''); setPosted(atIn == null ? `General note added on ${pl.version?.label || 'this mix'}.` : `Comment added at ${mmss(atIn)} on ${pl.version?.label || 'this mix'}.`);
     setTimeout(() => setPosted(''), 3500);
   };
   useEffect(() => {
@@ -459,7 +461,7 @@ function NowPlaying() {
         <div>
           <div className="npwavewrap">
             <Wave peaks={v?.peaks} time={pl.time} duration={pl.duration} onSeek={pl.seek} height={52} />
-            {composing && pl.duration > 0 && <span className="nppin" style={{ left: `${Math.min(100, (pinAt / pl.duration) * 100)}%` }} aria-hidden="true" />}
+            {composing && pinAt != null && pl.duration > 0 && <span className="nppin" style={{ left: `${Math.min(100, (pinAt / pl.duration) * 100)}%` }} aria-hidden="true" />}
             {/* comments on the waveform, SoundCloud style: a dot where each one sits, and a bubble as the song passes it */}
             {pl.duration > 0 && waveNotes.map((n) => (
               <button key={n.id} className={`npmark ${active?.id === n.id ? 'on' : ''}`} style={{ left: `${Math.min(100, (n.t / pl.duration) * 100)}%` }}
@@ -476,23 +478,8 @@ function NowPlaying() {
           <div className="nptimes mono"><span>{mmss(pl.time)}</span><span className="npfmt">{v?.file_format ? `${v.file_format} · as delivered` : 'Original file'}</span><span className="npdur">{mmss(pl.duration)}</span><span className="npleft">-{mmss(Math.max(0, pl.duration - pl.time))}</span></div>
         </div>
             {composing && (
-          <div className="npcompose inline compact" role="group" aria-label="Add a comment" ref={composeBox}>
-            <div className="nc-row">
-              <button className="nc-time mono" onClick={() => setPinAt(pl.time)} title="Tap to set it to right now" aria-label={`Comment at ${mmss(pinAt)}. Tap to use the current time`}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 2M10 2h4" /></svg>{mmss(pinAt)}
-              </button>
-              <textarea autoFocus rows={1} enterKeyHint="send" value={text} placeholder="Add a note…" aria-label="Comment"
-                onChange={(e) => { setText(e.target.value); const t = e.target; t.style.height = 'auto'; t.style.height = `${Math.min(t.scrollHeight, 110)}px`; }}
-                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); postComment(); } if (e.key === 'Escape') { setComposing(false); setText(''); } }} />
-              <button className="nc-send" disabled={!text.trim() || posting} onClick={postComment} aria-label={`Post at ${mmss(pinAt)}`}>
-                {posting ? <span className="sbusy" /> : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6" /></svg>}
-              </button>
-            </div>
-            <div className="nc-sub">
-              <span>On {pl.version?.label || 'this mix'} · tap the time to set it to now</span>
-              <button onClick={() => { setComposing(false); setText(''); }}>Cancel</button>
-            </div>
-          </div>
+          <NoteComposer now={pl.time} start={pinAt} duration={pl.duration} label={`On ${pl.version?.label || 'this mix'}`} onAt={(t) => setPinAt(t)}
+            onCancel={() => { setComposing(false); setText(''); }} onPost={(body, at) => postComment(body, at)} />
         )}
         <div className="npctl">
           <button className="npskip" onClick={() => pl.seek(Math.max(0, pl.time - 15))} aria-label="Back 15 seconds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 103-6.7L3 8" /><path d="M3 3v5h5" /><text x="12" y="15.5" textAnchor="middle" fontSize="7.5" fontWeight="700" fill="currentColor" stroke="none">15</text></svg></button>

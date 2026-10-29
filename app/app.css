@@ -1719,3 +1719,21 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .sharenp.composing .sharesquare { max-width: 132px; }
 @media (min-width: 761px) { .sharenp .sharesquare { max-width: 240px; } .sharenp.composing .sharesquare { max-width: 110px; } }
 .sharenp .lqname { margin-bottom: 6px; }
+
+/* note box: moment or general, editable time */
+.notecomposer { gap: 8px; }
+.ncmodes { display: inline-flex; gap: 4px; padding: 3px; border-radius: 10px; background: rgba(255,255,255,.06); justify-self: start; }
+.ncmodes button { height: 30px; padding: 0 12px; border-radius: 8px; border: 0; background: none; color: rgba(255,255,255,.6); font-size: 12.5px; font-weight: 650; cursor: pointer; }
+.ncmodes button[aria-pressed="true"] { background: rgba(255,255,255,.14); color: #fff; }
+.nctime { display: flex; align-items: center; gap: 6px; }
+.ncnudge, .ncnow { height: 32px; padding: 0 10px; border-radius: 9px; border: 1px solid rgba(255,255,255,.12); background: none; color: rgba(255,255,255,.75); font-size: 12.5px; font-weight: 650; cursor: pointer; }
+.ncnudge:hover, .ncnow:hover { color: #fff; border-color: rgba(255,255,255,.3); }
+.nctimebtn, .nctimein { height: 32px; min-width: 70px; padding: 0 10px; border-radius: 9px; border: 1px solid rgba(245,213,71,.4); background: rgba(245,213,71,.1); color: var(--sig); font-size: 14px; font-weight: 700; text-align: center; cursor: text; }
+.nctimein { width: 80px; font-size: 16px; outline: none; }
+.ncnow { margin-left: auto; }
+/* smoother with the phone keyboard: the player shrinks to the space above it */
+@media (max-width: 760px) {
+  .np.composing { height: calc(100% - var(--kb, 0px)) !important; transition: height .2s ease-out; }
+}
+/* share links on phones: no comment icon in the song list (the player handles it) */
+@media (max-width: 900px) { .ltracks .lrowc { display: none; } .ltracks button { grid-template-columns: 34px minmax(0, 1fr) auto; } }

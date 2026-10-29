@@ -7,8 +7,15 @@ const PORTAL_HOSTS = (process.env.PORTAL_DOMAINS || 'sendfileshere.com,www.sendf
   .split(',').map((h) => h.trim().toLowerCase()).filter(Boolean);
 const MAIN = SITE_URL;
 
+// the old Vercel address always goes to ctrl-room.app (same page), for everyone
+const OLD_HOSTS = (process.env.OLD_HOSTS || 'ctrl-room-eight.vercel.app').split(',').map((h) => h.trim().toLowerCase()).filter(Boolean);
+
 export function middleware(req) {
   const host = (req.headers.get('host') || '').toLowerCase().split(':')[0];
+  if (OLD_HOSTS.includes(host) && !req.nextUrl.pathname.startsWith('/api/dropbox/callback')) {
+    const { pathname, search } = req.nextUrl;
+    return NextResponse.redirect(new URL(pathname + search, MAIN), 308);
+  }
   if (!PORTAL_HOSTS.includes(host)) return NextResponse.next();
   const { pathname, search } = req.nextUrl;
   if (pathname === '/') return NextResponse.rewrite(new URL('/portal' + search, req.url));

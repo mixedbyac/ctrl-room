@@ -7,7 +7,7 @@ import Cocoa
 import WebKit
 import UniformTypeIdentifiers
 
-let HOME = URL(string: Bundle.main.object(forInfoDictionaryKey: "CTRLHomeURL") as? String ?? "https://ctrl-room-eight.vercel.app")!
+let HOME = URL(string: Bundle.main.object(forInfoDictionaryKey: "CTRLHomeURL") as? String ?? "https://ctrl-room.app")!
 let AUDIO_EXT: Set<String> = ["wav", "wave", "aif", "aiff", "aifc", "flac", "mp3", "m4a", "aac", "ogg", "opus"]
 let BG = NSColor(red: 0x0b / 255.0, green: 0x0b / 255.0, blue: 0x0c / 255.0, alpha: 1)
 let CHUNK = 3 * 1024 * 1024

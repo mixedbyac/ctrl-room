@@ -16,7 +16,7 @@
   <key>NSHighResolutionCapable</key><true/>
   <key>NSSupportsAutomaticGraphicsSwitching</key><true/>
   <key>NSHumanReadableCopyright</key><string>CTRL ROOM by Music by AC</string>
-  <key>CTRLHomeURL</key><string>https://ctrl-room-eight.vercel.app</string>
+  <key>CTRLHomeURL</key><string>https://ctrl-room.app</string>
   <key>CFBundleDocumentTypes</key>
   <array>
     <dict>

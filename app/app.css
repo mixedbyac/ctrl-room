@@ -1791,3 +1791,27 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .moreme b { display: flex; align-items: center; gap: 5px; font-size: 16px; }
 .moreme b .bluecheck { width: 15px; height: 15px; }
 .moreme small { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* People (engineer) */
+.pplbar { display: grid; gap: 10px; margin: 0 0 16px; }
+.pplbar input { width: 100%; max-width: 460px; }
+.pplfilters { display: flex; flex-wrap: wrap; gap: 6px; }
+.pplfilters button { padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: none; color: var(--muted); font-size: 13px; font-weight: 650; cursor: pointer; }
+.pplfilters button[aria-pressed="true"] { background: var(--sig); color: #0f0f10; border-color: var(--sig); }
+.ppl { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.pplrow { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 12px 14px; border-radius: 16px; background: var(--s1); border: 1px solid var(--line); }
+.pplav { width: 46px; height: 46px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: rgba(245,213,71,.14); color: var(--sig); font-weight: 800; font-size: 18px; }
+.pplav img { width: 100%; height: 100%; object-fit: cover; }
+.pplmain { display: grid; gap: 2px; min-width: 0; }
+.pplmain b { display: flex; align-items: center; gap: 6px; font-size: 15px; }
+.pplmain b .bluecheck { width: 15px; height: 15px; }
+.pplmain small { color: var(--muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pplrole { font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--sig); background: rgba(245,213,71,.12); padding: 2px 7px; border-radius: 999px; }
+.pplmeta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; }
+.pplchip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 650; padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,.06); }
+.pplchip i { font-style: normal; color: var(--muted); font-weight: 600; }
+.pplnone { font-size: 12px; color: var(--sig); }
+.pplwhen { font-size: 11.5px; color: var(--faint); }
+.pplacts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.pplacts select { max-width: 180px; }
+@media (max-width: 760px) { .pplrow { grid-template-columns: 42px minmax(0, 1fr); } .pplacts { grid-column: 2; justify-content: flex-start; } }

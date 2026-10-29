@@ -134,6 +134,11 @@ export default function AppShell({ children }) {
                   <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" /></svg></span>{eng ? 'Artists' : 'Artist page'}
                 </Link>
               )}
+              {eng && (
+                <Link className="navitem" href="/people" aria-current={pathname.startsWith('/people')}>
+                  <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c1-3.5 3.5-5.5 6.5-5.5s5.5 2 6.5 5.5" /><circle cx="17" cy="9" r="2.8" /><path d="M16 14.6c2.6.2 4.6 2 5.5 5.4" /></svg></span>People
+                </Link>
+              )}
             </div>
           )}
           {eng ? (
@@ -199,7 +204,7 @@ export default function AppShell({ children }) {
         </div>
         <EnterAnimation active={!!session && !needMfa} ready={loaded} />
         {session && <UpdateWatcher eng={eng} />}
-        {session && <TabBar eng={eng} projects={projects} verified={!session.user.app_metadata?.needs_verify} email={session.user.email} signOut={signOut} unseen={unseen} />}
+        {session && <TabBar eng={eng} projects={projects} meta={session.user.user_metadata || {}} verified={!session.user.app_metadata?.needs_verify} email={session.user.email} signOut={signOut} unseen={unseen} />}
       </div>
       </PlayerProvider>
     </Ctx.Provider>

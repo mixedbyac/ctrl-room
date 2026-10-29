@@ -7,12 +7,14 @@ export default function SideMe({ session, eng, signOut }) {
   const list = useProfiles();
   const email = session.user.email || '';
   const prof = eng ? list.find((p) => p.email === email.toLowerCase()) : null;
-  const name = prof?.display_name || prof?.full_name || session.user.user_metadata?.name || email.replace(/@.*/, '');
+  const md = session.user.user_metadata || {};
+  const name = prof?.display_name || prof?.full_name || md.display_name || md.name || email.replace(/@.*/, '');
+  const photo = prof?.photo_url || md.avatar_url || null;
   const verified = eng ? !!prof?.verified || !!session.user.email_confirmed_at : !session.user.app_metadata?.needs_verify;
   return (
     <div className="sideme">
       <Link href="/settings" className="sidemecard" title="Settings">
-        <span className="sideav">{prof?.photo_url ? <img src={prof.photo_url} alt="" /> : (name[0] || '?').toUpperCase()}</span>
+        <span className="sideav">{photo ? <img src={photo} alt="" /> : (name[0] || '?').toUpperCase()}</span>
         <span className="sidewho">
           <b>{name}{verified && <BlueCheck title="Verified" />}</b>
           <small>{email}</small>

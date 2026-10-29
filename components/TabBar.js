@@ -14,13 +14,14 @@ const I = {
 const Icon = ({ d }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>;
 
 /** Phone navigation: tabs along the bottom, with a "More" sheet for everything else and signing out. */
-export default function TabBar({ eng, projects, email, signOut, unseen, verified }) {
+export default function TabBar({ eng, projects, email, signOut, unseen, verified, meta = {} }) {
   const pathname = usePathname();
   const [more, setMore] = useState(false);
   const profiles = useProfiles();
   const prof = eng ? profiles.find((x) => x.email === String(email || '').toLowerCase()) : null;
-  const myName = prof?.display_name || prof?.full_name || String(email || '').replace(/@.*/, '');
-  const av = <span className="tabav">{prof?.photo_url ? <img src={prof.photo_url} alt="" /> : (myName[0] || '?').toUpperCase()}</span>;
+  const myName = prof?.display_name || prof?.full_name || meta.display_name || meta.name || String(email || '').replace(/@.*/, '');
+  const myPhoto = prof?.photo_url || meta.avatar_url || null;
+  const av = <span className="tabav">{myPhoto ? <img src={myPhoto} alt="" /> : (myName[0] || '?').toUpperCase()}</span>;
   useEffect(() => { setMore(false); }, [pathname]);
   useEffect(() => {
     if (!more) return;
@@ -50,6 +51,7 @@ export default function TabBar({ eng, projects, email, signOut, unseen, verified
             <div className="moregrid">
               {eng && <Link href="/insights">Insights</Link>}
               {eng && <Link href="/dropbox">Dropbox</Link>}
+              {eng && <Link href="/people">People</Link>}
               <Link href="/whats-new">What’s new{unseen && <i className="tabdot" />}</Link>
               <Link href="/settings">Settings</Link>
               <Link href="/protect">How your music is protected</Link>

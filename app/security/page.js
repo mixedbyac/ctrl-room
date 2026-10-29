@@ -1,9 +1,10 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase, api } from '@/lib/supabase';
 import { ENGINEER_KINDS, CLIENT_KINDS, prefOf } from '@/lib/notify';
 import { useApp, TopBar } from '@/components/AppShell';
 import ProfileForm from '@/components/ProfileForm';
+import { shrink } from '@/components/ArtistProfile';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 
@@ -189,22 +190,47 @@ function ProtectionInfo({ eng }) {
   );
 }
 
-/** Artists: your name and email. */
+/** Everyone: your name, display name and photo. */
 function AccountBasics({ session }) {
-  const [name, setName] = useState(session?.user?.user_metadata?.name || '');
+  const md = session?.user?.user_metadata || {};
+  const [name, setName] = useState(md.name || '');
+  const [display, setDisplay] = useState(md.display_name || '');
+  const [photo, setPhoto] = useState(md.avatar_url || '');
   const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+  const fileIn = useRef(null);
   const verified = !session?.user?.app_metadata?.needs_verify;
+  const after = async (r, m) => { setMsg(m); await supabase().auth.refreshSession().catch(() => {}); return r; };
   const save = async (e) => {
-    e.preventDefault();
-    const { error } = await supabase().auth.updateUser({ data: { name: name.trim() } });
-    setMsg(error ? error.message : 'Saved.');
+    e.preventDefault(); setBusy(true);
+    try { await api('/api/me', { action: 'save', name, display_name: display }); await after(null, 'Saved.'); } catch (er) { setMsg(er.message); }
+    setBusy(false);
   };
+  const pick = (e) => {
+    const f = e.target.files?.[0]; e.target.value = ''; if (!f) return;
+    setBusy(true);
+    shrink(f, 800).then((dataUrl) => api('/api/me', { action: 'photo', dataUrl })).then((r) => { setPhoto(r.user_metadata?.avatar_url || ''); return after(r, 'Photo updated.'); }).catch((er) => setMsg(er.message)).finally(() => setBusy(false));
+  };
+  const shown = display || name || (session?.user?.email || '').replace(/@.*/, '');
   return (
     <form className="panel secpanel" onSubmit={save}>
-      <b>Your account</b>
-      <div className="fld"><label htmlFor="ac-n">Your name</label><input id="ac-n" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" /></div>
-      <div className="fld"><label>Email</label><input value={session?.user?.email || ''} disabled /><span className="muted small">{verified ? '✓ Verified' : 'Not confirmed yet'}</span></div>
-      <div className="row-actions"><button className="btn small primary">Save</button></div>
+      <div className="profcard" style={{ background: 'none', border: 0, padding: 0 }}>
+        <span className="profav">{photo ? <img src={photo} alt="" /> : (shown[0] || '?').toUpperCase()}</span>
+        <div>
+          <b className="profname">{shown}</b>
+          <span className="profmail">{session?.user?.email} · {verified ? <span className="vok">Verified</span> : <span className="vno">Not confirmed yet</span>}</span>
+          <div className="row-actions" style={{ marginTop: 8 }}>
+            <button type="button" className="btn small" onClick={() => fileIn.current?.click()} disabled={busy}>{photo ? 'Change photo' : 'Add a photo'}</button>
+            {photo && <button type="button" className="btn small quiet" disabled={busy} onClick={() => api('/api/me', { action: 'clear-photo' }).then((r) => { setPhoto(''); return after(r, 'Photo removed.'); }).catch((er) => setMsg(er.message))}>Remove</button>}
+          </div>
+        </div>
+      </div>
+      <input ref={fileIn} type="file" accept="image/*" hidden onChange={pick} />
+      <div className="two">
+        <div className="fld"><label htmlFor="ac-n">Full name</label><input id="ac-n" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" /></div>
+        <div className="fld"><label htmlFor="ac-d">Display name <span className="opt">what people see</span></label><input id="ac-d" value={display} onChange={(e) => setDisplay(e.target.value)} placeholder={name || 'How you go by'} /></div>
+      </div>
+      <div className="row-actions"><button className="btn small primary" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button></div>
       {msg && <p className="toast-inline" style={{ margin: 0 }}>{msg}</p>}
     </form>
   );

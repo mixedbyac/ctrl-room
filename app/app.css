@@ -1324,3 +1324,33 @@ a.driftc:hover { transform: scale(1.04); }
 .credit > img { width: 19px; height: 19px; }
 .credit > .bluecheck { width: 16px; height: 16px; }
 .credit.big { font-size: 14.3px; }
+
+/* notes in the player: the art shrinks, the waveform moves up, and the note box sits right under it (nothing covers the screen) */
+.npsquare, .npdisc { transition: max-width .32s cubic-bezier(.2,.8,.2,1), width .32s cubic-bezier(.2,.8,.2,1), margin .32s; }
+.np.composing .npdisc { width: 96px; }
+.np.composing .npsquare { max-width: 132px; }
+.np.composing .npqueue, .np.composing .npvers .nphint { display: none; }
+.npwavewrap { position: relative; }
+.nppin { position: absolute; top: -6px; bottom: -6px; width: 2px; margin-left: -1px; border-radius: 2px; background: var(--sig); box-shadow: 0 0 0 3px rgba(245,213,71,.18); pointer-events: none; transition: left .2s; }
+.nppin::before { content: ""; position: absolute; top: -5px; left: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--sig); }
+.npcompose.inline { position: static !important; transform: none !important; width: auto; margin: 2px 0 0; padding: 10px; border-radius: 16px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); box-shadow: none; animation: ncin .22s cubic-bezier(.2,.8,.2,1); backdrop-filter: none; -webkit-backdrop-filter: none; }
+@keyframes ncin { from { opacity: 0; transform: translateY(-6px); } }
+.npcompose.inline:focus-within { border-color: rgba(245,213,71,.45); }
+@media (max-width: 760px) {
+  .np.composing .npsquare { max-width: 112px; border-radius: 12px; }
+  .np.composing .nphead { margin-top: -4px; }
+  .npcompose.inline { bottom: auto !important; }
+}
+
+/* credit a bit smaller again */
+.credit { font-size: 12px; }
+.credit > img { width: 18px; height: 18px; }
+.credit > .bluecheck { width: 15px; height: 15px; }
+
+/* project cover centered on phones (for everyone): just the sleeve, square, in the middle */
+@media (max-width: 900px) {
+  .app .sleevewrap { aspect-ratio: 1; max-width: 300px; width: 100%; margin: 0 auto; }
+  .app .sleevewrap .record { display: none; }
+  .app .sleevewrap .sleeve, .app .sleevewrap:hover .sleeve, body.playing .app .sleevewrap .sleeve { left: 0; right: 0; width: 100%; transform: none; }
+  .phero { justify-items: center; }
+}

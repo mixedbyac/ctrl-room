@@ -303,6 +303,7 @@ function NowPlaying() {
   const [upNext, setUpNext] = useState([]);
   const close = () => pl.setExpanded(false);
   const sheet = useRef(null), drag = useRef(null); // swipe down to close (phones)
+  const composeBox = useRef(null);
   // quick comment at the exact moment (phone friendly)
   const [composing, setComposing] = useState(false);
   const [pinAt, setPinAt] = useState(0);
@@ -318,6 +319,7 @@ function NowPlaying() {
     fit(); vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit);
     return () => { vv.removeEventListener('resize', fit); vv.removeEventListener('scroll', fit); document.documentElement.style.setProperty('--kb', '0px'); };
   }, [composing]);
+  useEffect(() => { if (composing) requestAnimationFrame(() => sheet.current?.scrollTo({ top: 0, behavior: 'smooth' })); }, [composing]);
   const postComment = async () => {
     if (!text.trim()) return;
     setPosting(true);
@@ -350,7 +352,7 @@ function NowPlaying() {
   return (
     <>
     <div className="npscrim" onClick={close} aria-hidden="true" />
-    <div className="np" role="dialog" aria-label="Now playing" ref={sheet}
+    <div className={`np ${composing ? 'composing' : ''}`} role="dialog" aria-label="Now playing" ref={sheet}
       onTouchStart={(e) => { const el = sheet.current; if (!el || el.scrollTop > 0 || e.target.closest('.npwave, textarea, input, .npq, .npvers')) return; drag.current = { y: e.touches[0].clientY, dy: 0 }; }}
       onTouchMove={(e) => {
         const d = drag.current; if (!d) return;
@@ -392,9 +394,31 @@ function NowPlaying() {
           </div>
         )}
         <div>
-          <Wave peaks={v?.peaks} time={pl.time} duration={pl.duration} onSeek={pl.seek} height={52} />
+          <div className="npwavewrap">
+            <Wave peaks={v?.peaks} time={pl.time} duration={pl.duration} onSeek={pl.seek} height={52} />
+            {composing && pl.duration > 0 && <span className="nppin" style={{ left: `${Math.min(100, (pinAt / pl.duration) * 100)}%` }} aria-hidden="true" />}
+          </div>
           <div className="nptimes mono"><span>{mmss(pl.time)}</span><span className="npfmt">{v?.file_format ? `${v.file_format} · as delivered` : 'Original file'}</span><span className="npdur">{mmss(pl.duration)}</span><span className="npleft">-{mmss(Math.max(0, pl.duration - pl.time))}</span></div>
         </div>
+            {composing && (
+          <div className="npcompose inline compact" role="group" aria-label="Add a comment" ref={composeBox}>
+            <div className="nc-row">
+              <button className="nc-time mono" onClick={() => setPinAt(pl.time)} title="Tap to set it to right now" aria-label={`Comment at ${mmss(pinAt)}. Tap to use the current time`}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 2M10 2h4" /></svg>{mmss(pinAt)}
+              </button>
+              <textarea autoFocus rows={1} enterKeyHint="send" value={text} placeholder="Add a note…" aria-label="Comment"
+                onChange={(e) => { setText(e.target.value); const t = e.target; t.style.height = 'auto'; t.style.height = `${Math.min(t.scrollHeight, 110)}px`; }}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); postComment(); } if (e.key === 'Escape') { setComposing(false); setText(''); } }} />
+              <button className="nc-send" disabled={!text.trim() || posting} onClick={postComment} aria-label={`Post at ${mmss(pinAt)}`}>
+                {posting ? <span className="sbusy" /> : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6" /></svg>}
+              </button>
+            </div>
+            <div className="nc-sub">
+              <span>On {pl.version?.label || 'this mix'} · tap the time to set it to now</span>
+              <button onClick={() => { setComposing(false); setText(''); }}>Cancel</button>
+            </div>
+          </div>
+        )}
         <div className="npctl">
           <button className="npskip" onClick={() => pl.seek(Math.max(0, pl.time - 15))} aria-label="Back 15 seconds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 103-6.7L3 8" /><path d="M3 3v5h5" /><text x="12" y="15.5" textAnchor="middle" fontSize="7.5" fontWeight="700" fill="currentColor" stroke="none">15</text></svg></button>
           <button onClick={pl.prev} aria-label="Previous song (or back to the start)"><svg viewBox="0 0 24 24"><path d="M11 12l9-6.5v13zM2 12l9-6.5v13z" /></svg></button>
@@ -420,25 +444,6 @@ function NowPlaying() {
         )}
       </div>
     </div>
-        {composing && (
-      <div className="npcompose sheet compact" role="dialog" aria-label="Add a comment">
-        <div className="nc-row">
-          <button className="nc-time mono" onClick={() => setPinAt(pl.time)} title="Tap to set it to right now" aria-label={`Comment at ${mmss(pinAt)}. Tap to use the current time`}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 2M10 2h4" /></svg>{mmss(pinAt)}
-          </button>
-          <textarea autoFocus rows={1} enterKeyHint="send" value={text} placeholder="Add a note…" aria-label="Comment"
-            onChange={(e) => { setText(e.target.value); const t = e.target; t.style.height = 'auto'; t.style.height = `${Math.min(t.scrollHeight, 110)}px`; }}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); postComment(); } if (e.key === 'Escape') { setComposing(false); setText(''); } }} />
-          <button className="nc-send" disabled={!text.trim() || posting} onClick={postComment} aria-label={`Post at ${mmss(pinAt)}`}>
-            {posting ? <span className="sbusy" /> : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6" /></svg>}
-          </button>
-        </div>
-        <div className="nc-sub">
-          <span>On {pl.version?.label || 'this mix'} · tap the time to set it to now</span>
-          <button onClick={() => { setComposing(false); setText(''); }}>Cancel</button>
-        </div>
-      </div>
-    )}
     </>
   );
 }

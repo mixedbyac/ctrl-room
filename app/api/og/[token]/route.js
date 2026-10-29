@@ -1,42 +1,38 @@
-import { SITE_URL } from '@/lib/site';
 import { ImageResponse } from 'next/og';
 import { shareInfo } from '@/lib/sharemeta';
+import { admin } from '@/lib/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const hue = (seed) => Math.abs(Number(seed) || 7) % 360;
+const CACHE = 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800';
 
-// The preview card a share link shows in iMessage, Instagram DMs, WhatsApp, Slack…
+// The picture a share link shows in iMessage, Instagram DMs, WhatsApp, Slack…
+// With real cover art: the cover itself (fast and reliable, which iMessage needs). Otherwise a square card in the cover's colors.
 export async function GET(req, { params }) {
   const info = await shareInfo(params.token).catch(() => null);
-  const site = SITE_URL;
+  if (info?.cover) {
+    // a smaller copy when Supabase can resize images, otherwise the original
+    let src = info.cover;
+    try {
+      const { data } = await admin().storage.from('mixes').createSignedUrl(info.coverPath, 3600, { transform: { width: 1200, height: 1200, resize: 'cover', quality: 82 } });
+      if (data?.signedUrl) { const t = await fetch(data.signedUrl, { method: 'HEAD', signal: AbortSignal.timeout(3000) }).catch(() => null); if (t?.ok) src = data.signedUrl; }
+    } catch {}
+    try {
+      const r = await fetch(src, { signal: AbortSignal.timeout(6000) });
+      if (r.ok) return new Response(r.body, { headers: { 'Content-Type': r.headers.get('content-type') || 'image/jpeg', 'Cache-Control': CACHE } });
+    } catch {}
+  }
   const h = hue(info?.seed);
-  const art = info?.cover
-    ? <img src={info.cover} width={470} height={470} style={{ borderRadius: 28, objectFit: 'cover', boxShadow: '0 40px 80px rgba(0,0,0,.6)' }} />
-    : <div style={{ width: 470, height: 470, borderRadius: 28, display: 'flex', background: `linear-gradient(135deg, hsl(${h},70%,55%), hsl(${(h + 70) % 360},65%,35%) 60%, hsl(${(h + 150) % 360},60%,18%))`, boxShadow: '0 40px 80px rgba(0,0,0,.6)' }} />;
   return new ImageResponse(
     (
-      <div style={{ width: 1200, height: 630, display: 'flex', position: 'relative', background: '#0f0f10', color: '#f4f4f5', fontFamily: 'sans-serif' }}>
-        {info?.cover && <img src={info.cover} width={1200} height={630} style={{ position: 'absolute', top: 0, left: 0, width: 1200, height: 630, objectFit: 'cover', opacity: 0.22 }} />}
-        <div style={{ position: 'absolute', top: 0, left: 0, width: 1200, height: 630, display: 'flex', background: 'linear-gradient(90deg, rgba(15,15,16,.35), rgba(15,15,16,.92) 55%)' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 56, padding: '80px 70px', width: '100%', position: 'relative' }}>
-          {art}
-          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 26, letterSpacing: 4, textTransform: 'uppercase', color: '#f5d547', fontWeight: 700, marginBottom: 18 }}>{info ? (info.kind === 'song' ? info.project : `${info.count} song${info.count === 1 ? '' : 's'}`) : 'CTRL ROOM'}</div>
-            <div style={{ fontSize: (info?.title || '').length > 22 ? 64 : 82, fontWeight: 800, lineHeight: 1.02, letterSpacing: -2, marginBottom: 22, display: 'flex' }}>{info?.title || 'Listen in CTRL ROOM'}</div>
-            {info && <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 36, fontWeight: 600, color: '#e4e4e7' }}>
-              {info.artistImage && <img src={info.artistImage} width={54} height={54} style={{ borderRadius: 27, objectFit: 'cover' }} />}
-              {info.artist}
-            </div>}
-            {info?.credit && <div style={{ marginTop: 20, fontSize: 24, color: '#a1a1aa', display: 'flex' }}>{info.credit}</div>}
-            <div style={{ marginTop: 'auto', paddingTop: 40, display: 'flex', alignItems: 'center', gap: 14, fontSize: 24, color: '#a1a1aa', fontWeight: 700, letterSpacing: 2 }}>
-              <img src={`${site}/logo.png`} width={44} height={44} />CTRL ROOM
-            </div>
-          </div>
-        </div>
+      <div style={{ width: 1200, height: 1200, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: 90, color: '#fff', fontFamily: 'sans-serif',
+        background: `linear-gradient(135deg, hsl(${h},70%,55%), hsl(${(h + 70) % 360},65%,32%) 60%, hsl(${(h + 150) % 360},60%,14%))` }}>
+        <div style={{ display: 'flex', fontSize: 44, fontWeight: 700, opacity: 0.85, marginBottom: 16 }}>{info?.artist || 'CTRL ROOM'}</div>
+        <div style={{ display: 'flex', fontSize: (info?.title || '').length > 18 ? 96 : 130, fontWeight: 800, lineHeight: 1, letterSpacing: -3 }}>{info?.title || 'Listen'}</div>
       </div>
     ),
-    { width: 1200, height: 630, headers: { 'Cache-Control': 'public, max-age=3600, s-maxage=3600' } },
+    { width: 1200, height: 1200, headers: { 'Cache-Control': CACHE } },
   );
 }

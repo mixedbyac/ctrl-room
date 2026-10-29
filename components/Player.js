@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import Cover from '@/components/Cover';
 import { mmss, deviceName, orderVersions, latestMix, currentMix } from '@/lib/format';
-import { artOf } from '@/lib/art';
+import { makeArt, artOf } from '@/lib/art';
 
 /*
   One player for the whole app. It lives above the pages, so music keeps playing while you move around.
@@ -187,6 +187,54 @@ export function PlayerProvider({ eng, children }) {
     return () => cancelAnimationFrame(raf);
   });
   useEffect(() => { document.body.classList.toggle('playing', playing); }, [playing]);
+
+  /* iPhone / Mac lock screen, Control Center, AirPods and keyboard media keys: cover art, title, artist, controls */
+  const cur = current;
+  useEffect(() => {
+    const ms = typeof navigator !== 'undefined' && navigator.mediaSession;
+    if (!ms || !cur) return;
+    let live = true;
+    (async () => {
+      const art = artOf(cur.song, cur.project);
+      let src = '';
+      if (art.path) { const { data } = await supabase().storage.from('mixes').createSignedUrl(art.path, 24 * 3600).catch(() => ({ data: null })); src = data?.signedUrl || ''; }
+      if (!src) src = makeArt(art.seed, 512);
+      let artist = cur.project?.artist || '';
+      try { const { data } = await supabase().from('artists').select('display_name').ilike('name', artist).maybeSingle(); if (data?.display_name) artist = data.display_name; } catch {}
+      if (!live || typeof MediaMetadata === 'undefined') return;
+      const v = cur.versions.find((x) => x.id === cur.versionId);
+      ms.metadata = new MediaMetadata({
+        title: cur.song.title,
+        artist: [artist, v?.label].filter(Boolean).join(' · '),
+        album: cur.project?.title || 'CTRL ROOM',
+        artwork: [{ src, sizes: '512x512', type: src.startsWith('data:image/jpeg') ? 'image/jpeg' : src.startsWith('data:image/png') ? 'image/png' : 'image/jpeg' }, { src: '/logo.png', sizes: '512x512', type: 'image/png' }],
+      });
+    })();
+    return () => { live = false; };
+  }, [cur?.song?.id, cur?.versionId, cur?.song?.title, cur?.song?.cover_path, cur?.project?.cover_path]); // eslint-disable-line
+  useEffect(() => {
+    const ms = typeof navigator !== 'undefined' && navigator.mediaSession;
+    if (!ms) return;
+    const set = (k, fn) => { try { ms.setActionHandler(k, fn); } catch {} };
+    set('play', () => resume());
+    set('pause', () => pause());
+    set('previoustrack', () => step(-1));
+    set('nexttrack', () => step(1));
+    set('seekbackward', (d) => { const a = curAudio(); if (a) seek(a.currentTime - (d?.seekOffset || 15)); });
+    set('seekforward', (d) => { const a = curAudio(); if (a) seek(a.currentTime + (d?.seekOffset || 15)); });
+    set('seekto', (d) => { if (d?.seekTime != null) seek(d.seekTime); });
+  }, [resume, pause, step, seek]); // eslint-disable-line
+  const posAt = useRef(0);
+  useEffect(() => {
+    const ms = typeof navigator !== 'undefined' && navigator.mediaSession;
+    if (!ms) return;
+    try { ms.playbackState = cur ? (playing ? 'playing' : 'paused') : 'none'; } catch {}
+    const now = Date.now();
+    if (cur && duration > 0 && ms.setPositionState && (now - posAt.current > 1000 || !playing)) {
+      posAt.current = now;
+      try { ms.setPositionState({ duration, playbackRate: 1, position: Math.min(time, duration) }); } catch {}
+    }
+  }, [playing, time, duration, cur]);
 
   function listen(a) {
     const c = curRef.current;

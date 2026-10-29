@@ -1,4 +1,5 @@
 'use client';
+import { makeArt } from '@/lib/art';
 import Credit, { BlueCheck } from '@/components/Credit';
 import QualityBadge from '@/components/QualityBadge';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -93,6 +94,22 @@ export default function SharedListen() {
     setTime(0); setDur(cur.version.duration || 0);
     return () => { cancelAnimationFrame(raf); a.pause(); a.removeEventListener('loadedmetadata', onMeta); a.removeEventListener('ended', onEnd); report(); audio.current = null; };
   }, [cur?.id]); // eslint-disable-line
+
+  // lock screen / Control Center: cover art, title, artist and controls
+  useEffect(() => {
+    const ms = typeof navigator !== 'undefined' && navigator.mediaSession;
+    if (!ms || !cur || !data || typeof MediaMetadata === 'undefined') return;
+    const src = cur.cover || data.project?.cover || (typeof document !== 'undefined' ? makeArt(cur.seed ?? data.project?.seed, 512) : '');
+    ms.metadata = new MediaMetadata({ title: cur.title, artist: data.artist?.display_name || data.project?.artist || '', album: data.project?.title || 'CTRL ROOM',
+      artwork: [{ src, sizes: '512x512', type: 'image/jpeg' }, { src: '/logo.png', sizes: '512x512', type: 'image/png' }] });
+    const set = (k, fn) => { try { ms.setActionHandler(k, fn); } catch {} };
+    set('play', () => audio.current?.play().then(() => setPlaying(true)).catch(() => {}));
+    set('pause', () => { audio.current?.pause(); setPlaying(false); });
+    set('nexttrack', idx < songs.length - 1 ? () => setIdx(idx + 1) : null);
+    set('previoustrack', idx > 0 ? () => setIdx(idx - 1) : null);
+    set('seekto', (d) => { if (audio.current && d?.seekTime != null) audio.current.currentTime = d.seekTime; });
+  }, [cur?.id, data]); // eslint-disable-line
+  useEffect(() => { try { navigator.mediaSession.playbackState = playing ? 'playing' : 'paused'; } catch {} }, [playing]);
 
   useEffect(() => {
     const bye = () => report(true);

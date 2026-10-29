@@ -39,7 +39,7 @@ export async function POST(req) {
       return json({ ok: true });
     }
     const { data: p } = await db.from('projects').select('title').eq('id', up.project_id).single();
-    const folder = await dropboxFolder(up.artist, p?.title, song.title);
+    const folder = await dropboxFolder(up.artist, p?.title, song.title, up.created_at);
     const r = await dropboxChunk('finish', { session, offset, path: dropboxPath(folder, name), data });
     return json({ ok: true, path: r.path_display });
   } catch (e) {

@@ -20,7 +20,7 @@ export async function POST(req) {
   const { data: p } = await db.from('projects').select('title').eq('id', up.project_id).single();
 
   try {
-    const folder = await dropboxFolder(up.artist, p?.title, song.title);
+    const folder = await dropboxFolder(up.artist, p?.title, song.title, up.created_at);
     const link = await dropboxUploadLink(dropboxPath(folder, b.name));
     return json({ link, folder });
   } catch (e) {

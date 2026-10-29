@@ -256,7 +256,16 @@ function RememberedDevices() {
 
 function EmailSetup() {
   const [st, setSt] = useState(null);
-  useEffect(() => { api('/api/invite', { check: true }).then(setSt).catch((e) => setSt({ email: null, error: e.message })); }, []);
+  const [log, setLog] = useState(null);
+  const [tmsg, setTmsg] = useState('');
+  const loadLog = () => api('/api/invite', { log: true }).then((r) => setLog(r.log || [])).catch(() => setLog([]));
+  useEffect(() => { api('/api/invite', { check: true }).then(setSt).catch((e) => setSt({ email: null, error: e.message })); loadLog(); }, []);
+  const test = async () => {
+    setTmsg('Sending…');
+    try { const r = await api('/api/invite', { test: true }); setTmsg(r.sent ? 'Sent. Check your inbox (and spam).' : `Didn’t send: ${r.reason}`); }
+    catch (e) { setTmsg(e.message); }
+    loadLog();
+  };
   return (
     <div className="panel secpanel" id="email">
       <b>Email invites {st && (st.email ? <span className="tbadge ok">✓ On · from {st.from}</span> : st.email === null ? <span className="tbadge">Couldn’t check</span> : <span className="tbadge warn">Not set up</span>)}</b>
@@ -272,6 +281,20 @@ function EmailSetup() {
           <li>API Keys › Create API key (Sending access).</li>
           <li>In Vercel › ctrl-room › Settings › Environment Variables, add <code>RESEND_API_KEY</code> (the key) and <code>EMAIL_FROM</code> = <code>CTRL ROOM &lt;mix@ctrl-room.app&gt;</code>, then Redeploy.</li>
         </ol>
+      )}
+      <div className="row" style={{ gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <button className="btn small" onClick={test}>Send test email</button>
+        {tmsg && <span className="small muted" role="status">{tmsg}</span>}
+      </div>
+      {log && log.length > 0 && (
+        <details className="small">
+          <summary>Recent emails ({log.length})</summary>
+          <ul className="emaillog">
+            {log.map((e, i) => (
+              <li key={i}><span className={e.sent ? 'ok' : 'bad'}>{e.sent ? '✓ Sent' : '✗ Failed'}</span> <b>{e.subject}</b> → {e.to} <span className="muted">· {new Date(e.at).toLocaleString()}</span>{e.reason ? <div className={e.sent ? 'muted' : 'ferr'}>{e.reason}</div> : null}</li>
+            ))}
+          </ul>
+        </details>
       )}
     </div>
   );

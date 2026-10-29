@@ -1781,3 +1781,13 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .sidelinks a, .sidelinks button { display: block; text-align: left; padding: 6px 8px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--muted); background: none; border: 0; cursor: pointer; text-decoration: none; }
 .sidelinks a:hover, .sidelinks button:hover { color: var(--ink); background: var(--s1); }
 .settabs { margin: 0 0 22px; } @media (min-width: 901px) { .settabs { justify-content: flex-start; } } .setsec { display: grid; gap: 0; }
+/* phone tab bar: your picture instead of “More” */
+.tabav { width: 26px; height: 26px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: rgba(245,213,71,.16); color: var(--sig); font-size: 12px; font-weight: 800; border: 1.5px solid transparent; }
+.tabav img { width: 100%; height: 100%; object-fit: cover; }
+.tab.tabme.on .tabav, .tab.tabme:active .tabav { border-color: var(--sig); }
+.moreme { display: grid; grid-template-columns: 48px minmax(0, 1fr) 14px; gap: 12px; align-items: center; padding: 10px 12px; margin: 4px 0 12px; border-radius: 16px; background: var(--s1); color: var(--ink); text-decoration: none; }
+.moreme .tabav { width: 48px; height: 48px; font-size: 18px; }
+.moreme > span:nth-child(2) { display: grid; min-width: 0; line-height: 1.3; }
+.moreme b { display: flex; align-items: center; gap: 5px; font-size: 16px; }
+.moreme b .bluecheck { width: 15px; height: 15px; }
+.moreme small { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useProfiles, BlueCheck } from '@/components/Credit';
 
 const I = {
   home: <path d="M4 11l8-7 8 7v8a1 1 0 01-1 1h-4v-6H9v6H5a1 1 0 01-1-1z" />,
@@ -16,6 +17,10 @@ const Icon = ({ d }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 export default function TabBar({ eng, projects, email, signOut, unseen, verified }) {
   const pathname = usePathname();
   const [more, setMore] = useState(false);
+  const profiles = useProfiles();
+  const prof = eng ? profiles.find((x) => x.email === String(email || '').toLowerCase()) : null;
+  const myName = prof?.display_name || prof?.full_name || String(email || '').replace(/@.*/, '');
+  const av = <span className="tabav">{prof?.photo_url ? <img src={prof.photo_url} alt="" /> : (myName[0] || '?').toUpperCase()}</span>;
   useEffect(() => { setMore(false); }, [pathname]);
   useEffect(() => {
     if (!more) return;
@@ -34,13 +39,14 @@ export default function TabBar({ eng, projects, email, signOut, unseen, verified
         {tabs.map(([href, label, d]) => (
           <Link key={href} href={href} className={`tab ${on(href) ? 'on' : ''}`} aria-current={on(href) ? 'page' : undefined}><Icon d={d} /><span>{label}</span></Link>
         ))}
-        <button className={`tab ${more ? 'on' : ''}`} onClick={() => setMore(!more)} aria-expanded={more}><Icon d={I.more} /><span>More</span>{unseen && <i className="tabdot" />}</button>
+        <button className={`tab tabme ${more ? 'on' : ''}`} onClick={() => setMore(!more)} aria-expanded={more} aria-label="You: settings and more">{av}<span>You</span>{unseen && <i className="tabdot" />}</button>
       </nav>
       {more && (
         <div className="moresheet" role="dialog" aria-label="More">
           <div className="morescrim" onClick={() => setMore(false)} />
           <div className="morepanel">
             <div className="moregrab" aria-hidden="true" />
+            <Link href="/settings" className="moreme">{av}<span><b>{myName}{verified && <BlueCheck title="Verified" />}</b><small>{email}</small><small className="siderole">{eng ? 'Engineer' : 'Artist'}</small></span><span className="chev" aria-hidden="true">›</span></Link>
             <div className="moregrid">
               {eng && <Link href="/insights">Insights</Link>}
               {eng && <Link href="/dropbox">Dropbox</Link>}
@@ -50,8 +56,7 @@ export default function TabBar({ eng, projects, email, signOut, unseen, verified
               {eng && <a href="/mac">Get the Mac app</a>}
             </div>
             <div className="morefoot">
-              <span>{email}{eng ? ' · Engineer' : ''}{!eng && verified && <span className="vbadge mine">✓ Verified</span>}</span>
-              <button className="btn small" onClick={signOut}>Sign out</button>
+              <button className="btn small" onClick={signOut} style={{ width: '100%' }}>Sign out</button>
             </div>
           </div>
         </div>

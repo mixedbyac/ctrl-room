@@ -1232,3 +1232,33 @@ a.driftc:hover { transform: scale(1.04); }
 .dlclear:hover { color: var(--ink); background: rgba(255,255,255,.07); }
 @media (max-width: 900px) { .app .pinfo .deadline { justify-content: center; } }
 .arm { display: none !important; } /* no tone arm anywhere */
+
+/* engineer credits + profile */
+.credit { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; color: var(--muted); }
+.credit img { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
+.credit.big { font-size: 15px; color: var(--ink); margin-top: 6px; }
+.bluecheck { width: 16px; height: 16px; flex: none; vertical-align: -3px; }
+.profname .bluecheck { width: 20px; height: 20px; margin-left: 6px; }
+.profcard { display: flex; align-items: center; gap: 18px; padding: 20px; border-radius: 20px; background: var(--s1); border: 1px solid var(--line); }
+.profav { width: 76px; height: 76px; flex: none; border-radius: 50%; display: grid; place-items: center; overflow: hidden; background: rgba(245,213,71,.14); color: var(--sig); font-size: 30px; font-weight: 800; }
+.profav img { width: 100%; height: 100%; object-fit: cover; }
+.profname { display: flex; align-items: center; font-size: 22px; }
+.profmail { display: block; font-size: 13px; color: var(--muted); margin-top: 2px; }
+.vok { color: #3a9bff; font-weight: 700; }
+.vno { color: var(--faint); }
+.rolepick { display: flex; flex-wrap: wrap; gap: 8px; }
+.rolechip { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); cursor: pointer; font-weight: 600; font-size: 14px; color: var(--muted); }
+.rolechip input { display: none; }
+.rolechip.on { color: #0f0f10; background: var(--sig); border-color: var(--sig); }
+.pcredit { margin: 2px 0 0; }
+.sidefoot .proflink { display: block; font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+@media (max-width: 760px) { .profcard { flex-direction: column; text-align: center; } .profname { justify-content: center; } }
+/* tracklist columns line up: every row (and the header) uses the same fixed trailing column */
+.rows.dyn .rtrail { width: 96px; justify-content: flex-end; }
+.rows.dyn .rowhead > span:last-child { width: 96px; }
+.rows.dyn .rtools { justify-content: flex-start; }
+.rows.dyn .cell, .rows.dyn .rowhead > [data-col] { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 900px) {
+  .rows.dyn .row, .rows.dyn .rowhead { grid-template-columns: 44px minmax(0, 1fr) 88px !important; }
+  .rows.dyn .rtrail { width: 88px; }
+}

@@ -1,4 +1,5 @@
 'use client';
+import Credit, { useProfiles } from '@/components/Credit';
 import { TitleInput, ArtistPicker } from '@/components/TitleCase';
 import QualityBadge from '@/components/QualityBadge';
 import VersionStack, { StackIcon } from '@/components/VersionStack';
@@ -94,7 +95,7 @@ export default function ProjectPage() {
   const availCols = ALL_COLS.filter((c) => !c.eng || eng);
   const shownCols = (savedCols || DEFAULT_COLS).filter((k) => availCols.some((c) => c.k === k));
   const cols = availCols.filter((c) => shownCols.includes(c.k));
-  const tpl = ['52px', 'minmax(0, 1fr)', ...cols.map((c) => c.w), ...(canEdit ? ['78px'] : []), 'auto'].join(' ');
+  const tpl = ['52px', 'minmax(0, 1fr)', ...cols.map((c) => c.w), ...(canEdit ? ['78px'] : []), '96px'].join(' ');
   const saveCols = async (next) => {
     setSavedCols(next);
     try { localStorage.setItem('ctrl-room:cols', JSON.stringify(next)); } catch {}
@@ -134,6 +135,7 @@ export default function ProjectPage() {
           </div>
           <div className="pinfo">
             <EditableTitle value={p.title} canEdit={canEdit} label="project" onSave={async (t) => { if (viaAdmin) await api('/api/admin', { action: 'title', projectId: p.id, title: t }); else await supabase().from('projects').update({ title: t }).eq('id', p.id); load(); reloadProjects(); }} />
+            <p className="pcredit"><Credit project={p} /></p>
             <Deadline p={p} eng={eng} onSaved={load} />
             <p className="psub">{p.artist} · {p.type} · {p.songs.length} song{p.songs.length === 1 ? '' : 's'} · {approved} approved{p.release ? ` · out ${fmtDate(p.release)}` : ''}</p>
             <div className="prow">
@@ -332,12 +334,14 @@ function AddSong({ p, onSaved }) {
 }
 
 function EditProject({ p, onSaved }) {
-  const [f, setF] = useState({ title: p.title, artist: p.artist, type: p.type, release: p.release || '', due: p.settings?.due || '' });
+  const [f, setF] = useState({ title: p.title, artist: p.artist, type: p.type, release: p.release || '', due: p.settings?.due || '', engineer: p.settings?.engineer || '' });
+  const engineers = useProfiles();
   const [err, setErr] = useState('');
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const save = async (e) => {
     e.preventDefault();
     const settings = { ...(p.settings || {}) }; if (f.due) settings.due = f.due; else delete settings.due;
+    if (f.engineer) settings.engineer = f.engineer; else delete settings.engineer;
     const { error } = await supabase().from('projects').update({ title: f.title.trim(), artist: f.artist.trim(), type: f.type, release: f.release || null, settings }).eq('id', p.id);
     if (error) return setErr(error.message);
     onSaved();
@@ -350,6 +354,7 @@ function EditProject({ p, onSaved }) {
         <div className="fld"><label htmlFor="ep-t">Title</label><TitleInput id="ep-t" value={f.title} onChange={(v) => setF((x) => ({ ...x, title: v }))} /></div>
         <div className="fld"><label htmlFor="ep-a">Artist</label><ArtistPicker id="ep-a" value={f.artist} onChange={(v) => setF((x) => ({ ...x, artist: v }))} /></div>
         <div className="fld"><label htmlFor="ep-ty">Type</label><select id="ep-ty" value={f.type} onChange={set('type')}><option>Single</option><option>EP</option><option>Album</option><option>Mixtape</option></select></div>
+        {engineers.length > 0 && <div className="fld"><label htmlFor="ep-en">Engineer <span className="opt">who’s credited</span></label><select id="ep-en" value={f.engineer} onChange={set('engineer')}><option value="">Main engineer</option>{engineers.map((x) => <option key={x.email} value={x.email}>{x.display_name || x.full_name || x.email}</option>)}</select></div>}
         <div className="fld"><label htmlFor="ep-d">Final deadline <span className="opt">everything done by</span></label><input id="ep-d" type="date" value={f.due} onChange={set('due')} /></div>
         <div className="fld"><label htmlFor="ep-r">Release date</label><input id="ep-r" type="date" value={f.release} onChange={set('release')} /></div>
       </div>

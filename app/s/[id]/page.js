@@ -1,4 +1,5 @@
 'use client';
+import Credit from '@/components/Credit';
 import { CaseButtons } from '@/components/TitleCase';
 import QualityBadge from '@/components/QualityBadge';
 import InlineText from '@/components/InlineText';
@@ -134,6 +135,7 @@ export default function SongPage() {
           </div>
           <div className="sinfo">
             <p className="eyebrow"><Link href={`/p/${p.id}`}>{p.title}</Link> · {p.artist}</p>
+            <p className="pcredit"><Credit project={p} /></p>
             <SongTitle song={song} eng={eng || canEditArtist(p?.artist)} viaAdmin={!eng} reload={load} />
             <div className="meta"><span className={`dot ${song.status}`}>{statusText(song, versions)}</span>
               {eng ? <>

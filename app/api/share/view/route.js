@@ -1,5 +1,6 @@
 import { limit } from '@/lib/ratelimit';
 import { admin, json, fail } from '@/lib/server';
+import { creditLine } from '@/lib/credit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -52,7 +53,15 @@ export async function GET(req) {
   let pcover = null;
   if (project.cover_path) { const { data: c } = await db.storage.from('mixes').createSignedUrl(project.cover_path, 60 * 60 * 6); pcover = c?.signedUrl || null; }
   const { data: artist } = await db.from('artists').select('name, display_name, image_url, header_url, bio, spotify_url, accent').ilike('name', project.artist).maybeSingle().then((r) => r, () => ({ data: null }));
+  let credit = null;
+  try {
+    const want = String(project.settings?.engineer || '').toLowerCase();
+    const { data: eps } = await db.from('engineer_profiles').select('email, full_name, display_name, credit, roles, photo_url, verified, is_main');
+    const e = (want && (eps || []).find((x) => x.email === want)) || (eps || []).find((x) => x.is_main);
+    if (e) credit = { text: creditLine(e), verified: e.verified, photo: e.photo_url };
+  } catch {}
   return json({
+    credit,
     kind: song ? 'song' : 'project',
     project: { title: project.title, artist: project.artist, type: project.type, release: project.release, seed: project.seed, cover: pcover },
     artist: artist || null,

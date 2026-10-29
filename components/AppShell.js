@@ -181,6 +181,7 @@ export default function AppShell({ children }) {
             {session ? (
               <>
                 <p className="demo">{session.user.email}{eng ? ' · Engineer' : ''}{!eng && !session.user.app_metadata?.needs_verify && <span className="vbadge mine" title="Your email is confirmed">✓ Verified</span>}</p>
+                {eng && <Link className="seclink" href="/profile">Your profile</Link>}
                 <Link className="seclink" href="/security">Security</Link>
                 <button className="btn small" onClick={signOut}>Sign out</button>
               </>

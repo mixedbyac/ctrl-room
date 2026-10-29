@@ -1,4 +1,5 @@
 'use client';
+import Credit from '@/components/Credit';
 import QualityBadge from '@/components/QualityBadge';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -376,6 +377,7 @@ function NowPlaying() {
           <div className="nphead-t">
             <h2 className="ttl">{c.song.title}</h2>
             <p className="npsub">{c.project.artist} · {c.project.title}</p>
+            <p className="npsub"><Credit project={c.project} /></p>
           </div>
           <button className="npcomment" onClick={() => { setPinAt(pl.time); setComposing(true); }} aria-label="Add a comment at this moment">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-7l-4 3v-3H5a1 1 0 01-1-1V6a1 1 0 011-1z" /><path d="M12 8.5v4M10 10.5h4" /></svg>

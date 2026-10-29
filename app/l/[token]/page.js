@@ -1,4 +1,5 @@
 'use client';
+import { BlueCheck } from '@/components/Credit';
 import QualityBadge from '@/components/QualityBadge';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -135,6 +136,7 @@ export default function SharedListen() {
             <p className="leyebrow">{data.kind === 'song' ? `${p.title} · ${p.type}` : `${p.type}${p.release ? ` · ${new Date(p.release + 'T12:00').getFullYear()}` : ''}`}</p>
             <h1 className="ttl">{data.kind === 'song' ? cur?.title || 'Nothing to play yet' : p.title}</h1>
             <div className="lartist">{ar?.image_url && <img src={ar.image_url} alt="" />}<span>{name}</span>{cur && <QualityBadge v={cur.version} size="md" />}</div>
+            {data.credit && <p className="credit lcredit">{data.credit.photo && <img src={data.credit.photo} alt="" />}<span>{data.credit.text}</span>{data.credit.verified && <BlueCheck title="Verified engineer" />}</p>}
             {cur ? <>
               {data.kind === 'project' && <p className="lnow">{playing ? 'Playing' : 'Up'}: <b>{cur.title}</b></p>}
               <div><Wave peaks={cur.version.peaks} time={time} duration={dur} onSeek={seek} />

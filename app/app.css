@@ -1569,3 +1569,14 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
   .lpage .lartist, .lpage .lcredit { justify-content: center; }
 }
 @media (max-width: 900px) { .lpage .ldisc .npart::before { display: none; } }
+
+/* SoundCloud-style comments on the player waveform */
+.npwavewrap { position: relative; margin-bottom: 16px; }
+.npmark { position: absolute; bottom: -15px; width: 18px; height: 18px; margin-left: -9px; padding: 0; border-radius: 50%; border: 1.5px solid #0f0f10; background: rgba(245,213,71,.85); color: #0f0f10; font-size: 8px; font-weight: 800; display: grid; place-items: center; cursor: pointer; z-index: 2; transition: transform .15s, background .15s; }
+.npmark span { line-height: 1; }
+.npmark:hover, .npmark.on { transform: scale(1.25); background: var(--sig); z-index: 3; }
+.npbubble { position: absolute; z-index: 4; bottom: calc(100% + 10px); left: clamp(0px, calc(var(--x) - 110px), calc(100% - 220px)); width: 220px; padding: 9px 12px; border-radius: 12px; font-size: 13px; line-height: 1.35; color: #f4f4f5;
+  background: rgba(22,22,25,.96); border: 1px solid rgba(245,213,71,.35); box-shadow: 0 14px 34px -10px rgba(0,0,0,.8); pointer-events: none; animation: npbub .25s cubic-bezier(.2,.8,.2,1); }
+.npbubble b { color: var(--sig); font-weight: 700; margin-right: 4px; }
+@keyframes npbub { from { opacity: 0; transform: translateY(6px); } }
+@media (max-width: 760px) { .npbubble { width: 200px; left: clamp(0px, calc(var(--x) - 100px), calc(100% - 200px)); } }

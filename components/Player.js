@@ -346,6 +346,8 @@ function Wave({ peaks, time, duration, onSeek, height = 72 }) {
   );
 }
 
+const initialOf = (n) => String(n.author_name || (n.from_client ? 'C' : 'E')).replace(/\(.*?\)/g, '').trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '•';
+
 function NowPlaying() {
   const pl = usePlayer();
   const c = pl.current, v = pl.version;
@@ -405,6 +407,8 @@ function NowPlaying() {
       .then(({ data }) => { if (live) setSongNotes(data || []); });
     return () => { live = false; };
   }, [c.song.id, posted]); // eslint-disable-line
+  const waveNotes = songNotes.filter((n) => n.t != null && (!n.version_id || n.version_id === c.versionId));
+  const active = [...waveNotes].reverse().find((n) => pl.time >= n.t && pl.time - n.t < 4.5) || null;
   const vi = c.versions.findIndex((x) => x.id === c.versionId);
   const flip = () => { const prev = c.versions[vi - 1] || c.versions[vi + 1]; if (prev) pl.switchVersion(prev.id); };
   return (
@@ -455,6 +459,18 @@ function NowPlaying() {
           <div className="npwavewrap">
             <Wave peaks={v?.peaks} time={pl.time} duration={pl.duration} onSeek={pl.seek} height={52} />
             {composing && pl.duration > 0 && <span className="nppin" style={{ left: `${Math.min(100, (pinAt / pl.duration) * 100)}%` }} aria-hidden="true" />}
+            {/* comments on the waveform, SoundCloud style: a dot where each one sits, and a bubble as the song passes it */}
+            {pl.duration > 0 && waveNotes.map((n) => (
+              <button key={n.id} className={`npmark ${active?.id === n.id ? 'on' : ''}`} style={{ left: `${Math.min(100, (n.t / pl.duration) * 100)}%` }}
+                onClick={() => pl.seek(n.t)} aria-label={`${n.author_name || 'Note'} at ${mmss(n.t)}: ${n.body}`} title={`${mmss(n.t)} · ${n.body}`}>
+                <span>{initialOf(n)}</span>
+              </button>
+            ))}
+            {active && !composing && pl.duration > 0 && (
+              <span className="npbubble" key={active.id} style={{ '--x': `${Math.min(100, (active.t / pl.duration) * 100)}%` }}>
+                <b>{active.author_name || (active.from_client ? 'Client' : 'Engineer')}</b> {active.body}
+              </span>
+            )}
           </div>
           <div className="nptimes mono"><span>{mmss(pl.time)}</span><span className="npfmt">{v?.file_format ? `${v.file_format} · as delivered` : 'Original file'}</span><span className="npdur">{mmss(pl.duration)}</span><span className="npleft">-{mmss(Math.max(0, pl.duration - pl.time))}</span></div>
         </div>

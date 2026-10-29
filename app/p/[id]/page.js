@@ -480,7 +480,7 @@ function TrackStats({ songs, eng, onMeasured }) {
       onMeasured();
     })();
   }, [eng, todo.length]); // eslint-disable-line
-  const parts = [`${songs.length} song${songs.length === 1 ? '' : 's'}`];
+  const parts = []; // the song count already shows under the title
   if (total) parts.push(`${mmss(total)} total`);
   return (
     <div className="tstats">

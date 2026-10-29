@@ -1418,3 +1418,16 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .partist .artistname img, .partist .artistname i { width: 22px; height: 22px; }
 .partist .artistname { vertical-align: -0.3em; }
 @media (max-width: 900px) { .partist { display: flex; justify-content: center; margin: 0; } }
+/* phone project header: perfectly centered title (pencil hangs off to the side), matching button sizes */
+@media (max-width: 900px) {
+  .pinfo .titlewrap { position: relative; display: inline-block; padding: 0 4px; }
+  .pinfo .titlewrap .titlepen { position: absolute; left: 100%; top: 50%; transform: translateY(-50%); margin-left: 2px; }
+  .pinfo .deadline { position: relative; }
+  .pinfo .deadline .dlclear { position: absolute; left: 100%; top: 50%; transform: translateY(-50%); margin-left: 2px; }
+  .pinfo .prow { gap: 12px; }
+  .pinfo .prow .bigplay { width: 52px; height: 52px; border-radius: 50%; }
+  .pinfo .prow .gear { height: 46px; padding: 0 18px; font-size: 14px; }
+  .pinfo .prow .addplus > button.bigplus { width: 46px; height: 46px; }
+  .tstats:empty, .tstats:has(> .mono:empty) { display: none; }
+}
+@media (max-width: 900px) { .pinfo { gap: 10px; } .pinfo h1 { margin: 0; line-height: 1.05; } .pinfo .partist { margin-top: -2px; } }

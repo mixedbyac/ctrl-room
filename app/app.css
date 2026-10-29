@@ -1558,3 +1558,14 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
   .row.cur .rplay { color: var(--sig); }
   .row.cur .ropen .t { color: var(--sig); }
 }
+
+/* share link page on phones: the cover and its play button always show (square, still) */
+@media (max-width: 900px) {
+  .lpage .npdisc.ldisc { display: block !important; width: min(300px, 78vw); max-width: none; margin: 0 auto; border-radius: 18px; box-shadow: 0 30px 60px -20px rgba(0,0,0,.85); }
+  .lpage .ldisc .npart { border-radius: 18px !important; transform: none !important; animation: none !important; }
+  .lpage .ldisc .nphole { display: none; }
+  .lpage .lhub { inset: auto; right: 14px; bottom: 14px; width: 60px; height: 60px; }
+  .lpage .linfo { text-align: center; display: grid; justify-items: center; }
+  .lpage .lartist, .lpage .lcredit { justify-content: center; }
+}
+@media (max-width: 900px) { .lpage .ldisc .npart::before { display: none; } }

@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase, api } from '@/lib/supabase';
+import { ENGINEER_KINDS, CLIENT_KINDS, prefOf } from '@/lib/notify';
 import { useApp, TopBar } from '@/components/AppShell';
 
 export default function SecurityPage() {
@@ -91,6 +92,7 @@ export default function SecurityPage() {
                   <li className="when"><small>Last checked {new Date(health.at).toLocaleString()}</small></li></ul>}
           </div>
         )}
+        <NotifySettings eng={eng} session={session} />
         <RememberedDevices />
         {eng && <EmailSetup />}
         {eng && <Engineers />}
@@ -128,6 +130,35 @@ function LoginCovers() {
       <div className="aerow"><input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://music.apple.com/us/playlist/…" />
         <button className="btn small primary" disabled={busy || !url.trim()} onClick={() => save(false)}>{busy ? 'Loading…' : 'Use playlist'}</button>
         <button className="btn small quiet" disabled={busy} onClick={() => save(true)}>Clear</button></div>
+      {msg && <p className="toast-inline" style={{ margin: 0 }}>{msg}</p>}
+    </div>
+  );
+}
+
+function NotifySettings({ eng, session }) {
+  const [n, setN] = useState(() => session?.user?.user_metadata?.notify || {});
+  const [msg, setMsg] = useState('');
+  const kinds = eng ? ENGINEER_KINDS : CLIENT_KINDS;
+  const flip = async (kind, ch) => {
+    const next = { ...n, [kind]: { ...(n[kind] || {}), [ch]: !prefOf(n, kind, ch) } };
+    setN(next);
+    const { error } = await supabase().auth.updateUser({ data: { notify: next } });
+    setMsg(error ? error.message : 'Saved.'); setTimeout(() => setMsg(''), 1500);
+  };
+  return (
+    <div className="panel secpanel" id="notifications">
+      <b>Notifications</b>
+      <span className="muted small">Choose what shows in your bell (in the app) and what gets emailed to you.</span>
+      <div className="notifgrid">
+        <span /><span className="nghead">In the app</span><span className="nghead">Email</span>
+        {kinds.map(([k, label, sub]) => (
+          <div key={k} className="ngrow">
+            <span className="ngtext"><b>{label}</b><small>{sub}</small></span>
+            <button type="button" className="switch" role="switch" aria-checked={prefOf(n, k, 'app')} aria-label={`${label} in the app`} onClick={() => flip(k, 'app')}><i /></button>
+            <button type="button" className="switch" role="switch" aria-checked={prefOf(n, k, 'email')} aria-label={`${label} by email`} onClick={() => flip(k, 'email')}><i /></button>
+          </div>
+        ))}
+      </div>
       {msg && <p className="toast-inline" style={{ margin: 0 }}>{msg}</p>}
     </div>
   );

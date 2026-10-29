@@ -24,7 +24,7 @@ export async function POST(req) {
     if (status === 'paid' && r.status !== 'paid') {
       const { data: songs } = await db.from('songs').select('id').eq('project_id', r.project_id).limit(1);
       if (songs?.[0]) await db.from('updates').insert({ song_id: songs[0].id, body: `Invoice ${number} is paid. Thank you!` });
-      await alertEngineers(db, { subject: `Invoice ${number} was paid`, text: `Invoice ${number} was paid. Anything it locked is unlocked.` }).catch(() => {});
+      await alertEngineers(db, { kind: 'invoices', subject: `Invoice ${number} was paid`, text: `Invoice ${number} was paid. Anything it locked is unlocked.` }).catch(() => {});
     }
   }
   return json({ ok: true, updated: rows.length, status });

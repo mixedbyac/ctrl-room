@@ -12,6 +12,7 @@ import PoweredBy from '@/components/PoweredBy';
 import TabBar from '@/components/TabBar';
 import ProjectMenu from '@/components/ProjectMenu';
 import ProjectFolders from '@/components/ProjectFolders';
+import Bell from '@/components/Bell';
 import EnterAnimation, { LogoLoader } from '@/components/EnterAnimation';
 import VerifyBanner from '@/components/VerifyBanner';
 import UpdateWatcher, { getSeen } from '@/components/UpdateWatcher';
@@ -232,6 +233,7 @@ export function TopBar({ crumbs = [], right = null }) {
         {session && eng && <Link className="barportal" href="/artists">Artists</Link>}
         {session && <Link className="barportal" href={eng ? '/portal/inbox' : '/portal'}>Portal</Link>}
         {right}
+        {session && <Bell />}
       </div>
     </div>
   );

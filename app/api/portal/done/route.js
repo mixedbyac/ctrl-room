@@ -40,6 +40,6 @@ export async function POST(req) {
     const bytes = songs.reduce((n, s) => n + (s.bytes || 0), 0);
     await portalReceipt(db, { up, project: p, songs, total, bytes }).catch(() => {});
   }
-  if (total) await alertEngineers(db, { subject: `New files from ${up.artist || up.name}`, text: `${up.name} (${up.artist}) sent ${total} file${total > 1 ? 's' : ''} for ${p?.title}.`, link: '/portal/inbox', linkLabel: 'Open the Portal inbox' });
+  if (total) await alertEngineers(db, { kind: 'uploads', subject: `New files from ${up.artist || up.name}`, text: `${up.name} (${up.artist}) sent ${total} file${total > 1 ? 's' : ''} for ${p?.title}.`, link: '/portal/inbox', linkLabel: 'Open the Portal inbox' });
   return json({ ok: true });
 }

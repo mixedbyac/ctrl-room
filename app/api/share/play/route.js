@@ -45,6 +45,6 @@ async function checkLeaks(db, s) {
     const key = `alerted:${a.key}`;
     if (await getConfig(key)) continue;
     await setConfig(key, new Date().toISOString());
-    await alertEngineers(db, { subject: `Unusual activity on ${a.title}`, text: a.text, link: '/insights', linkLabel: 'Review in Insights' });
+    await alertEngineers(db, { kind: 'listening', subject: `Unusual activity on ${a.title}`, text: a.text, link: '/insights', linkLabel: 'Review in Insights' });
   }
 }

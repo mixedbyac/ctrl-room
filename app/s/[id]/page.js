@@ -130,13 +130,6 @@ export default function SongPage() {
           <div className="bigdisc hascm">
             <Cover as="div" {...artOf(song, song.projects)} size={640} className="art spin" />
             {(eng || canEditArtist(p?.artist)) && <CoverMenu table="songs" row={song} viaAdmin={!eng} onChange={load} className="ondisc" />}
-            <div className="arm" aria-hidden="true"><svg viewBox="0 0 100 170">
-              <circle cx="80" cy="14" r="13" fill="#1d1d20" stroke="#3a3a40" strokeWidth="2" />
-              <circle cx="80" cy="14" r="5" fill="#9a9aa2" />
-              <path d="M80 14 C 78 60, 62 110, 44 140" fill="none" stroke="#d6d6db" strokeWidth="4.5" strokeLinecap="round" />
-              <rect x="30" y="136" width="22" height="30" rx="4" fill="#ececef" transform="rotate(28 41 151)" />
-              <rect x="34" y="150" width="6" height="8" rx="1.5" fill="#f5d547" transform="rotate(28 41 151)" />
-            </svg></div>
             <button className="hub" onClick={toggle} disabled={!v} aria-label={playing ? 'Pause' : 'Play'}><svg viewBox="0 0 24 24">{playing ? PAUSE : PLAY}</svg></button>
           </div>
           <div className="sinfo">

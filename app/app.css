@@ -1231,3 +1231,4 @@ a.driftc:hover { transform: scale(1.04); }
 .dlclear { width: 26px; height: 26px; border-radius: 50%; border: 0; background: none; color: var(--faint); cursor: pointer; font-size: 12px; }
 .dlclear:hover { color: var(--ink); background: rgba(255,255,255,.07); }
 @media (max-width: 900px) { .app .pinfo .deadline { justify-content: center; } }
+.arm { display: none !important; } /* no tone arm anywhere */

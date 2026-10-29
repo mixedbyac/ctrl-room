@@ -36,7 +36,7 @@ export default function ArtistTeam({ artist, projects }) {
     if (st === 'unconfirmed') return <span className="row-actions"><span className="tbadge warn">Not confirmed</span><button className="btn small" onClick={() => confirmAcct(em)}>Verify</button></span>;
     if (st === 'invited') return <span className="row-actions"><span className="tbadge">Invited, hasn’t joined</span><button className="btn small" onClick={() => confirmAcct(em)}>Verify</button></span>;
     if (st === 'none') return <span className="row-actions"><span className="tbadge">No account yet</span><button className="btn small" onClick={() => confirmAcct(em)} title="Marks them verified and emails an invite to join">Verify &amp; invite</button></span>;
-    if (st === 'confirmed') return <span className="tbadge ok" title="Signed up with this email and confirmed it"><BlueCheck title="Verified" /> Verified</span>;
+    if (st === 'confirmed') return <span className="tbadge ok" title="Signed up with this email and confirmed it"><BlueCheck title="Verified" tone="gray" /> Verified</span>;
     return null;
   };
   const add = async (e) => {
@@ -75,7 +75,7 @@ export default function ArtistTeam({ artist, projects }) {
           <li key={`c-${em}`}><span className="tav">{em[0].toUpperCase()}</span><span className="tmain"><b>{em}</b><small>Project contact</small></span><span className="tctl"><Badge em={em} /></span></li>
         ))}
         {(rows || []).filter((r) => !contacts.includes(r.email.toLowerCase())).map((r) => (
-          <li key={r.id}><span className="tav">{r.email[0].toUpperCase()}</span><span className="tmain"><b>{r.email}</b><small>{/^admin$/i.test(r.role || '') ? 'Admin · can edit cover art, track order, titles and the active version' : r.role || 'Team'}</small></span>
+          <li key={r.id}><span className="tav">{r.email[0].toUpperCase()}</span><span className="tmain"><b>{r.email}</b><small>{/^artist$/i.test(r.role || '') ? 'The artist · their verified account verifies the artist page' : /^admin$/i.test(r.role || '') ? 'Admin · can edit cover art, track order, titles and the active version' : r.role || 'Team'}</small></span>
             <span className="tctl"><Badge em={r.email.toLowerCase()} /><select className="trole" value={r.role || 'Other'} aria-label="Role" onChange={async (e) => { await supabase().from('artist_members').update({ role: e.target.value }).eq('id', r.id); load(); }}>{ROLES.map((x) => <option key={x}>{x}</option>)}</select><Badge em={r.email.toLowerCase()} />
             <span className="row-actions"><button className="btn small quiet" onClick={() => sendInvite(r.email)}>Send invite</button><button className="btn small quiet" onClick={() => remove(r)}>Remove</button></span></span></li>
         ))}

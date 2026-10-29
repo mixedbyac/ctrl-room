@@ -44,8 +44,11 @@ export async function POST(req) {
     const add = (artist, email) => { if (!artist || !email) return; const k = artist; (people[k] ||= new Set()).add(String(email).toLowerCase()); };
     const { data: ps } = await db.from('projects').select('artist, client_email');
     (ps || []).forEach((p) => add(p.artist, p.client_email));
-    const { data: ms } = await db.from('artist_members').select('artist, email');
+    const { data: ms } = await db.from('artist_members').select('artist, email, role');
     (ms || []).forEach((m) => add(m.artist, m.email));
+    // the artist's own account: the team member marked “Artist”
+    const own = {};
+    (ms || []).filter((m) => /^artist$/i.test(m.role || '')).forEach((m) => { (own[m.artist.toLowerCase()] ||= []).push(m.email.toLowerCase()); });
     const users = {};
     for (let page = 1; page <= 20; page++) {
       const { data, error } = await db.auth.admin.listUsers({ page, perPage: 200 });
@@ -56,7 +59,9 @@ export async function POST(req) {
     const out = {};
     Object.entries(people).forEach(([a, set]) => {
       const list = [...set];
-      out[a.toLowerCase()] = { total: list.length, verified: list.filter((e) => users[e] === 'confirmed').length, joined: list.filter((e) => users[e] && users[e] !== 'invited').length };
+      const mine = own[a.toLowerCase()] || [];
+      out[a.toLowerCase()] = { total: list.length, verified: list.filter((e) => users[e] === 'confirmed').length, joined: list.filter((e) => users[e] && users[e] !== 'invited').length,
+        artistEmail: mine[0] || null, artistVerified: mine.some((e) => users[e] === 'confirmed'), artistState: mine.length ? (mine.map((e) => users[e] || 'none').includes('confirmed') ? 'confirmed' : users[mine[0]] || 'none') : 'missing' };
     });
     return json({ artists: out });
   }

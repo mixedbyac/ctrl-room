@@ -11,7 +11,7 @@ async function canAdmin(user, projectId) {
   const { data: p } = await db.from('projects').select('artist').eq('id', projectId).maybeSingle();
   if (!p) return false;
   const { data: m } = await db.from('artist_members').select('email, role, artist').ilike('artist', p.artist);
-  return (m || []).some((x) => x.email.toLowerCase() === user.email.toLowerCase() && x.artist.toLowerCase() === p.artist.toLowerCase() && /^admin$/i.test(x.role || ''));
+  return (m || []).some((x) => x.email.toLowerCase() === user.email.toLowerCase() && x.artist.toLowerCase() === p.artist.toLowerCase() && /^(admin|artist)$/i.test(x.role || '')); // the artist themself can edit too
 }
 
 // Artist admins (and the engineer): cover art, track order, active version, song titles.

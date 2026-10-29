@@ -47,7 +47,7 @@ export default function TabBar({ eng, projects, email, signOut, unseen, verified
           <div className="morescrim" onClick={() => setMore(false)} />
           <div className="morepanel">
             <div className="moregrab" aria-hidden="true" />
-            <Link href="/settings" className="moreme">{av}<span><b>{myName}{verified && <BlueCheck title="Verified" />}</b><small>{email}</small><small className="siderole">{eng ? 'Engineer' : 'Artist'}</small></span><span className="chev" aria-hidden="true">›</span></Link>
+            <Link href="/settings" className="moreme">{av}<span><b>{myName}{verified && <BlueCheck title="Verified" tone={eng ? 'gold' : 'gray'} />}</b><small>{email}</small><small className="siderole">{eng ? 'Engineer' : 'Artist'}</small></span><span className="chev" aria-hidden="true">›</span></Link>
             <div className="moregrid">
               {eng && <Link href="/insights">Insights</Link>}
               {eng && <Link href="/dropbox">Dropbox</Link>}

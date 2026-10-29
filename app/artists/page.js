@@ -71,7 +71,7 @@ function Artists() {
         <section className="page"><div className="adetail">
           {(eng || artists.length > 1) && <button className="aback" onClick={() => router.push('/artists')}>‹ All artists</button>}
           <ArtistHero name={artist.name} profile={prof(artist.name)} canEdit onChange={setProf}>
-            {eng && ver[artist.name.toLowerCase()] && <div className="acontact"><span className={`vbadge ${ver[artist.name.toLowerCase()].verified ? '' : 'pending'}`}>{ver[artist.name.toLowerCase()].verified ? <><BlueCheck />Verified</> : 'Not verified yet'}</span></div>}
+            {eng && ver[artist.name.toLowerCase()] && <div className="acontact"><span className={`vbadge ${ver[artist.name.toLowerCase()].artistVerified ? '' : 'pending'}`} title={ver[artist.name.toLowerCase()].artistEmail ? `The artist’s account: ${ver[artist.name.toLowerCase()].artistEmail}` : 'Mark the artist’s own email as “Artist” on the Team list below'}>{ver[artist.name.toLowerCase()].artistVerified ? <><BlueCheck title="Verified artist" />Verified</> : ver[artist.name.toLowerCase()].artistEmail ? 'Not verified yet' : 'Add the artist’s own email to verify'}</span></div>}
             {eng && (artist.contact || artist.phone || artist.email) && <div className="acontact">
               {artist.contact && <span className="sichip">Contact <b>{artist.contact}</b></span>}
               {artist.phone && <span className="sichip mono">{artist.phone}</span>}
@@ -132,8 +132,8 @@ function Artists() {
                   <Link key={a.name} className="arow" href={`/artists?a=${encodeURIComponent(a.name)}`}>
                     <ArtistAvatar name={a.name} profile={prof(a.name)} />
                     <span style={{ minWidth: 0 }}>
-                      <b className="aname"><span>{prof(a.name)?.display_name || a.name}</span>{eng && ver[a.name.toLowerCase()]?.verified > 0 && <BlueCheck title={`Verified · ${ver[a.name.toLowerCase()].verified} of ${ver[a.name.toLowerCase()].total} people`} />}</b>
-                      <small>{a.projects.length ? `${a.projects.length} project${a.projects.length > 1 ? 's' : ''}` : 'No projects yet'} · {st.songs.length} song{st.songs.length === 1 ? '' : 's'}{eng && ver[a.name.toLowerCase()] && !ver[a.name.toLowerCase()].verified ? ` · ${ver[a.name.toLowerCase()].joined ? 'not confirmed' : 'not joined yet'}` : ''}</small>
+                      <b className="aname"><span>{prof(a.name)?.display_name || a.name}</span>{eng && ver[a.name.toLowerCase()]?.artistVerified && <BlueCheck title="Verified artist" />}</b>
+                      <small>{a.projects.length ? `${a.projects.length} project${a.projects.length > 1 ? 's' : ''}` : 'No projects yet'} · {st.songs.length} song{st.songs.length === 1 ? '' : 's'}{eng && ver[a.name.toLowerCase()] && !ver[a.name.toLowerCase()].artistVerified ? ` · ${ver[a.name.toLowerCase()].artistEmail ? 'artist not verified' : 'no artist email yet'}` : ''}</small>
                     </span>
                     <span className="apill" style={st.live.length ? undefined : { color: 'var(--ok)' }}>{pill}</span><span className="chev" aria-hidden="true">›</span>
                   </Link>

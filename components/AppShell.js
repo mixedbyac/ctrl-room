@@ -66,7 +66,7 @@ export default function AppShell({ children }) {
   const [adminArtists, setAdminArtists] = useState([]);
   useEffect(() => {
     if (!session || needMfa !== false) { setAdminArtists([]); return; }
-    supabase().from('artist_members').select('artist, role').then(({ data }) => setAdminArtists((data || []).filter((m) => /^admin$/i.test(m.role || '')).map((m) => m.artist.toLowerCase())));
+    supabase().from('artist_members').select('artist, role').then(({ data }) => setAdminArtists((data || []).filter((m) => /^(admin|artist)$/i.test(m.role || '')).map((m) => m.artist.toLowerCase())));
   }, [session, needMfa]);
   useEffect(() => {
     if (!session || needMfa !== false) { setEng(false); setProjects([]); return; }

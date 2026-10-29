@@ -17,7 +17,8 @@ export async function POST(req) {
   const role = ['Admin', 'Artist', 'Manager', 'Team'].includes(b.role) ? b.role : 'Admin';
   const spotify = String(b.spotify || '').trim().slice(0, 300);
   const phone = String(b.phone || '').trim().slice(0, 30);
-  const vouch = b.verify !== false; // you know these people: they count as verified straight away
+  const vouch = b.verify !== false;
+  const artistEmail = String(b.artistEmail || '').trim().toLowerCase(); // you know these people: they count as verified straight away
   if (!artist) return fail('Add the artist name.');
   const bad = emails.find((e) => !/^\S+@\S+\.\S+$/.test(e));
   if (bad) return fail(`“${bad}” doesn’t look like an email.`);
@@ -36,7 +37,8 @@ export async function POST(req) {
   const origin = SITE_URL;
   const results = [];
   for (const email of emails) {
-    const { error: mErr } = await db.from('artist_members').insert({ artist, email, role });
+    const { error: mErr } = await db.from('artist_members').insert({ artist, email, role: email === artistEmail ? 'Artist' : role });
+    if (mErr && /duplicate|unique/i.test(mErr.message) && email === artistEmail) await db.from('artist_members').update({ role: 'Artist' }).ilike('artist', artist).ilike('email', email);
     if (mErr && !/duplicate|unique/i.test(mErr.message)) { results.push({ email, status: 'error', message: mErr.message }); continue; }
     const r = await invitePerson(db, { email, origin, artist, invitedBy: user.email, phone: emails.length === 1 ? phone : '' });
     let u = r.user;

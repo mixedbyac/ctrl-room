@@ -4,7 +4,7 @@ import { api } from '@/lib/supabase';
 
 /** Engineer: add an artist by hand and email their team an invite to join. */
 export default function AddArtist({ onDone }) {
-  const [f, setF] = useState({ artist: '', emails: '', phone: '', spotify: '', role: 'Admin', verify: true });
+  const [f, setF] = useState({ artist: '', emails: '', phone: '', spotify: '', role: 'Admin', verify: true, own: true });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [res, setRes] = useState(null);
@@ -14,7 +14,7 @@ export default function AddArtist({ onDone }) {
     if (!f.artist.trim()) return setErr('Add the artist name.');
     setBusy(true);
     try {
-      const r = await api('/api/invite', { artist: f.artist.trim(), emails: f.emails, spotify: f.spotify.trim(), role: f.role, verify: f.verify, phone: f.phone.trim() });
+      const r = await api('/api/invite', { artist: f.artist.trim(), emails: f.emails, spotify: f.spotify.trim(), role: f.role, verify: f.verify, phone: f.phone.trim(), artistEmail: f.own ? String(f.emails).split(/[\s,;]+/).filter(Boolean)[0] || '' : '' });
       setRes(r); setF((x) => ({ ...x, artist: '', emails: '', phone: '', spotify: '' })); onDone?.();
     } catch (e2) { setErr(e2.message); }
     setBusy(false);
@@ -33,6 +33,7 @@ export default function AddArtist({ onDone }) {
       <div className="fld"><label htmlFor="aa-e">Email to invite <span className="opt">add a few, separated by commas</span></label><input id="aa-e" value={f.emails} onChange={set('emails')} placeholder="artist@email.com, manager@email.com" inputMode="email" autoCapitalize="none" /></div>
       <div className="fld"><label htmlFor="aa-p">Phone <span className="opt">optional, texts them the invite link too</span></label><input id="aa-p" type="tel" value={f.phone} onChange={set('phone')} placeholder="(555) 555-5555" /></div>
       <div className="fld"><label htmlFor="aa-s">Spotify artist link <span className="opt">optional, fills in the photo and bio</span></label><input id="aa-s" value={f.spotify} onChange={set('spotify')} placeholder="https://open.spotify.com/artist/…" /></div>
+      <label className="smsopt"><input type="checkbox" checked={f.own} onChange={(e) => setF((x) => ({ ...x, own: e.target.checked }))} /> The first email is the artist’s own (this is what verifies the artist)</label>
       <label className="smsopt"><input type="checkbox" checked={f.verify} onChange={(e) => setF((x) => ({ ...x, verify: e.target.checked }))} /> Mark them verified, I know it’s them</label>
       {err && <p className="ferr" style={{ margin: 0 }}>{err}</p>}
       <div className="row-actions"><button className="btn primary small" disabled={busy}>{busy ? 'Adding…' : f.emails.trim() ? 'Add & send invite' : 'Add artist'}</button></div>

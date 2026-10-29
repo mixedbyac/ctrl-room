@@ -177,7 +177,15 @@ function Engineers() {
   const [st, setSt] = useState(null);
   const [email, setEmail] = useState('');
   const [msg, setMsg] = useState('');
-  const call = async (body) => { try { setSt(await api('/api/engineers', body)); setMsg(body.action === 'add' ? `Added. ${body.email} has engineer access once they sign in (or create an account) with that email.` : body.action === 'remove' ? 'Removed.' : ''); } catch (e) { setMsg(e.message); } };
+  const call = async (body) => {
+    try {
+      const r = await api('/api/engineers', body); setSt(r);
+      if (body.action === 'add') {
+        if (r.invite && !r.invite.sent && r.invite.link) { try { await navigator.clipboard.writeText(r.invite.link); } catch {} }
+        setMsg(r.invite?.sent ? `Added. ${body.email} got an invite email to set up their engineer account.` : `Added. Email isn’t going out, so their invite link is copied. Text it to ${body.email}.`);
+      } else setMsg(body.action === 'remove' ? 'Removed.' : '');
+    } catch (e) { setMsg(e.message); }
+  };
   useEffect(() => { call({ action: 'list' }); }, []);
   return (
     <div className="panel secpanel">

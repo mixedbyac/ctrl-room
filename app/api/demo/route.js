@@ -22,7 +22,7 @@ export async function POST(req) {
   } else {
     const user = await userFrom(req);
     ok = !!user && (await canSee(user, song.project_id));
-    if (ok && (await isEngineer(user.email))) who = 'engineer';
+    if (ok && (await isEngineer(user))) who = 'engineer';
   }
   if (!ok) return fail('You don’t have access to this song.', 403);
 

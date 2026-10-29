@@ -60,7 +60,7 @@ export async function GET(req) {
 export async function POST(req) {
   const { userFrom, isEngineer } = await import('@/lib/server');
   const user = await userFrom(req);
-  if (!user || !(await isEngineer(user.email))) return Response.json({ error: 'Only the engineer can see this.' }, { status: 403 });
+  if (!user || !(await isEngineer(user))) return Response.json({ error: 'Only the engineer can see this.' }, { status: 403 });
   const last = JSON.parse((await getConfig('health')) || 'null');
   return Response.json({ last });
 }

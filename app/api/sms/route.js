@@ -5,7 +5,7 @@ export const runtime = 'nodejs';
 // Engineer only: text the client on a song's project.
 export async function POST(req) {
   const user = await userFrom(req);
-  if (!user || !(await isEngineer(user.email))) return fail('Only the engineer can send texts.', 403);
+  if (!user || !(await isEngineer(user))) return fail('Only the engineer can send texts.', 403);
   const b = await req.json().catch(() => null);
   if (!b?.songId || !String(b.body || '').trim()) return fail('Missing message.');
   const db = admin();

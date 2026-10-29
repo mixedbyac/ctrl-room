@@ -96,7 +96,7 @@ function Login() {
         )}
         {err && <p className="ferr">{err}</p>}
         <p className="muted small authswitch"><Link className="link" href="/protect">How your music is protected</Link></p>
-        <p className="muted small authswitch">New here? <Link className="link" href={`/signup${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`}>Create an account</Link></p>
+        <p className="muted small authswitch">Artist? <Link className="link" href={`/signup${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`}>Create an account</Link> · Engineers join by invite</p>
       </div>
       <PoweredBy className="pinned" />
     </div>

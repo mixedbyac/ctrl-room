@@ -5,7 +5,7 @@ export const runtime = 'nodejs';
 
 /** Is this user an Admin on the team of the artist who owns the project? (or the engineer) */
 async function canAdmin(user, projectId) {
-  if (await isEngineer(user.email)) return true;
+  if (await isEngineer(user)) return true;
   if (needsVerify(user)) return false;
   const db = admin();
   const { data: p } = await db.from('projects').select('artist').eq('id', projectId).maybeSingle();

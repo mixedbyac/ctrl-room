@@ -22,6 +22,11 @@ export async function POST(req) {
   if (b?.website) return json({ ok: true }); // bots fill hidden fields
 
   const db = admin();
+  // engineers are invite-only: their account comes from the invite email, never from this form
+  const { data: engs } = await db.from('app_config').select('key, value').like('key', 'engineer_email%');
+  if ((engs || []).some((r) => r.value.toLowerCase() === email) || (process.env.ENGINEER_EMAIL || '').toLowerCase() === email) {
+    return fail('This email has engineer access, which is invite-only. Use the invite email you were sent, or sign in.');
+  }
   const { error } = await db.auth.admin.createUser({
     email, password, email_confirm: true,
     user_metadata: { name, artist, phone, spotify },

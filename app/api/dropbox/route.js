@@ -7,7 +7,7 @@ const origin = (req) => process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).ori
 // Engineer only. body: { action: 'status' | 'connect' | 'folders' | 'root' | 'disconnect', path?, root? }
 export async function POST(req) {
   const user = await userFrom(req);
-  if (!user || !(await isEngineer(user.email))) return fail('Only the engineer can set up Dropbox.', 403);
+  if (!user || !(await isEngineer(user))) return fail('Only the engineer can set up Dropbox.', 403);
   const b = await req.json().catch(() => ({}));
   const hasKeys = !!(process.env.DROPBOX_APP_KEY && process.env.DROPBOX_APP_SECRET);
   const redirect = `${origin(req)}/api/dropbox/callback`;

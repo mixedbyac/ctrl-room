@@ -43,7 +43,8 @@ function Signup() {
       <div className="logincard signcard">
         <img src="/logo.png" alt="" className="loginlogo" />
         <h1 className="up">Create your account</h1>
-        <p>Listen to your mixes, leave notes, approve, and follow every step.</p>
+        <p>For artists and their teams: send your files, listen to your mixes, leave notes and approve.</p>
+        <p className="muted small" style={{ margin: 0 }}>Engineers join by invite.</p>
         <form onSubmit={submit} className="signform" noValidate>
           <div className="two">
             <div className="fld"><label htmlFor="su-n">Your name</label><input id="su-n" autoComplete="name" value={f.name} onChange={set('name')} autoFocus /></div>

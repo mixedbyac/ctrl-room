@@ -56,7 +56,7 @@ export async function GET(req) {
 // Engineer: set the playlist. body: { url }
 export async function POST(req) {
   const user = await userFrom(req);
-  if (!user || !(await isEngineer(user.email))) return fail('Only the engineer can change this.', 403);
+  if (!user || !(await isEngineer(user))) return fail('Only the engineer can change this.', 403);
   const b = await req.json().catch(() => ({}));
   const url = String(b.url || '').trim();
   if (!url) { await setConfig('login_playlist', null); await setConfig('login_covers', null); return json({ covers: 0, default: true }); }

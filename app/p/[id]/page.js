@@ -402,7 +402,7 @@ function AddMixes({ p, onSaved }) {
         }
         const { data: vs } = await sb.from('versions').select('id,label,created_at').eq('song_id', song.id).order('created_at');
         const res = await deliverFile({ song, versions: vs || [], file: r.file, project: p, text, onStatus: (m) => setRow(i, { status: m }) });
-        setRow(i, { state: 'done', status: `${song.title} · ${res.label}${res.texted ? ' · texted' : ''}` });
+        setRow(i, { state: 'done', status: `${song.title} · ${res.label}${res.texted ? ' · emailed' : ''}` });
       } catch (e) {
         setRow(i, { state: 'error', status: e.message });
       }
@@ -439,7 +439,7 @@ function AddMixes({ p, onSaved }) {
           </ul>
           <div className="row-actions">
             <button className="btn primary" onClick={go} disabled={busy || rows.every((r) => r.state === 'done')}>{busy ? 'Delivering…' : `Deliver ${rows.length} mix${rows.length > 1 ? 'es' : ''}`}</button>
-            <label className="smsopt"><input type="checkbox" checked={text} onChange={(e) => setText(e.target.checked)} /> Text the client</label>
+            <label className="smsopt"><input type="checkbox" checked={text} onChange={(e) => setText(e.target.checked)} /> Email the client</label>
             {!busy && <button className="btn quiet" onClick={() => setRows([])}>Clear</button>}
           </div>
         </>

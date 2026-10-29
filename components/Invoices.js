@@ -97,7 +97,7 @@ export function InvoicePanel({ project, firstSongId, onChange }) {
       try { texted = (await api('/api/sms', { songId: firstSongId, body })).sent; } catch {}
       await supabase().from('updates').insert({ song_id: firstSongId, body, texted });
     }
-    done(texted ? 'Shown to the client and texted them.' : 'Shown to the client. It’s in their updates. Add Twilio to text them too.');
+    done(texted ? 'Shown to the client and emailed them.' : 'Shown to the client. It’s in their updates (the email didn’t go out).');
   };
   const receiptIn = useRef(null), receiptFor = useRef(null);
   const uploadReceipt = async (file) => {

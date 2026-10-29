@@ -83,7 +83,7 @@ export default function SecurityPage() {
         </div>
         {eng && (
           <div className="panel secpanel">
-            <div className="shrow"><span><b>Daily check</b><span className="muted small">Every morning CTRL ROOM checks the database, music storage, sign-in, Dropbox and texting, and texts you if something breaks.</span></span>
+            <div className="shrow"><span><b>Daily check</b><span className="muted small">Every morning CTRL ROOM checks the database, music storage, sign-in, Dropbox and email, and emails you if something breaks.</span></span>
               {health && <span className={`secbadge ${health.ok ? 'on' : ''}`}>{health.ok ? 'ALL GOOD' : 'PROBLEM'}</span>}</div>
             {health === undefined ? <p className="muted small" style={{ margin: 0 }}>Loading…</p>
               : !health ? <p className="muted small" style={{ margin: 0 }}>No check has run yet. The first one runs tomorrow morning.</p>

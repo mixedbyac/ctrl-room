@@ -1,6 +1,6 @@
 import { limit } from '@/lib/ratelimit';
 import { admin, json, fail, sendText, dropboxFolder } from '@/lib/server';
-import { portalReceipt } from '@/lib/invite';
+import { portalReceipt, alertEngineers } from '@/lib/invite';
 
 export const runtime = 'nodejs';
 
@@ -40,8 +40,6 @@ export async function POST(req) {
     const bytes = songs.reduce((n, s) => n + (s.bytes || 0), 0);
     await portalReceipt(db, { up, project: p, songs, total, bytes }).catch(() => {});
   }
-  if (process.env.ENGINEER_PHONE && total) {
-    await sendText(process.env.ENGINEER_PHONE, `CTRL ROOM: ${up.name} (${up.artist}) sent ${total} file${total > 1 ? 's' : ''} for ${p?.title}.`);
-  }
+  if (total) await alertEngineers(db, { subject: `New files from ${up.artist || up.name}`, text: `${up.name} (${up.artist}) sent ${total} file${total > 1 ? 's' : ''} for ${p?.title}.`, link: '/portal/inbox', linkLabel: 'Open the Portal inbox' });
   return json({ ok: true });
 }

@@ -216,7 +216,7 @@ function DeliverVersion({ song, versions, onDone, setMsg }) {
     setBusy('');
     setMsg([
       done.length ? `Delivered ${done.join(', ')}.` : '',
-      done.length && text ? (texted ? 'Texted the client.' : '(Text not sent. Check the phone number and Twilio setup.)') : '',
+      done.length && text ? (texted ? 'Emailed the client.' : '(Email not sent. Check there’s a client email on the project or its team.)') : '',
       done.length ? 'Tap ✎ to rename a version.' : '',
       aiff ? 'Heads up: Chrome and Android can’t play AIFF. WAV plays everywhere.' : '',
       lossy.length ? `${lossy.join(', ')} ${lossy.length > 1 ? 'are' : 'is'} compressed, not lossless. Send a WAV, AIFF or FLAC for the Lossless badge.` : '',
@@ -230,7 +230,7 @@ function DeliverVersion({ song, versions, onDone, setMsg }) {
       onDrop={(e) => { e.preventDefault(); setHot(false); if (!busy) deliverAll(e.dataTransfer?.files); }}>
       <label className="btn small" htmlFor={inputId} style={{ cursor: 'pointer' }}>{busy || (hot ? 'Drop to deliver' : '+ Deliver new versions')}</label>
       <input id={inputId} className="vh" type="file" multiple accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.flac" onChange={(e) => { const l = Array.from(e.target.files || []); e.target.value = ''; deliverAll(l); }} disabled={!!busy} />
-      <label className="smsopt"><input type="checkbox" checked={text} onChange={(e) => setText(e.target.checked)} /> Text the client</label>
+      <label className="smsopt"><input type="checkbox" checked={text} onChange={(e) => setText(e.target.checked)} /> Email the client</label>
     </div>
   );
 }
@@ -467,7 +467,7 @@ function Updates({ updates, eng, song, p, reload }) {
     let texted = false, reason = '';
     if (text) { try { const r = await api('/api/sms', { songId: song.id, body: body.trim() }); texted = r.sent; reason = r.reason || ''; } catch (e) { reason = e.message; } }
     await supabase().from('updates').insert({ song_id: song.id, body: body.trim(), texted });
-    setBusy(false); setBody(''); setNote(text && !texted ? `Posted, but the text didn't go out: ${reason}` : texted ? 'Posted and texted.' : 'Posted.'); reload();
+    setBusy(false); setBody(''); setNote(text && !texted ? `Posted, but the email didn't go out: ${reason}` : texted ? 'Posted and emailed.' : 'Posted.'); reload();
   };
   return (
     <section>
@@ -475,7 +475,7 @@ function Updates({ updates, eng, song, p, reload }) {
         <div className="composer">
           <textarea rows={2} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Post an update, like “Vocals are tuned, starting the mix tonight.”" aria-label="Update" />
           <div className="row2">
-            <label className="smsopt"><input type="checkbox" checked={text} onChange={(e) => setText(e.target.checked)} /> Text the client{p.phone ? ` at ${p.phone}` : ' (no phone on file)'}</label>
+            <label className="smsopt"><input type="checkbox" checked={text} onChange={(e) => setText(e.target.checked)} /> Email the client{p.client_email ? ` at ${p.client_email}` : ' and their team'}</label>
             <button className="post" onClick={post} disabled={!body.trim() || busy}>{busy ? 'Posting…' : 'Post update'}</button>
           </div>
           {text && body.trim() && <p className="smsprev"><b>Text:</b> {song.title}: {body.trim()} Listen: [link to this song]</p>}

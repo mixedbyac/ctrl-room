@@ -1,4 +1,5 @@
 import { limit } from '@/lib/ratelimit';
+import { alertEngineers } from '@/lib/invite';
 import { admin, json, fail, getConfig, setConfig, sendText } from '@/lib/server';
 import { findLeaks } from '@/lib/leaks';
 
@@ -33,9 +34,8 @@ export async function POST(req) {
   return json({ id: data?.id || null });
 }
 
-// Text the engineer right away if this listen looks like a leak (once per song, kind and day).
+// Tell the engineer right away (email) if this listen looks like a leak (once per song, kind and day).
 async function checkLeaks(db, s) {
-  if (!process.env.ENGINEER_PHONE) return;
   const { data: ids } = await db.from('songs').select('id').eq('project_id', s.project_id);
   const since = new Date(Date.now() - 14 * 86400000).toISOString();
   const { data: plays } = await db.from('plays').select('id, song_id, started_at, updated_at, device, source, listener_email, songs(title, project_id, projects(title))')
@@ -45,7 +45,6 @@ async function checkLeaks(db, s) {
     const key = `alerted:${a.key}`;
     if (await getConfig(key)) continue;
     await setConfig(key, new Date().toISOString());
-    const site = process.env.NEXT_PUBLIC_SITE_URL || '';
-    await sendText(process.env.ENGINEER_PHONE, `CTRL ROOM: unusual activity on ${a.title}. ${a.text}${site ? ` Review: ${site}/insights` : ''}`);
+    await alertEngineers(db, { subject: `Unusual activity on ${a.title}`, text: a.text, link: '/insights', linkLabel: 'Review in Insights' });
   }
 }

@@ -1,4 +1,5 @@
 import { limit } from '@/lib/ratelimit';
+import { alertEngineers } from '@/lib/invite';
 import { admin, getConfig, setConfig, dropboxToken, sendText } from '@/lib/server';
 
 export const runtime = 'nodejs';
@@ -29,16 +30,16 @@ export async function GET(req) {
     if (!(await getConfig('dropbox_refresh_token')) && !process.env.DROPBOX_REFRESH_TOKEN) return 'not connected';
     await dropboxToken();
   });
-  await run('Texting', async () => (process.env.TWILIO_ACCOUNT_SID ? '' : 'not set up'));
+  await run('Email', async () => (process.env.RESEND_API_KEY && process.env.EMAIL_FROM ? '' : 'not set up'));
   const ok = checks.every((c) => c.ok);
   const result = { ok, at: new Date().toISOString(), checks, build: process.env.VERCEL_GIT_COMMIT_SHA || 'dev' };
 
   if (isCron) {
     const prev = JSON.parse((await getConfig('health')) || 'null');
     await setConfig('health', JSON.stringify(result)).catch(() => {});
-    if (!ok && (prev?.ok !== false) && process.env.ENGINEER_PHONE) {
+    if (!ok && (prev?.ok !== false)) {
       const bad = checks.filter((c) => !c.ok).map((c) => c.name).join(', ');
-      await sendText(process.env.ENGINEER_PHONE, `CTRL ROOM daily check: ${bad} not working. Open CTRL ROOM › Security for details.`).catch(() => {});
+      await alertEngineers(db, { subject: 'Daily check found a problem', text: `${bad} not working. Open Security for details.`, link: '/security', linkLabel: 'Open Security' });
     }
   }
   // ?counts=1 : how much is in the database (numbers only) and which Supabase project the site uses

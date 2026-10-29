@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useApp } from '@/components/AppShell';
 import { prefOf } from '@/lib/notify';
 import { ago, mmss } from '@/lib/format';
+import { useNames, nameFor } from '@/components/Names';
 
 /** The bell: what's happened lately (listens, notes, approvals, new mixes…), filtered by your notification settings. */
 export default function Bell() {
@@ -15,6 +16,7 @@ export default function Bell() {
   const box = useRef(null);
   const notify = session?.user?.user_metadata?.notify || {};
   const me = (session?.user?.email || '').toLowerCase();
+  const names = useNames(!!eng);
   const load = useCallback(async () => {
     if (!session) return;
     const sb = supabase(), since = new Date(Date.now() - 21 * 86400000).toISOString(), out = [];
@@ -26,7 +28,7 @@ export default function Bell() {
         prefOf(notify, 'approvals', 'app') ? sb.from('updates').select(`id, created_at, body, song_id, ${song}`).eq('from_client', true).gte('created_at', since).order('created_at', { ascending: false }).limit(25) : { data: [] },
         prefOf(notify, 'uploads', 'app') ? sb.from('uploads').select('id, created_at, name, artist, project_id').gte('created_at', since).order('created_at', { ascending: false }).limit(15) : { data: [] },
       ]);
-      (pl.data || []).filter((x) => (x.listener_email || '').toLowerCase() !== me).forEach((x) => out.push({ id: `p${x.id}`, at: x.started_at, icon: '▶', text: <><b>{x.listener_email ? x.listener_email.replace(/@.*/, '') : 'Someone'}</b> played <b>{x.songs?.title} {x.versions?.label || ''}</b></>, sub: [x.device, x.source].filter(Boolean).join(' · '), href: `/s/${x.song_id}` }));
+      (pl.data || []).filter((x) => (x.listener_email || '').toLowerCase() !== me).forEach((x) => out.push({ id: `p${x.id}`, at: x.started_at, icon: '▶', text: <><b>{x.listener_email ? nameFor(names, x.listener_email) : /share/i.test(x.source || '') ? 'Someone on a share link' : 'Someone'}</b> played <b>{x.songs?.title} {x.versions?.label || ''}</b></>, sub: [x.device, x.source].filter(Boolean).join(' · '), href: `/s/${x.song_id}` }));
       (no.data || []).forEach((x) => out.push({ id: `n${x.id}`, at: x.created_at, icon: '✎', text: <><b>{x.author_name || 'Client'}</b> left a note on <b>{x.songs?.title}</b>{x.t != null ? ` at ${mmss(x.t)}` : ''}</>, sub: `“${x.body}”`, href: `/s/${x.song_id}#notes` }));
       (up.data || []).filter((x) => /approv|change/i.test(x.body)).forEach((x) => out.push({ id: `u${x.id}`, at: x.created_at, icon: /approv/i.test(x.body) ? '✓' : '↺', text: <><b>{x.songs?.title}</b>: {x.body}</>, sub: x.songs?.projects?.artist || '', href: `/s/${x.song_id}` }));
       (sends.data || []).forEach((x) => out.push({ id: `s${x.id}`, at: x.created_at, icon: '↑', text: <><b>{x.name}</b> sent files{x.artist ? ` for ${x.artist}` : ''}</>, sub: 'Portal', href: '/portal/inbox' }));
@@ -39,7 +41,7 @@ export default function Bell() {
       (no.data || []).forEach((x) => out.push({ id: `n${x.id}`, at: x.created_at, icon: '✎', text: <><b>Your engineer</b> left a note on <b>{x.songs?.title}</b>{x.t != null ? ` at ${mmss(x.t)}` : ''}</>, sub: `“${x.body}”`, href: `/s/${x.song_id}#notes` }));
     }
     setItems(out.filter((x) => x.at).sort((a, b) => b.at.localeCompare(a.at)).slice(0, 40));
-  }, [session, eng]); // eslint-disable-line
+  }, [session, eng, names]); // eslint-disable-line
   useEffect(() => { load(); const t = setInterval(load, 60000); return () => clearInterval(t); }, [load]);
   useEffect(() => {
     if (!open) return;

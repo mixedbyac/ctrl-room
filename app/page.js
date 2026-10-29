@@ -10,6 +10,7 @@ import Cover from '@/components/Cover';
 import { artOf } from '@/lib/art';
 import QuickDrop from '@/components/QuickDrop';
 import ArtistName from '@/components/ArtistName';
+import { useNames, nameFor } from '@/components/Names';
 import { fmtDate, todayISO, addDaysISO, statusText, ago, mmss, fmtBytes, latestMix, mixesOf, nextLabel } from '@/lib/format';
 
 export default function HomePage() {
@@ -28,6 +29,7 @@ function EngineerHome() {
   const { reloadProjects } = useApp();
   const [projects, setProjects] = useState(null);
   const [activity, setActivity] = useState([]);
+  const names = useNames(true);
   const [fresh, setFresh] = useState(0);
   const [day, setDay] = useState(todayISO());
   const [showNew, setShowNew] = useState(false);
@@ -166,7 +168,7 @@ function EngineerHome() {
           <section>
             <div className="sechead"><h2 className="h2 up">Activity</h2><Link className="link small" href="/insights">Insights ›</Link></div>
             <ul className="nlist" style={{ overflow: 'visible' }}>
-              {activity.length ? activity.map((a) => <ActivityItem key={a.kind + a.x.id} a={a} />) : <li className="emptyday">Plays, notes and sign-offs will show up here.</li>}
+              {activity.length ? activity.map((a) => <ActivityItem key={a.kind + a.x.id} a={a} names={names} />) : <li className="emptyday">Plays, notes and sign-offs will show up here.</li>}
             </ul>
             {fresh > 0 && <p style={{ marginTop: 12 }}><Link className="link" href="/portal/inbox">{fresh} new send{fresh > 1 ? 's' : ''} in the Portal ›</Link></p>}
           </section>
@@ -183,9 +185,9 @@ function waitingGroups(list) {
   return [...m.values()];
 }
 
-function ActivityItem({ a }) {
+function ActivityItem({ a, names }) {
   const x = a.x, song = x.songs || {};
-  const who = x.listener_email || x.author_name || x.author_email || (/share link/.test(x.source || '') ? 'Someone' : 'Client');
+  const who = (x.listener_email && names ? nameFor(names, x.listener_email) : x.listener_email) || x.author_name || x.author_email || (/share link/.test(x.source || '') ? 'Someone on a share link' : 'Client');
   let text, body = null, icon = '▶';
   if (a.kind === 'play') {
     const pct = x.duration ? Math.min(100, Math.round((x.listened / x.duration) * 100)) : 0;

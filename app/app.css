@@ -1684,3 +1684,4 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .lshowall { justify-self: start; margin-top: 8px; padding: 8px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,.14); background: none; color: rgba(255,255,255,.8); font-size: 13px; font-weight: 650; cursor: pointer; }
 .lshowall:hover { color: #fff; border-color: rgba(255,255,255,.3); }
 @media (max-width: 900px) { .lshowall { justify-self: center; } }
+@media (min-width: 901px) { .lpage .lcomments { max-width: 864px; } }

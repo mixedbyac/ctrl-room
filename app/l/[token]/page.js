@@ -48,7 +48,8 @@ export default function SharedListen() {
   const [err, setErr] = useState('');
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [mainGone, setMainGone] = useState(false); // big player scrolled away: show the mini bar
+  const [mainGone, setMainGone] = useState(false);
+  const [allSongs, setAllSongs] = useState(false); // long projects: show the first few songs so comments stay close // big player scrolled away: show the mini bar
   const mainRef = useRef(null);
   const [time, setTime] = useState(0);
   const [dur, setDur] = useState(0);
@@ -171,13 +172,16 @@ export default function SharedListen() {
             </> : <p className="muted">There’s nothing to play here yet.</p>}
               {data.kind === 'project' && songs.length > 1 && (
                 <ol className="ltracks">
-                  {songs.map((s, i) => (
+                  {songs.map((s, i) => (allSongs || songs.length <= 7 || i < 6 || i === idx) && (
                     <li key={s.id}><button className={`${i === idx ? 'on' : ''} ${i === idx && playing ? 'live' : ''}`} onClick={() => pick(i)} aria-label={i === idx && playing ? `Pause ${s.title}` : `Play ${s.title}`}>
                       <span className="mono ln"><span className="lnum">{i + 1}</span><svg viewBox="0 0 24 24" aria-hidden="true">{i === idx && playing ? PAUSE : PLAY}</svg></span>
                       <span className="lt">{s.title}{s.approved && <em className="lfinal">Final</em>}</span><span className="mono muted">{mmss(s.version.duration || 0)}</span>
                     </button></li>
                   ))}
                 </ol>
+              )}
+              {data.kind === 'project' && songs.length > 7 && (
+                <button className="lshowall" onClick={() => setAllSongs(!allSongs)}>{allSongs ? 'Show fewer' : `Show all ${songs.length} songs`}</button>
               )}
           </div>
         </div>

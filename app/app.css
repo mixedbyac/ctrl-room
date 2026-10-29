@@ -1650,3 +1650,4 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .lfinal { font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--ok); background: rgba(114,211,156,.12); padding: 2px 7px; border-radius: 999px; margin-left: 8px; vertical-align: 2px; }
 @media (max-width: 900px) { .ltracks, .lprog, .ldetails { margin-left: auto; margin-right: auto; width: 100%; } }
 .sprog-steps li b { justify-self: start; text-align: left; }
+.linfo .ltracks { margin-top: 18px; } .ltabs { margin-top: 32px; }

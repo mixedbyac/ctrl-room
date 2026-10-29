@@ -43,7 +43,7 @@ function Wave({ peaks, time, duration, onSeek }) {
 
 export default function SharedListen() {
   const { token } = useParams();
-  const [ltab, setLtab] = useState('songs');
+  const [ltab, setLtab] = useState('progress');
   const [data, setData] = useState(undefined);
   const [err, setErr] = useState('');
   const [idx, setIdx] = useState(0);
@@ -68,7 +68,6 @@ export default function SharedListen() {
     const io = new IntersectionObserver(([e]) => setMainGone(!e.isIntersecting && e.boundingClientRect.top < 0), { threshold: 0 });
     io.observe(el); return () => io.disconnect();
   }, [data]); // eslint-disable-line
-  useEffect(() => { if (data && ltab === 'songs' && (data.kind === 'song' || songs.length < 2)) setLtab('progress'); }, [data]); // eslint-disable-line
 
   const report = useCallback((final) => {
     const t = track.current; if (!t || t.creating) return;
@@ -170,11 +169,21 @@ export default function SharedListen() {
               <div><Wave peaks={cur.version.peaks} time={time} duration={dur} onSeek={seek} />
                 <div className="nptimes mono"><span>{mmss(time)}</span><span>{cur.approved ? 'Final mix' : 'Mix in progress'}</span><span>{mmss(dur)}</span></div></div>
             </> : <p className="muted">There’s nothing to play here yet.</p>}
+              {data.kind === 'project' && songs.length > 1 && (
+                <ol className="ltracks">
+                  {songs.map((s, i) => (
+                    <li key={s.id}><button className={i === idx ? 'on' : ''} onClick={() => pick(i)}>
+                      <span className="mono ln">{i === idx && playing ? <span className="eq"><span /><span /><span /></span> : i + 1}</span>
+                      <span className="lt">{s.title}{s.approved && <em className="lfinal">Final</em>}</span><span className="mono muted">{mmss(s.version.duration || 0)}</span>
+                    </button></li>
+                  ))}
+                </ol>
+              )}
           </div>
         </div>
+        {cur && <LinkComments token={token} songId={cur.id} versionId={cur.version.id} time={time} seek={seek} />}
         {cur && (
           <div className="npdtabs ltabs" role="tablist" aria-label="More about this song">
-            {data.kind === 'project' && songs.length > 1 && <button role="tab" aria-selected={ltab === 'songs'} onClick={() => setLtab('songs')}>Songs</button>}
             <button role="tab" aria-selected={ltab === 'progress'} onClick={() => setLtab('progress')}>Progress</button>
             <button role="tab" aria-selected={ltab === 'details'} onClick={() => setLtab('details')}>Details</button>
           </div>
@@ -183,17 +192,6 @@ export default function SharedListen() {
         {cur && ltab === 'details' && <div className="ldetails"><SongDetails rows={[['Version', cur.version.label], ['Length', cur.version.duration ? mmss(cur.version.duration) : null], ['BPM', cur.bpm], ['Key', cur.key],
           ['Format', cur.version.file_format ? [cur.version.file_format, cur.version.sample_rate ? `${(cur.version.sample_rate / 1000).toFixed(1).replace(/\.0$/, '')} kHz` : '', cur.version.bit_depth ? `${cur.version.bit_depth}-bit` : ''].filter(Boolean).join(' · ') : null],
           ['Status', cur.approved ? 'Final mix' : 'Mix in progress'], ['Updated', cur.version.created_at ? new Date(cur.version.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : null]]} /></div>}
-        {data.kind === 'project' && songs.length > 0 && (ltab === 'songs' || songs.length < 2) && ltab !== 'progress' && ltab !== 'details' && (
-          <ol className="ltracks">
-            {songs.map((s, i) => (
-              <li key={s.id}><button className={i === idx ? 'on' : ''} onClick={() => pick(i)}>
-                <span className="mono ln">{i === idx && playing ? <span className="eq"><span /><span /><span /></span> : i + 1}</span>
-                <span className="lt">{s.title}{s.approved && <em className="lfinal">Final</em>}</span><span className="mono muted">{mmss(s.version.duration || 0)}</span>
-              </button></li>
-            ))}
-          </ol>
-        )}
-        {cur && <LinkComments token={token} songId={cur.id} versionId={cur.version.id} time={time} seek={seek} />}
         {ar && (ar.bio || ar.spotify_url) && (
           <section className="labout">
             {ar.image_url && <img src={ar.image_url} alt="" />}

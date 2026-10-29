@@ -47,6 +47,8 @@ export default function SharedListen() {
   const [err, setErr] = useState('');
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [mainGone, setMainGone] = useState(false); // big player scrolled away: show the mini bar
+  const mainRef = useRef(null);
   const [time, setTime] = useState(0);
   const [dur, setDur] = useState(0);
   const audio = useRef(null);
@@ -60,6 +62,11 @@ export default function SharedListen() {
 
   const songs = data?.songs || [];
   const cur = songs[idx];
+  useEffect(() => {
+    const el = mainRef.current; if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(([e]) => setMainGone(!e.isIntersecting), { threshold: 0.05 });
+    io.observe(el); return () => io.disconnect();
+  }, [data]); // eslint-disable-line
   useEffect(() => { if (data && ltab === 'songs' && (data.kind === 'song' || songs.length < 2)) setLtab('progress'); }, [data]); // eslint-disable-line
 
   const report = useCallback((final) => {
@@ -147,7 +154,7 @@ export default function SharedListen() {
       {ar?.header_url && <div className="lheader" style={{ backgroundImage: `url(${ar.header_url})` }} />}
       <div className="lwrap">
         <div className="ltop"><img src="/logo.png" alt="" className="llogo" /><span>CTRL ROOM</span></div>
-        <div className="lmain">
+        <div className="lmain" ref={mainRef}>
           <div className="npdisc ldisc"><Art src={artSrc} seed={artSeed} size={640} className="npart spin" /><span className="nphole" />
             <button className="lhub" onClick={toggle} disabled={!cur} aria-label={playing ? 'Pause' : 'Play'}><svg viewBox="0 0 24 24">{playing ? PAUSE : PLAY}</svg></button>
           </div>
@@ -208,6 +215,15 @@ export default function SharedListen() {
         <p className="lfoot">Shared privately with CTRL ROOM. Please don’t repost unreleased music.</p>
         <PoweredBy />
       </div>
+      {cur && mainGone && (
+        <div className={`lmini ${playing ? 'playing' : ''}`} role="region" aria-label="Now playing">
+          <button className="lminiart" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="Back to the player"><Art src={cur.cover || p.cover} seed={cur.seed ?? p.seed} size={120} className="lminiimg" /></button>
+          <span className="lminit"><b>{cur.title}</b><span>{name}</span></span>
+          <button className="lminibtn" onClick={toggle} aria-label={playing ? 'Pause' : 'Play'}><svg viewBox="0 0 24 24">{playing ? PAUSE : PLAY}</svg></button>
+          {songs.length > 1 && idx < songs.length - 1 && <button className="lminibtn" onClick={() => pick(idx + 1)} aria-label="Next song"><svg viewBox="0 0 24 24"><path d="M13 12L4 5.5v13zM22 12l-9-6.5v13z" /></svg></button>}
+          <span className="lminiprog" style={{ width: `${dur ? Math.min(100, (time / dur) * 100) : 0}%` }} />
+        </div>
+      )}
     </main>
   );
 }

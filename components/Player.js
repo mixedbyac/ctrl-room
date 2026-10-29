@@ -503,7 +503,7 @@ function NowPlaying() {
         {posted && <p className="npposted" role="status">{posted}</p>}
         <div className="npdeck">
           <div className="npdtabs" role="tablist" aria-label="More about this song">
-            {upNext.length > 1 && <button role="tab" aria-selected={deck === 'next'} onClick={() => setDeck('next')}>Up next</button>}
+            {upNext.length > 1 && <button role="tab" aria-selected={deck === 'next'} onClick={() => setDeck('next')}>Playlist</button>}
             <button role="tab" aria-selected={deck === 'notes'} onClick={() => setDeck('notes')}>Notes{songNotes.length ? <i>{songNotes.length}</i> : null}</button>
             <button role="tab" aria-selected={deck === 'progress'} onClick={() => setDeck('progress')}>Progress</button>
             <button role="tab" aria-selected={deck === 'details'} onClick={() => setDeck('details')}>Details</button>

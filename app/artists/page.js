@@ -11,6 +11,7 @@ import { fmtDate, todayISO, statusText, shortDate } from '@/lib/format';
 import { ArtistHero, ArtistAvatar } from '@/components/ArtistProfile';
 import ArtistTeam from '@/components/ArtistTeam';
 import AddArtist from '@/components/AddArtist';
+import { BlueCheck } from '@/components/Credit';
 
 export const VCheck = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.4 1.8 3-.2.9 2.9 2.5 1.7-1 2.8 1 2.8-2.5 1.7-.9 2.9-3-.2L12 22l-2.4-1.8-3 .2-.9-2.9-2.5-1.7 1-2.8-1-2.8 2.5-1.7.9-2.9 3 .2z" fill="currentColor" /><path d="M8 12.2l2.6 2.6L16.2 9" fill="none" stroke="#0f0f10" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const initials = (n) => n.split(/\s+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
@@ -71,7 +72,7 @@ function Artists() {
         <section className="page"><div className="adetail">
           {(eng || artists.length > 1) && <button className="aback" onClick={() => router.push('/artists')}>‹ All artists</button>}
           <ArtistHero name={artist.name} profile={prof(artist.name)} canEdit onChange={setProf}>
-            {eng && ver[artist.name.toLowerCase()] && <div className="acontact"><span className={`vbadge ${ver[artist.name.toLowerCase()].verified ? '' : 'pending'}`}>{ver[artist.name.toLowerCase()].verified ? <><VCheck />{ver[artist.name.toLowerCase()].verified} of {ver[artist.name.toLowerCase()].total} verified</> : 'No one verified yet'}</span></div>}
+            {eng && ver[artist.name.toLowerCase()] && <div className="acontact"><span className={`vbadge ${ver[artist.name.toLowerCase()].verified ? '' : 'pending'}`}>{ver[artist.name.toLowerCase()].verified ? <><BlueCheck />{ver[artist.name.toLowerCase()].verified} of {ver[artist.name.toLowerCase()].total} verified</> : 'No one verified yet'}</span></div>}
             {eng && (artist.contact || artist.phone || artist.email) && <div className="acontact">
               {artist.contact && <span className="sichip">Contact <b>{artist.contact}</b></span>}
               {artist.phone && <span className="sichip mono">{artist.phone}</span>}
@@ -131,9 +132,10 @@ function Artists() {
                 return (
                   <Link key={a.name} className="arow" href={`/artists?a=${encodeURIComponent(a.name)}`}>
                     <ArtistAvatar name={a.name} profile={prof(a.name)} />
-                    <span style={{ minWidth: 0 }}><b>{prof(a.name)?.display_name || a.name}</b><small>{a.projects.length ? `${a.projects.length} project${a.projects.length > 1 ? 's' : ''}` : 'No projects yet'} · {st.songs.length} song{st.songs.length === 1 ? '' : 's'}{a.contact && a.contact !== a.name ? ` · ${a.contact}` : ''}</small></span>
-                    {eng && ver[a.name.toLowerCase()]?.verified > 0 && <span className="vbadge" title={`${ver[a.name.toLowerCase()].verified} of ${ver[a.name.toLowerCase()].total} people verified`}><VCheck />Verified</span>}
-                    {eng && ver[a.name.toLowerCase()] && !ver[a.name.toLowerCase()].verified && <span className="vbadge pending" title="No one on this artist has a confirmed account yet">{ver[a.name.toLowerCase()].joined ? 'Not confirmed' : 'Not joined'}</span>}
+                    <span style={{ minWidth: 0 }}>
+                      <b className="aname"><span>{prof(a.name)?.display_name || a.name}</span>{eng && ver[a.name.toLowerCase()]?.verified > 0 && <BlueCheck title={`Verified · ${ver[a.name.toLowerCase()].verified} of ${ver[a.name.toLowerCase()].total} people`} />}</b>
+                      <small>{a.projects.length ? `${a.projects.length} project${a.projects.length > 1 ? 's' : ''}` : 'No projects yet'} · {st.songs.length} song{st.songs.length === 1 ? '' : 's'}{eng && ver[a.name.toLowerCase()] && !ver[a.name.toLowerCase()].verified ? ` · ${ver[a.name.toLowerCase()].joined ? 'not confirmed' : 'not joined yet'}` : ''}</small>
+                    </span>
                     <span className="apill" style={st.live.length ? undefined : { color: 'var(--ok)' }}>{pill}</span><span className="chev" aria-hidden="true">›</span>
                   </Link>
                 ); })}

@@ -41,6 +41,105 @@ function Wave({ peaks, time, duration, onSeek }) {
   return <div ref={wrap} className="npwave lwave" onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); at(e); }} onPointerMove={(e) => { if (e.buttons) at(e); }}><canvas ref={cv} /></div>;
 }
 
+
+const guestId = () => { try { let g = localStorage.getItem('ctrl-room:guest'); if (!g) { g = crypto.randomUUID?.() || String(Math.random()).slice(2); localStorage.setItem('ctrl-room:guest', g); } return g; } catch { return 'anon'; } };
+const initials2 = (n) => String(n || '?').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+
+/** The share link's full player that pops out of the mini player (like in the app): cover, waveform with comments, controls, a note box. */
+function SharePlayer({ cur, p, name, artSrc, artSeed, playing, toggle, time, dur, seek, songs, idx, pick, token, canComment, startComposing, onClose }) {
+  const [notes, setNotes] = useState([]);
+  const [composing, setComposing] = useState(!!startComposing);
+  const [pinAt, setPinAt] = useState(startComposing ? time : 0);
+  const [body, setBody] = useState('');
+  const [nm, setNm] = useState(() => { try { return localStorage.getItem('ctrl-room:guest-name') || ''; } catch { return ''; } });
+  const [hadName] = useState(() => { try { return !!localStorage.getItem('ctrl-room:guest-name'); } catch { return false; } });
+  const [msg, setMsg] = useState('');
+  const [tab, setTab] = useState('notes');
+  const sheet = useRef(null), drag = useRef(null);
+  const load = useCallback(() => {
+    if (!canComment) return;
+    fetch(`/api/share/notes?t=${encodeURIComponent(token)}&songId=${cur.id}&versionId=${cur.version.id}`, { cache: 'no-store' }).then((r) => r.json()).then((j) => setNotes((j.notes || []).filter((n) => !n.parent_id))).catch(() => {});
+  }, [token, cur.id, cur.version.id, canComment]);
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => { const k = (e) => { if (e.key === 'Escape') onClose(); }; document.addEventListener('keydown', k); document.body.style.overflow = 'hidden'; return () => { document.removeEventListener('keydown', k); document.body.style.overflow = ''; }; }, [onClose]);
+  const timed = notes.filter((n) => n.t != null).sort((a, b) => a.t - b.t);
+  const active = [...timed].reverse().find((n) => time >= n.t && time - n.t < 4.5) || null;
+  const post = async () => {
+    if (!body.trim()) return;
+    if (!nm.trim()) return setMsg('Add your name first.');
+    try { localStorage.setItem('ctrl-room:guest-name', nm.trim()); } catch {}
+    const r = await fetch('/api/share/notes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ t: token, songId: cur.id, versionId: cur.version.id, guestId: guestId(), name: nm.trim(), action: 'post', body, at: pinAt }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) return setMsg(j.error || 'Couldn’t post that.');
+    setBody(''); setComposing(false); setMsg(`Posted at ${mmss(pinAt)}.`); setTimeout(() => setMsg(''), 2500);
+    load(); window.dispatchEvent(new Event('ctrl-room:link-notes'));
+  };
+  return (
+    <>
+      <div className="npscrim" onClick={onClose} aria-hidden="true" />
+      <div className={`np sharenp ${composing ? 'composing' : ''}`} role="dialog" aria-label="Now playing" ref={sheet}
+        onTouchStart={(e) => { const el = sheet.current; if (!el || el.scrollTop > 0 || e.target.closest('.npwave, textarea, input')) return; drag.current = { y: e.touches[0].clientY, dy: 0 }; }}
+        onTouchMove={(e) => { const d = drag.current; if (!d) return; d.dy = Math.max(0, e.touches[0].clientY - d.y); if (d.dy > 4) { sheet.current.style.transition = 'none'; sheet.current.style.transform = `translateY(${d.dy}px)`; } }}
+        onTouchEnd={() => { const d = drag.current; drag.current = null; if (!d || !sheet.current) return; const el = sheet.current; el.style.transition = 'transform .25s cubic-bezier(.2,.8,.2,1)'; if (d.dy > 110) { el.style.transform = 'translateY(100%)'; setTimeout(onClose, 220); } else el.style.transform = ''; }}>
+        <span className="npgrab" aria-hidden="true" />
+        <div className="npinner">
+          <div className="nptop">
+            <span className="npfrom">Playing from <b>{p.title}</b></span>
+            <button className="npclose" onClick={onClose} aria-label="Close the player"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg></button>
+          </div>
+          <Art src={artSrc} seed={artSeed} size={900} className="npsquare sharesquare" />
+          <div className="nphead">
+            <div className="nphead-t"><h2 className="ttl">{cur.title}</h2><p className="npsub">{name} · {p.title}</p></div>
+            {canComment && <button className="npcomment" onClick={() => { setPinAt(time); setComposing(true); }} aria-label="Add a comment at this moment">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-7l-4 3v-3H5a1 1 0 01-1-1V6a1 1 0 011-1z" /><path d="M12 8.5v4M10 10.5h4" /></svg><span>Comment</span></button>}
+          </div>
+          <div>
+            <div className="npwavewrap">
+              <Wave peaks={cur.version.peaks} time={time} duration={dur} onSeek={seek} />
+              {composing && dur > 0 && <span className="nppin" style={{ left: `${Math.min(100, (pinAt / dur) * 100)}%` }} aria-hidden="true" />}
+              {dur > 0 && timed.map((n) => <button key={n.id} className={`npmark ${active?.id === n.id ? 'on' : ''}`} style={{ left: `${Math.min(100, (n.t / dur) * 100)}%` }} onClick={() => seek(n.t)} aria-label={`${n.author_name || 'Note'} at ${mmss(n.t)}`}><span>{initials2(n.author_name)}</span></button>)}
+              {active && !composing && dur > 0 && <span className="npbubble" key={active.id} style={{ '--x': `${Math.min(100, (active.t / dur) * 100)}%` }}><b>{active.author_name || 'Listener'}</b> {active.body}</span>}
+            </div>
+            <div className="nptimes mono"><span>{mmss(time)}</span><span className="npfmt">{cur.approved ? 'Final mix' : 'Mix in progress'}</span><span className="npdur">{mmss(dur)}</span><span className="npleft">-{mmss(Math.max(0, dur - time))}</span></div>
+          </div>
+          {composing && (
+            <div className="npcompose inline compact" role="group" aria-label="Add a comment">
+              {!hadName && <input className="lqname" placeholder="Your name" value={nm} onChange={(e) => setNm(e.target.value)} maxLength={40} aria-label="Your name" />}
+              <div className="nc-row">
+                <button className="nc-time mono" onClick={() => setPinAt(time)} title="Tap to set it to right now">{mmss(pinAt)}</button>
+                <textarea autoFocus rows={1} enterKeyHint="send" value={body} placeholder="Add a note…" aria-label="Comment" onChange={(e) => setBody(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); post(); } if (e.key === 'Escape') setComposing(false); }} />
+                <button className="nc-send" disabled={!body.trim()} onClick={post} aria-label="Post"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6" /></svg></button>
+              </div>
+              <div className="nc-sub"><span>On {cur.version.label} · tap the time to set it to now</span><button onClick={() => setComposing(false)}>Cancel</button></div>
+            </div>
+          )}
+          {msg && <p className="npposted" role="status">{msg}</p>}
+          <div className="npctl">
+            <button className="npskip" onClick={() => seek(Math.max(0, time - 15))} aria-label="Back 15 seconds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 103-6.7L3 8" /><path d="M3 3v5h5" /><text x="12" y="15.5" textAnchor="middle" fontSize="7.5" fontWeight="700" fill="currentColor" stroke="none">15</text></svg></button>
+            <button onClick={() => idx > 0 && pick(idx - 1)} disabled={idx === 0} aria-label="Previous song"><svg viewBox="0 0 24 24"><path d="M11 12l9-6.5v13zM2 12l9-6.5v13z" /></svg></button>
+            <button className="npplay" onClick={toggle} aria-label={playing ? 'Pause' : 'Play'}><svg viewBox="0 0 24 24">{playing ? PAUSE : PLAY}</svg></button>
+            <button onClick={() => idx < songs.length - 1 && pick(idx + 1)} disabled={idx >= songs.length - 1} aria-label="Next song"><svg viewBox="0 0 24 24"><path d="M13 12L4 5.5v13zM22 12l-9-6.5v13z" /></svg></button>
+            <button className="npskip" onClick={() => seek(Math.min(dur || 0, time + 15))} aria-label="Forward 15 seconds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 11-3-6.7L21 8" /><path d="M21 3v5h-5" /><text x="12" y="15.5" textAnchor="middle" fontSize="7.5" fontWeight="700" fill="currentColor" stroke="none">15</text></svg></button>
+          </div>
+          <div className="npdeck">
+            <div className="npdtabs" role="tablist">
+              {songs.length > 1 && <button role="tab" aria-selected={tab === 'songs'} onClick={() => setTab('songs')}>Playlist</button>}
+              {canComment && <button role="tab" aria-selected={tab === 'notes'} onClick={() => setTab('notes')}>Notes{notes.length ? <i>{notes.length}</i> : null}</button>}
+              <button role="tab" aria-selected={tab === 'progress' || (!canComment && tab === 'notes')} onClick={() => setTab('progress')}>Progress</button>
+              <button role="tab" aria-selected={tab === 'details'} onClick={() => setTab('details')}>Details</button>
+            </div>
+            {tab === 'songs' && songs.length > 1 && <div className="npq">{songs.map((x, i) => <button key={x.id} className={`npqi ${i === idx ? 'on' : ''}`} onClick={() => pick(i)}><span className="npqn mono">{i + 1}</span><Art src={x.cover || p.cover} seed={x.seed ?? p.seed} size={80} className="" /><span className="npqt">{x.title}</span>{i === idx && playing && <span className="eq"><span /><span /><span /></span>}</button>)}</div>}
+            {tab === 'notes' && canComment && <div className="npnotes">{timed.length ? timed.map((n) => <button key={n.id} className="npnote" onClick={() => seek(n.t)}><span className="npnt mono">{mmss(n.t)}</span><span className="npnb"><b>{n.author_name || 'Listener'}</b><span>{n.body}</span></span></button>) : <p className="npempty">No notes yet. Tap Comment at the moment you hear something.</p>}</div>}
+            {(tab === 'progress' || (!canComment && tab === 'notes')) && <SongProgress steps={cur.steps || {}} />}
+            {tab === 'details' && <SongDetails rows={[['Version', cur.version.label], ['Length', cur.version.duration ? mmss(cur.version.duration) : null], ['BPM', cur.bpm], ['Key', cur.key], ['Status', cur.approved ? 'Final mix' : 'Mix in progress']]} />}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function SharedListen() {
   const { token } = useParams();
   const [ltab, setLtab] = useState('progress');
@@ -54,6 +153,7 @@ export default function SharedListen() {
   const [quickMsg, setQuickMsg] = useState('');
   useEffect(() => { const on = (e) => setCanComment(!!e.detail?.enabled); window.addEventListener('ctrl-room:link-comments', on); return () => window.removeEventListener('ctrl-room:link-comments', on); }, []);
   const [allSongs, setAllSongs] = useState(false);
+  const [big, setBig] = useState(null); // the popped-out player: { compose: bool }
   const openQuick = (at) => setQuick({ at, body: '', name: (() => { try { return localStorage.getItem('ctrl-room:guest-name') || ''; } catch { return ''; } })() }); // long projects: show the first few songs so comments stay close // big player scrolled away: show the mini bar
   const mainRef = useRef(null);
   const [time, setTime] = useState(0);
@@ -174,7 +274,7 @@ export default function SharedListen() {
               {data.kind === 'project' && <p className="lnow">{playing ? 'Playing' : 'Up'}: <b>{cur.title}</b></p>}
               <div><Wave peaks={cur.version.peaks} time={time} duration={dur} onSeek={seek} />
                 <div className="nptimes mono"><span>{mmss(time)}</span><span>{cur.approved ? 'Final mix' : 'Mix in progress'}</span><span>{mmss(dur)}</span></div></div>
-              {canComment && <button className="lcommentbtn" onClick={() => { if (!playing) toggle(); openQuick(time); }}>
+              {canComment && <button className="lcommentbtn" onClick={() => { if (!playing) toggle(); setBig({ compose: true }); }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-7l-4 3v-3H5a1 1 0 01-1-1V6a1 1 0 011-1z" /></svg>Comment at {mmss(time)}</button>}
             </> : <p className="muted">There’s nothing to play here yet.</p>}
               {data.kind === 'project' && songs.length > 1 && (
@@ -184,7 +284,7 @@ export default function SharedListen() {
                       <span className="mono ln"><span className="lnum">{i + 1}</span><svg viewBox="0 0 24 24" aria-hidden="true">{i === idx && playing ? PAUSE : PLAY}</svg></span>
                       <span className="lt">{s.title}{s.approved && <em className="lfinal">Final</em>}</span>
                       {canComment && <span className="lrowc" role="button" tabIndex={0} aria-label={`Comment on ${s.title}`} title="Comment on this song"
-                        onClick={(e) => { e.stopPropagation(); if (i !== idx) pick(i); else if (!playing) toggle(); openQuick(i === idx ? time : 0); }}
+                        onClick={(e) => { e.stopPropagation(); if (i !== idx) pick(i); else if (!playing) toggle(); setBig({ compose: true }); }}
                         onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); e.currentTarget.click(); } }}>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-7l-4 3v-3H5a1 1 0 01-1-1V6a1 1 0 011-1z" /></svg></span>}
                       <span className="mono muted">{mmss(s.version.duration || 0)}</span>
@@ -218,12 +318,12 @@ export default function SharedListen() {
         <p className="lfoot">Shared privately with CTRL ROOM. Please don’t repost unreleased music.</p>
         <PoweredBy />
       </div>
-      {cur && (mainGone || quick) && (
+      {cur && (mainGone || quick) && !big && (
         <div className={`lmini ${playing ? 'playing' : ''}`} role="region" aria-label="Now playing">
-          <button className="lminiart" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="Back to the player"><Art src={cur.cover || p.cover} seed={cur.seed ?? p.seed} size={120} className="lminiimg" /></button>
-          <span className="lminit"><b>{cur.title}</b><span>{name}</span></span>
+          <button className="lminiart" onClick={() => setBig({ compose: false })} aria-label="Open the player"><Art src={cur.cover || p.cover} seed={cur.seed ?? p.seed} size={120} className="lminiimg" /></button>
+          <button className="lminit" onClick={() => setBig({ compose: false })}><b>{cur.title}</b><span>{name}</span></button>
           <button className="lminibtn" onClick={toggle} aria-label={playing ? 'Pause' : 'Play'}><svg viewBox="0 0 24 24">{playing ? PAUSE : PLAY}</svg></button>
-          {canComment && <button className={`lminibtn ${quick ? 'on' : ''}`} onClick={() => (quick ? setQuick(null) : openQuick(time))} aria-label="Comment at this moment">
+          {canComment && <button className={`lminibtn ${quick ? 'on' : ''}`} onClick={() => setBig({ compose: true })} aria-label="Comment at this moment">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ fill: 'none' }}><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-7l-4 3v-3H5a1 1 0 01-1-1V6a1 1 0 011-1z" /></svg></button>}
           {songs.length > 1 && idx < songs.length - 1 && <button className="lminibtn" onClick={() => pick(idx + 1)} aria-label="Next song"><svg viewBox="0 0 24 24"><path d="M13 12L4 5.5v13zM22 12l-9-6.5v13z" /></svg></button>}
           <span className="lminiprog" style={{ width: `${dur ? Math.min(100, (time / dur) * 100) : 0}%` }} />
@@ -252,6 +352,8 @@ export default function SharedListen() {
         </div>
       )}
       {quickMsg && !quick && mainGone && <p className="lqtoast" role="status">{quickMsg}</p>}
+      {cur && big && <SharePlayer key={`${cur.id}-${big.compose}`} cur={cur} p={p} name={name} artSrc={artSrc} artSeed={artSeed} playing={playing} toggle={toggle} time={time} dur={dur} seek={seek}
+        songs={songs} idx={idx} pick={pick} token={token} canComment={canComment} startComposing={big.compose} onClose={() => setBig(null)} />}
     </main>
   );
 }

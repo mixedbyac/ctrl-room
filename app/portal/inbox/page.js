@@ -1,4 +1,5 @@
 'use client';
+import { PORTAL_URL } from '@/lib/site';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { supabase, api } from '@/lib/supabase';
@@ -40,7 +41,7 @@ export default function Inbox() {
   };
   const shown = (rows || []).filter((u) => (view === 'archived' ? u.archived : !u.archived));
   const archivedCount = (rows || []).filter((u) => u.archived).length;
-  const portalLink = process.env.NEXT_PUBLIC_PORTAL_URL || (typeof window !== 'undefined' ? `${window.location.origin}/portal` : '/portal');
+  const portalLink = PORTAL_URL;
 
   return (
     <>

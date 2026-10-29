@@ -91,6 +91,7 @@ export default function SecurityPage() {
                   <li className="when"><small>Last checked {new Date(health.at).toLocaleString()}</small></li></ul>}
           </div>
         )}
+        <RememberedDevices />
         {eng && <EmailSetup />}
         {eng && <Engineers />}
         {eng && <LoginCovers />}
@@ -127,6 +128,24 @@ function LoginCovers() {
       <div className="aerow"><input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://music.apple.com/us/playlist/…" />
         <button className="btn small primary" disabled={busy || !url.trim()} onClick={() => save(false)}>{busy ? 'Loading…' : 'Use playlist'}</button>
         <button className="btn small quiet" disabled={busy} onClick={() => save(true)}>Clear</button></div>
+      {msg && <p className="toast-inline" style={{ margin: 0 }}>{msg}</p>}
+    </div>
+  );
+}
+
+function RememberedDevices() {
+  const [msg, setMsg] = useState('');
+  const forget = async () => {
+    if (!window.confirm('Forget every remembered device? You’ll enter your 6-digit code again on each one.')) return;
+    const { data, error } = await supabase().rpc('forget_devices');
+    try { localStorage.removeItem('ctrl-room:device'); } catch {}
+    setMsg(error ? (/forget_devices/.test(error.message) ? 'Run supabase/016_remember_device.sql in Supabase first.' : error.message) : `Done. ${data || 0} device${data === 1 ? '' : 's'} forgotten.`);
+  };
+  return (
+    <div className="panel secpanel">
+      <b>Remembered devices</b>
+      <span className="muted small">When you tick “Remember this device” on the two-step check, that browser or app skips the code for 30 days. Your password is still needed. Lost a device? Forget them all here.</span>
+      <div className="row-actions"><button className="btn small" onClick={forget}>Forget remembered devices</button></div>
       {msg && <p className="toast-inline" style={{ margin: 0 }}>{msg}</p>}
     </div>
   );

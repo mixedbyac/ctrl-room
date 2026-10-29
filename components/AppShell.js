@@ -1,12 +1,12 @@
 'use client';
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Cover from '@/components/Cover';
 import { PlayerProvider } from '@/components/Player';
 import { installNativeBridge, isMacApp } from '@/lib/native';
-import MfaGate from '@/components/MfaGate';
+import MfaGate, { claimDevice } from '@/components/MfaGate';
 import PoweredBy from '@/components/PoweredBy';
 import TabBar from '@/components/TabBar';
 import ProjectMenu from '@/components/ProjectMenu';
@@ -50,20 +50,22 @@ export default function AppShell({ children }) {
   }, []);
 
   // two-step verification: accounts with it on must enter the code before anything loads
-  const [needMfa, setNeedMfa] = useState(false);
+  const [needMfa, setNeedMfa] = useState(null); // null = still checking
   const [mfaTick, setMfaTick] = useState(0);
+  const mfaUser = useRef(null);
   useEffect(() => {
-    if (!session) { setNeedMfa(false); return; }
-    supabase().auth.mfa.getAuthenticatorAssuranceLevel().then(({ data }) => setNeedMfa(!!data && data.nextLevel === 'aal2' && data.currentLevel !== 'aal2')).catch(() => setNeedMfa(false));
+    if (!session) { setNeedMfa(false); mfaUser.current = null; return; }
+    if (mfaUser.current !== session.user.id) { mfaUser.current = session.user.id; setNeedMfa(null); } // a token refresh doesn't re-check visibly
+    supabase().auth.mfa.getAuthenticatorAssuranceLevel().then(async ({ data }) => { const need = !!data && data.nextLevel === 'aal2' && data.currentLevel !== 'aal2'; setNeedMfa(need && !(await claimDevice())); }).catch(() => setNeedMfa(false));
   }, [session, mfaTick]);
 
   const [adminArtists, setAdminArtists] = useState([]);
   useEffect(() => {
-    if (!session || needMfa) { setAdminArtists([]); return; }
+    if (!session || needMfa !== false) { setAdminArtists([]); return; }
     supabase().from('artist_members').select('artist, role').then(({ data }) => setAdminArtists((data || []).filter((m) => /^admin$/i.test(m.role || '')).map((m) => m.artist.toLowerCase())));
   }, [session, needMfa]);
   useEffect(() => {
-    if (!session || needMfa) { setEng(false); setProjects([]); return; }
+    if (!session || needMfa !== false) { setEng(false); setProjects([]); return; }
     supabase().rpc('is_engineer').then(({ data }) => setEng(!!data));
     reloadProjects();
   }, [session, needMfa, reloadProjects]);
@@ -97,7 +99,7 @@ export default function AppShell({ children }) {
   }
   if (portalHost && session !== undefined) return <Ctx.Provider value={value}><div className="portalhost">{children}<PoweredBy /></div></Ctx.Provider>;
   if (pathname === '/login' || pathname === '/signup' || pathname === '/welcome' || pathname === '/protect' || pathname === '/portal/prep' || pathname.startsWith('/l/')) return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
-  if (session === undefined || (session === null && !isPublic)) {
+  if (session === undefined || (session === null && !isPublic) || (session && needMfa === null && !isPublic)) {
     return <LogoLoader />;
   }
 

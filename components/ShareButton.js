@@ -35,7 +35,7 @@ export default function ShareButton({ kind, id, eng, title, open: openProp, onOp
 
   return (
     <span className="sharewrap" ref={box}>
-      {!hideButton && <button className="gear" onClick={() => setOpen(!open)} aria-expanded={open}>{ICON}Share</button>}
+      {!hideButton && <button className="gear shareicon" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={`Share this ${what}`} title="Share">{ICON}</button>}
       {open && (
         <div className="sharepop" role="dialog" aria-label={`Share this ${what}`}>
           <p className="shtitle">Share this {what}</p>

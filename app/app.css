@@ -1431,3 +1431,15 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
   .tstats:empty, .tstats:has(> .mono:empty) { display: none; }
 }
 @media (max-width: 900px) { .pinfo { gap: 10px; } .pinfo h1 { margin: 0; line-height: 1.05; } .pinfo .partist { margin-top: -2px; } }
+
+/* share: just the icon, round */
+.gear.shareicon { width: 42px; height: 42px; padding: 0; justify-content: center; border-radius: 50%; }
+.gear.shareicon svg { width: 18px; height: 18px; }
+.gear.shareicon[aria-expanded="true"] { background: rgba(245,213,71,.16); border-color: rgba(245,213,71,.5); color: var(--sig); }
+
+/* phone project title: centered on its own; the pencil sits in matching side padding so it can't shift the text */
+@media (max-width: 900px) {
+  .pinfo .titlewrap { display: block; width: 100%; position: relative; padding: 0 30px; box-sizing: border-box; text-align: center; }
+  .pinfo .titlewrap .titlepen { position: absolute; left: auto; right: 0; top: 50%; transform: translateY(-50%); margin: 0; font-size: 15px; padding: 4px 6px; }
+  .pinfo .prow .gear.shareicon { width: 46px; height: 46px; padding: 0; }
+}

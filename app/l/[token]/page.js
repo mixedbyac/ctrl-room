@@ -49,6 +49,10 @@ export default function SharedListen() {
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [mainGone, setMainGone] = useState(false);
+  const [canComment, setCanComment] = useState(false);
+  const [quick, setQuick] = useState(null); // phone mini player comment: { at, body, name }
+  const [quickMsg, setQuickMsg] = useState('');
+  useEffect(() => { const on = (e) => setCanComment(!!e.detail?.enabled); window.addEventListener('ctrl-room:link-comments', on); return () => window.removeEventListener('ctrl-room:link-comments', on); }, []);
   const [allSongs, setAllSongs] = useState(false); // long projects: show the first few songs so comments stay close // big player scrolled away: show the mini bar
   const mainRef = useRef(null);
   const [time, setTime] = useState(0);
@@ -211,10 +215,35 @@ export default function SharedListen() {
           <button className="lminiart" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="Back to the player"><Art src={cur.cover || p.cover} seed={cur.seed ?? p.seed} size={120} className="lminiimg" /></button>
           <span className="lminit"><b>{cur.title}</b><span>{name}</span></span>
           <button className="lminibtn" onClick={toggle} aria-label={playing ? 'Pause' : 'Play'}><svg viewBox="0 0 24 24">{playing ? PAUSE : PLAY}</svg></button>
+          {canComment && <button className={`lminibtn ${quick ? 'on' : ''}`} onClick={() => setQuick(quick ? null : { at: time, body: '', name: (() => { try { return localStorage.getItem('ctrl-room:guest-name') || ''; } catch { return ''; } })() })} aria-label="Comment at this moment">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ fill: 'none' }}><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-7l-4 3v-3H5a1 1 0 01-1-1V6a1 1 0 011-1z" /></svg></button>}
           {songs.length > 1 && idx < songs.length - 1 && <button className="lminibtn" onClick={() => pick(idx + 1)} aria-label="Next song"><svg viewBox="0 0 24 24"><path d="M13 12L4 5.5v13zM22 12l-9-6.5v13z" /></svg></button>}
           <span className="lminiprog" style={{ width: `${dur ? Math.min(100, (time / dur) * 100) : 0}%` }} />
         </div>
       )}
+      {cur && mainGone && quick && (
+        <div className="lquick" role="dialog" aria-label={`Comment on ${cur.title}`}>
+          {!quick.name && <input className="lqname" placeholder="Your name" value={quick.nameDraft || ''} onChange={(e) => setQuick({ ...quick, nameDraft: e.target.value })} maxLength={40} aria-label="Your name" />}
+          <div className="lqrow">
+            <button className="nc-time mono" onClick={() => setQuick({ ...quick, at: time })} title="Tap to use right now">{mmss(quick.at)}</button>
+            <textarea rows={1} autoFocus placeholder={`Note on ${cur.title}…`} value={quick.body} onChange={(e) => setQuick({ ...quick, body: e.target.value })} aria-label="Comment" enterKeyHint="send"
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); document.getElementById('lqsend')?.click(); } }} />
+            <button id="lqsend" className="nc-send" disabled={!quick.body.trim()} aria-label="Post" onClick={async () => {
+              const nm = (quick.name || quick.nameDraft || '').trim();
+              if (!nm) return setQuickMsg('Add your name first.');
+              try { localStorage.setItem('ctrl-room:guest-name', nm); } catch {}
+              let g = ''; try { g = localStorage.getItem('ctrl-room:guest') || ''; if (!g) { g = crypto.randomUUID?.() || String(Math.random()).slice(2); localStorage.setItem('ctrl-room:guest', g); } } catch {}
+              const r = await fetch('/api/share/notes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ t: token, songId: cur.id, versionId: cur.version.id, guestId: g, name: nm, action: 'post', body: quick.body, at: quick.at }) });
+              const j = await r.json().catch(() => ({}));
+              if (!r.ok) return setQuickMsg(j.error || 'Couldn’t post that.');
+              setQuick(null); setQuickMsg(`Posted at ${mmss(quick.at)}.`); setTimeout(() => setQuickMsg(''), 2500);
+              window.dispatchEvent(new Event('ctrl-room:link-notes'));
+            }}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6" /></svg></button>
+          </div>
+          {quickMsg && <p className="lqmsg">{quickMsg}</p>}
+        </div>
+      )}
+      {quickMsg && !quick && mainGone && <p className="lqtoast" role="status">{quickMsg}</p>}
     </main>
   );
 }

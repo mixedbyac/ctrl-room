@@ -21,6 +21,9 @@ export default function LinkComments({ token, songId, versionId, time, seek }) {
     fetch(`/api/share/notes?t=${encodeURIComponent(token)}&songId=${songId}&versionId=${versionId}`, { cache: 'no-store' }).then((r) => r.json()).then(setState).catch(() => setState({ enabled: false }));
   }, [token, songId, versionId]);
   useEffect(() => { load(); }, [load]);
+  // tell the page whether comments are on (the phone mini player offers a quick comment), and reload when it posts one
+  useEffect(() => { window.dispatchEvent(new CustomEvent('ctrl-room:link-comments', { detail: { enabled: !!state?.enabled } })); }, [state?.enabled]);
+  useEffect(() => { const r = () => load(); window.addEventListener('ctrl-room:link-notes', r); return () => window.removeEventListener('ctrl-room:link-notes', r); }, [load]);
   if (!state?.enabled) return null;
   const call = async (payload) => {
     const r = await fetch('/api/share/notes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ t: token, songId, versionId, guestId: guestId(), name, ...payload }) });

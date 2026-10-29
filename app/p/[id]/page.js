@@ -138,7 +138,7 @@ export default function ProjectPage() {
             <EditableTitle value={p.title} canEdit={canEdit} label="project" onSave={async (t) => { if (viaAdmin) await api('/api/admin', { action: 'title', projectId: p.id, title: t }); else await supabase().from('projects').update({ title: t }).eq('id', p.id); load(); reloadProjects(); }} />
             <p className="pcredit"><Credit project={p} /></p>
             <Deadline p={p} eng={eng} onSaved={load} />
-            <p className="psub"><ArtistName name={p.artist} link /> · {p.type} · {p.songs.length} song{p.songs.length === 1 ? '' : 's'} · {approved} approved{p.release ? ` · out ${fmtDate(p.release)}` : ''}</p>
+            <p className="psub"><ArtistName name={p.artist} link /> · {p.songs.length} song{p.songs.length === 1 ? '' : 's'} · {approved} approved{p.release ? ` · out ${fmtDate(p.release)}` : ''}</p>
             <div className="prow">
               {firstPlayable && <button className="bigplay" onClick={() => (pl.current?.project?.id === p.id ? pl.toggle() : playSong(firstPlayable))} aria-label={projectPlaying ? 'Pause' : 'Play the project'}>
                 <svg viewBox="0 0 24 24">{projectPlaying ? <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" /> : <path d="M7 4.5v15l13-7.5z" />}</svg></button>}

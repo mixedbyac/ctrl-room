@@ -1139,3 +1139,22 @@ a.driftc:hover { transform: scale(1.04); }
 .titleedit-wrap { position: relative; }
 @media (max-width: 760px) { .casebtns button { min-width: 34px; height: 32px; } }
 .ttl { letter-spacing: -.02em; font-weight: 750; } /* song and project titles show exactly as typed (style them with AA / Aa / aa) */
+
+/* two-step check: one clean column (big code box, remember, full-width button) */
+.mfacard { max-width: 380px; gap: 16px; }
+.mfacard h1 { font-size: clamp(30px, 9vw, 44px); }
+.mfacard > p { font-size: 15px; line-height: 1.45; max-width: 300px; }
+.mfaform { display: grid; gap: 14px; width: 100%; }
+.mfaform input { width: 100%; text-align: center; font-family: var(--mono); font-size: 28px; letter-spacing: .32em; padding: 14px 12px 14px calc(12px + .32em); background: var(--s1); border: 1px solid var(--line); border-radius: 14px; color: var(--ink); }
+.mfaform input:focus { outline: none; border-color: var(--sig); }
+.mfaform input::placeholder { color: rgba(255,255,255,.18); }
+.mfaform .btn { width: 100%; justify-content: center; padding: 14px; font-size: 16px; border-radius: 14px; }
+.mfaform .remember { justify-content: center; margin: 0; font-size: 14px; }
+.mfaform .remember input { width: 18px; height: 18px; padding: 0; font-size: inherit; letter-spacing: 0; accent-color: var(--sig); }
+.mfacard .ferr { margin: 0; }
+.mfacard > .link { font-size: 14px; margin-top: 2px; }
+@media (max-width: 760px) {
+  .login:has(.mfacard) { align-items: start; padding-top: calc(48px + env(safe-area-inset-top, 0px)); }
+  .mfacard { padding: 26px 20px; }
+  .mfacard .loginlogo { width: 72px; height: 72px; }
+}

@@ -48,11 +48,11 @@ export default function MfaGate({ onDone, onSignOut }) {
   };
   return (
     <div className="login">
-      <div className="logincard">
+      <div className="logincard mfacard">
         <img src="/logo.png" alt="" className="loginlogo" />
         <h1 className="up">Two-step check</h1>
         <p>Open your authenticator app and enter the 6-digit code for CTRL ROOM.</p>
-        <form onSubmit={submit} className="lockform">
+        <form onSubmit={submit} className="mfaform">
           <input inputMode="numeric" autoComplete="one-time-code" placeholder="123456" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} aria-label="Authenticator code" autoFocus />
           <label className="smsopt remember"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Remember this device for 30 days</label>
           <button className="btn primary" disabled={busy || code.length < 6}>{busy ? 'Checking…' : 'Continue'}</button>

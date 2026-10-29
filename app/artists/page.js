@@ -13,7 +13,6 @@ import ArtistTeam from '@/components/ArtistTeam';
 import AddArtist from '@/components/AddArtist';
 import { BlueCheck } from '@/components/Credit';
 
-export const VCheck = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.4 1.8 3-.2.9 2.9 2.5 1.7-1 2.8 1 2.8-2.5 1.7-.9 2.9-3-.2L12 22l-2.4-1.8-3 .2-.9-2.9-2.5-1.7 1-2.8-1-2.8 2.5-1.7.9-2.9 3 .2z" fill="currentColor" /><path d="M8 12.2l2.6 2.6L16.2 9" fill="none" stroke="#0f0f10" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 const initials = (n) => n.split(/\s+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 const sortKey = (n) => n.replace(/^the\s+/i, '');
 

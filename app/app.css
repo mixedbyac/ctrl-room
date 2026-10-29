@@ -1290,3 +1290,11 @@ a.driftc:hover { transform: scale(1.04); }
 .igrow { display: inline-flex; align-items: center; gap: 6px; flex: 1 1 220px; }
 .igat { color: var(--muted); font-weight: 700; }
 .igrow input { flex: 1; min-width: 0; }
+
+/* verified: theme yellow everywhere (seal, badges, labels) */
+.bluecheck { width: 17px; height: 17px; flex: none; vertical-align: -3px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
+.vbadge { color: var(--sig); background: rgba(245,213,71,.12); border-color: rgba(245,213,71,.3); }
+.vbadge svg { color: var(--sig); }
+.vbadge.pending { color: var(--muted); background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.1); }
+.tbadge.ok { background: rgba(245,213,71,.13); color: var(--sig); }
+.vok { color: var(--sig); }

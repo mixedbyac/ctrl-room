@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/supabase';
 import { useApp, TopBar } from '@/components/AppShell';
 import Credit, { BlueCheck } from '@/components/Credit';
@@ -12,6 +12,7 @@ export default function ProfilePage() {
   const [f, setF] = useState(null);
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
+  const fileIn = useRef(null);
   useEffect(() => {
     if (!session || !eng) return;
     api('/api/profile', { action: 'get' }).then((r) => setF({ full_name: '', display_name: '', credit: '', bio: '', photo_url: '', roles: ['mix'], ...r.profile, roles: r.profile?.roles?.length ? r.profile.roles : ['mix'] })).catch((e) => { setMsg(e.message); setF({ roles: ['mix'] }); });
@@ -41,11 +42,9 @@ export default function ProfilePage() {
       <section className="page">
         <div className="hhead"><h1 className="up">Your profile</h1><p className="lede">How you’re credited on every project you work on.</p></div>
         <div className="profcard">
-          <label className="profav" title="Change your photo">
+          <span className="profav">
             {f.photo_url ? <img src={f.photo_url} alt="" /> : (f.display_name || f.full_name || session.user.email)[0].toUpperCase()}
-            <span className="profcam" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg></span>
-            <input type="file" accept="image/*" className="vh" onChange={pick} disabled={busy} />
-          </label>
+          </span>
           <div>
             <b className="profname">{f.display_name || f.full_name || 'Your name'}{f.verified && <BlueCheck title="Verified engineer" />}</b>
             <span className="profmail">{session.user.email} · {f.verified ? <span className="vok">Verified</span> : <span className="vno">Not verified yet. Sign in with an email link or confirm your email to get the blue check.</span>}</span>
@@ -62,7 +61,7 @@ export default function ProfilePage() {
           <div className="fld"><label htmlFor="pf-c">Credit <span className="opt">leave blank for “{creditLine({ ...f, credit: '' })}”</span></label><input id="pf-c" value={f.credit || ''} onChange={set('credit')} placeholder={creditLine({ ...f, credit: '' })} maxLength={120} /></div>
           <div className="fld"><label>Profile picture</label>
             <div className="photorow">
-              <label className="btn small">Upload a photo<input type="file" accept="image/*" className="vh" onChange={pick} disabled={busy} /></label>
+              <button type="button" className="btn small" onClick={() => fileIn.current?.click()} disabled={busy}>Upload a photo</button>
               <span className="muted small">or use your Instagram picture:</span>
               <span className="igrow"><span className="igat">@</span><input value={f.instagram_draft ?? f.instagram ?? ''} onChange={(e) => setF((x) => ({ ...x, instagram_draft: e.target.value }))} placeholder="yourhandle" aria-label="Instagram username" autoCapitalize="none" />
                 <button type="button" className="btn small" disabled={busy || !(f.instagram_draft ?? f.instagram)} onClick={() => photo({ action: 'instagram', handle: f.instagram_draft ?? f.instagram })}>Use it</button></span>
@@ -72,6 +71,7 @@ export default function ProfilePage() {
           <div className="row-actions"><button className="btn primary" disabled={busy}>{busy ? 'Saving…' : 'Save profile'}</button></div>
           {msg && <p className="toast-inline" style={{ margin: 0 }}>{msg}</p>}
         </form>
+        <input ref={fileIn} type="file" accept="image/*" hidden onChange={pick} />
       </section>
     </>
   );

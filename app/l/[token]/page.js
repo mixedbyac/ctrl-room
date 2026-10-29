@@ -195,9 +195,11 @@ export default function SharedListen() {
     const onEnd = () => { setPlaying(false); report(); if (idx < songs.length - 1) { setIdx(idx + 1); setTimeout(() => audio.current?.play().then(() => setPlaying(true)).catch(() => {}), 50); } };
     a.addEventListener('loadedmetadata', onMeta); a.addEventListener('ended', onEnd);
     let raf;
+    let lastSet = 0;
     const tick = () => {
       const t = track.current, now = performance.now();
-      setTime(a.currentTime);
+      // update the screen ~5 times a second (every frame made phones too busy to respond to taps)
+      if (now - lastSet > 200 || a.paused) { lastSet = now; setTime((prev) => (Math.abs(prev - a.currentTime) > 0.05 ? a.currentTime : prev)); }
       if (!a.paused && t) {
         const d = a.duration || t.duration || 0; t.duration = d;
         if (t.last) t.listened += Math.min(1, (now - t.last) / 1000);

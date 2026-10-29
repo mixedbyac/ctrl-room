@@ -172,16 +172,18 @@ export function PlayerProvider({ eng, children }) {
 
   /* frame loop: time, turntable, listen tracking */
   const rot = useRef({ angle: 0, vel: 0, last: 0, lastSet: 0 });
+  const phone = useRef(false);
+  useEffect(() => { const m = window.matchMedia('(max-width: 900px)'); const f = () => { phone.current = m.matches; }; f(); m.addEventListener?.('change', f); return () => m.removeEventListener?.('change', f); }, []);
   const track = useRef(null);
   useEffect(() => {
     let raf;
     const loop = (ts) => {
       const r = rot.current, dt = Math.min(0.05, (ts - (r.last || ts)) / 1000); r.last = ts;
       const a = curAudio();
-      if (a && playing && ts - r.lastSet > 80) { r.lastSet = ts; setTime(a.currentTime); }
+      if (a && playing && ts - r.lastSet > 200) { r.lastSet = ts; setTime(a.currentTime); }
       const target = playing ? 1 : 0;
       r.vel += (target - r.vel) * (target > r.vel ? 2.2 : 1.1) * dt;
-      if (Math.abs(r.vel) > 0.001) { r.angle = (r.angle + r.vel * 200 * dt) % 360; document.body.style.setProperty('--rot', r.angle.toFixed(2) + 'deg'); }
+      if (Math.abs(r.vel) > 0.001 && !phone.current) { r.angle = (r.angle + r.vel * 200 * dt) % 360; document.body.style.setProperty('--rot', r.angle.toFixed(2) + 'deg'); } // phones don't spin covers: skip the work
       if (!eng && a && playing && a.duration) listen(a);
       raf = requestAnimationFrame(loop);
     };

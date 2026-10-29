@@ -135,9 +135,10 @@ export default function SongPage() {
             <button className="hub" onClick={toggle} disabled={!v} aria-label={playing ? 'Pause' : 'Play'}><svg viewBox="0 0 24 24">{playing ? PAUSE : PLAY}</svg></button>
           </div>
           <div className="sinfo">
-            <p className="eyebrow"><Link href={`/p/${p.id}`}>{p.title}</Link> · <ArtistName name={p.artist} link /></p>
-            <p className="pcredit"><Credit project={p} /></p>
+            <p className="eyebrow"><Link href={`/p/${p.id}`}>{p.title}</Link></p>
             <SongTitle song={song} eng={eng || canEditArtist(p?.artist)} viaAdmin={!eng} reload={load} />
+            <p className="partist"><ArtistName name={p.artist} link /></p>
+            <p className="pcredit"><Credit project={p} /></p>
             <div className="meta"><span className={`dot ${song.status}`}>{statusText(song, versions)}</span>
               {eng ? <>
                 <InlineText value={song.bpm ? String(song.bpm) : ''} placeholder="BPM" suffix=" BPM" width={4} inputMode="decimal" label="BPM"

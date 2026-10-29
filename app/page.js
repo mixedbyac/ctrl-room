@@ -30,6 +30,12 @@ function EngineerHome() {
   const [fresh, setFresh] = useState(0);
   const [day, setDay] = useState(todayISO());
   const [showNew, setShowNew] = useState(false);
+  useEffect(() => {
+    const go = () => { setShowNew(true); setTimeout(() => document.querySelector('#np-t')?.focus(), 80); };
+    if (/[?&]new=1/.test(window.location.search)) { go(); window.history.replaceState(null, '', '/'); }
+    window.addEventListener('ctrl-room:new-project', go);
+    return () => window.removeEventListener('ctrl-room:new-project', go);
+  }, []);
 
   const loadProjects = () => selectWithVersions((V) => supabase().from('projects').select(`*, songs(*, ${V}(id,label,created_at))`).eq('archived', false).order('created_at', { ascending: false }))
     .then(({ data }) => setProjects(data || []));

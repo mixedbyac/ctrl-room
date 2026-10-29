@@ -140,13 +140,7 @@ export default function ProjectPage() {
                 <svg viewBox="0 0 24 24">{projectPlaying ? <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" /> : <path d="M7 4.5v15l13-7.5z" />}</svg></button>}
               <ShareButton kind="project" id={p.id} eng={eng} title={p.title} />
               {!eng && <span className="chipnote">{ready ? `${ready} mix${ready > 1 ? 'es' : ''} waiting on you` : "You're all caught up"}</span>}
-              {eng && <>
-                <button className="gear" onClick={() => setPanel(panel === 'share' ? null : 'share')}>Client access</button>
-                <button className="gear" onClick={() => setPanel(panel === 'invoice' ? null : 'invoice')}>Invoices{(inv.list || []).some((i) => i.status === 'unpaid') ? <span className="gdot" aria-label="unpaid" /> : null}</button>
-                <button className="gear" onClick={() => setPanel(panel === 'mixes' ? null : 'mixes')}>+ Add mixes</button>
-                <button className="gear" onClick={() => setPanel(panel === 'add' ? null : 'add')}>+ Add song</button>
-                <button className="gear" onClick={() => setPanel(panel === 'edit' ? null : 'edit')}>Edit details</button>
-              </>}
+              {eng && <AddPlus unpaid={(inv.list || []).some((i) => i.status === 'unpaid')} onPick={(k) => setPanel(panel === k ? null : k)} />}
             </div>
           </div>
         </div>
@@ -221,6 +215,36 @@ export default function ProjectPage() {
         {eng && <NerdStuff songs={p.songs} />}
       </section>
     </>
+  );
+}
+
+function AddPlus({ onPick, unpaid }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const off = (e) => { if (box.current && !box.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('pointerdown', off);
+    return () => document.removeEventListener('pointerdown', off);
+  }, [open]);
+  const pick = (k) => { setOpen(false); onPick(k); };
+  const Row = ({ k, icon, title, sub, dot }) => <button role="menuitem" onClick={() => pick(k)}><span className="pmi">{icon}</span><span><b>{title}{dot ? <span className="gdot" aria-label="unpaid" style={{ position: 'static', display: 'inline-block', marginLeft: 6 }} /> : null}</b><small>{sub}</small></span></button>;
+  return (
+    <span className="addplus" ref={box}>
+      <button className="bigplus" onClick={() => setOpen(!open)} aria-expanded={open} aria-label="Add to this project" title="Add & manage">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+      </button>
+      {unpaid && !open && <span className="gdot" aria-label="unpaid invoice" />}
+      {open && (
+        <div className="plusmenu" role="menu">
+          <Row k="mixes" icon="↑" title="Add mixes" sub="Drop files, they find their songs" />
+          <Row k="add" icon="♪" title="Add a song" sub="A new song in this project" />
+          <Row k="share" icon="@" title="Client access" sub="Who can open it, downloads" />
+          <Row k="invoice" icon="$" title="Invoices" sub="Attach, show, lock until paid" dot={unpaid} />
+          <Row k="edit" icon="✎" title="Edit details" sub="Title, artist, type, release" />
+        </div>
+      )}
+    </span>
   );
 }
 

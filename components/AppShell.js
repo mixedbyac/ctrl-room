@@ -10,6 +10,7 @@ import MfaGate, { claimDevice } from '@/components/MfaGate';
 import PoweredBy from '@/components/PoweredBy';
 import TabBar from '@/components/TabBar';
 import ProjectMenu from '@/components/ProjectMenu';
+import ProjectFolders from '@/components/ProjectFolders';
 import EnterAnimation, { LogoLoader } from '@/components/EnterAnimation';
 import VerifyBanner from '@/components/VerifyBanner';
 import UpdateWatcher, { getSeen } from '@/components/UpdateWatcher';
@@ -132,13 +133,14 @@ export default function AppShell({ children }) {
               )}
             </div>
           )}
-          {live.length > 0 && (
+          {eng ? (
+            <ProjectFolders projects={live} pathname={pathname} onProjectMenu={setPmenu} reloadProjects={reloadProjects} router={router} />
+          ) : live.length > 0 && (
             <div>
               <p className="navlabel">Projects</p>
               <div style={{ display: 'grid', gap: 2 }}>
                 {live.map((p) => (
-                  <Link key={p.id} className="navitem" href={`/p/${p.id}`} aria-current={pathname.startsWith(`/p/${p.id}`)}
-                    onContextMenu={(e) => { if (!eng) return; e.preventDefault(); setPmenu({ project: p, x: e.clientX, y: e.clientY }); }}>
+                  <Link key={p.id} className="navitem" href={`/p/${p.id}`} aria-current={pathname.startsWith(`/p/${p.id}`)}>
                     <Cover seed={p.seed} path={p.cover_path} size={64} />{p.title}
                   </Link>
                 ))}

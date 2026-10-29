@@ -39,11 +39,18 @@ export default function ProjectMenu({ menu, onClose, onChanged, router }) {
     onChanged();
     if (window.location.pathname.startsWith(`/p/${p.id}`)) router.push('/');
   };
-  const x = Math.min(menu.x, window.innerWidth - 200), y = Math.min(menu.y, window.innerHeight - 160);
+  const x = Math.min(menu.x, window.innerWidth - 200), y = Math.min(menu.y, window.innerHeight - 160 - (menu.folders?.length || 0) * 36);
   return (
     <div className="ctxmenu" style={{ left: x, top: y }} role="menu" onPointerDown={(e) => e.stopPropagation()}>
       <p className="ctxtitle">{p.title}</p>
       <button role="menuitem" onClick={() => { onClose(); router.push(`/p/${p.id}`); }}>Open</button>
+      {menu.folders?.length > 0 && !p.archived && (
+        <>
+          <p className="ctxtitle sub">Move to folder</p>
+          {menu.folders.map((f) => <button key={f.id} role="menuitem" disabled={p.folder_id === f.id} onClick={() => { onClose(); menu.moveTo(p.id, f.id); }}>{p.folder_id === f.id ? '✓ ' : ''}{f.name}</button>)}
+          {p.folder_id && <button role="menuitem" onClick={() => { onClose(); menu.moveTo(p.id, null); }}>Out of the folder</button>}
+        </>
+      )}
       <button role="menuitem" onClick={archive}>{p.archived ? 'Restore from archive' : 'Archive'}</button>
       <button role="menuitem" className="danger" onClick={remove}>Delete…</button>
     </div>

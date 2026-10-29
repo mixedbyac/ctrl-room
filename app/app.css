@@ -1158,3 +1158,42 @@ a.driftc:hover { transform: scale(1.04); }
   .mfacard { padding: 26px 20px; }
   .mfacard .loginlogo { width: 72px; height: 72px; }
 }
+
+/* sidebar: Projects + (new project / new folder) and folders */
+.navlabelrow { position: relative; display: flex; align-items: center; justify-content: space-between; margin: 0 0 6px; }
+.navlabelrow .navlabel { margin: 0; }
+.navplus { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 8px; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.04); color: var(--muted); cursor: pointer; transition: transform .2s cubic-bezier(.2,.8,.2,1), background .15s, color .15s; }
+.navplus svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
+.navplus:hover { color: var(--ink); background: rgba(245,213,71,.14); border-color: rgba(245,213,71,.4); }
+.navplus.on { transform: rotate(45deg); color: #0f0f10; background: var(--sig); border-color: var(--sig); }
+.plusmenu { position: absolute; z-index: 60; top: calc(100% + 6px); right: 0; left: 0; display: grid; gap: 2px; padding: 6px; border-radius: 14px; background: #1b1b1e; border: 1px solid var(--line); box-shadow: 0 24px 60px -15px rgba(0,0,0,.8); animation: npfade .12s; }
+.plusmenu button { display: flex; align-items: center; gap: 10px; text-align: left; padding: 9px 10px; border-radius: 10px; background: none; border: 0; color: var(--ink); cursor: pointer; }
+.plusmenu button:hover { background: rgba(255,255,255,.07); }
+.plusmenu b { display: block; font-size: 14px; }
+.plusmenu small { display: block; font-size: 12px; color: var(--muted); }
+.pmi { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 9px; background: rgba(245,213,71,.14); color: var(--sig); font-weight: 800; }
+.pmi svg { width: 16px; height: 16px; }
+.foldername { width: 100%; margin: 2px 0 4px; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--sig); background: var(--s1); color: var(--ink); font: inherit; font-size: 14px; font-weight: 600; }
+.foldertitle { background: none; border: 0; color: inherit; cursor: pointer; }
+.foldertitle .ftname { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fcount { font-size: 11.5px; color: var(--faint); font-weight: 700; }
+.folderin { display: grid; gap: 2px; padding-left: 14px; margin-left: 12px; border-left: 1px solid rgba(255,255,255,.07); }
+.folderempty { margin: 2px 0 6px; padding: 6px 8px; font-size: 12px; color: var(--faint); }
+.pfolder { border-radius: 10px; transition: background .12s, box-shadow .12s; }
+.pfolder.over { background: rgba(245,213,71,.08); box-shadow: inset 0 0 0 1px rgba(245,213,71,.45); }
+.pfolder.loose { min-height: 8px; }
+.foldermsg { font-size: 12px; color: var(--warn); margin: 6px 8px 0; }
+.ctxtitle.sub { margin-top: 4px; border-top: 1px solid var(--line); padding-top: 8px; }
+
+/* project page: one + for adding, one ⋯ for settings */
+.addplus { position: relative; display: inline-flex; }
+.addplus > button.bigplus { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); color: var(--ink); cursor: pointer; transition: transform .22s cubic-bezier(.2,.8,.2,1), background .15s; }
+.addplus > button.bigplus svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
+.addplus > button.bigplus:hover { background: rgba(245,213,71,.16); border-color: rgba(245,213,71,.5); }
+.addplus > button.bigplus[aria-expanded="true"] { transform: rotate(45deg); background: var(--sig); color: #0f0f10; border-color: var(--sig); }
+.addplus .plusmenu { left: 0; right: auto; min-width: 250px; top: calc(100% + 8px); }
+.addplus .gdot { position: absolute; top: 2px; right: 2px; }
+@media (max-width: 900px) {
+  .addplus .plusmenu { position: fixed; left: 0; right: 0; top: auto; bottom: 0; border-radius: 20px 20px 0 0; padding: 10px 10px calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 60; min-width: 0; }
+  .addplus .plusmenu button { padding: 13px 12px; }
+}

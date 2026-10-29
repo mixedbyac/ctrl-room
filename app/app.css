@@ -1674,3 +1674,4 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
   .lpage .lcomments, .lpage .cthreads, .lpage .lcomm { max-width: 760px; margin-left: auto; margin-right: auto; }
 }
 @media (min-width: 901px) { .ltop { position: absolute; top: 24px; left: calc(28px - max(0px, (100vw - 1180px) / 2)); } }
+.linfo .ltracks { max-width: none; width: 100%; } @media (min-width: 901px) { .lprog, .ldetails { margin-top: -30px !important; } }

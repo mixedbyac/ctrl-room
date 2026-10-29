@@ -1605,3 +1605,16 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .lpage { padding-bottom: 90px; }
 .lmini.playing .lminiart img, .lmini.playing .lminiart .lminiimg { animation-play-state: running; }
 .npdtabs button { min-width: 0; white-space: nowrap; } @media (max-width: 760px) { .npdtabs { gap: 4px; padding: 4px; } .npdtabs button { padding: 0 6px; font-size: 13px; } }
+
+/* tabs v3: clean underline tabs (no box). Active = bright text + yellow bar. Same on desktop and phones. */
+.npdtabs { display: flex; gap: 0; padding: 0; border-radius: 0; background: none !important; border: 0; border-bottom: 1px solid rgba(255,255,255,.1); box-shadow: none !important; }
+.npdtabs button { position: relative; flex: 1 1 0; height: 44px; padding: 0 8px; border-radius: 0; background: none !important; box-shadow: none !important; color: rgba(255,255,255,.5); font-size: 14px; font-weight: 650; letter-spacing: .01em; }
+.npdtabs button:hover { color: rgba(255,255,255,.85); }
+.npdtabs button[aria-selected="true"] { color: #fff; }
+.npdtabs button[aria-selected="true"]::after { content: ""; position: absolute; left: 22%; right: 22%; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--sig); }
+.npdtabs i, .npdtabs button[aria-selected="true"] i { background: rgba(245,213,71,.18); color: var(--sig); }
+@media (min-width: 901px) { .npdtabs button { flex: 0 0 auto; padding: 0 16px; } .npdtabs { gap: 6px; } .npdtabs button[aria-selected="true"]::after { left: 12px; right: 12px; } }
+@media (max-width: 760px) { .npdtabs button { font-size: 13.5px; padding: 0 4px; } }
+
+/* share links: the mini player is for phones only */
+@media (min-width: 901px) { .lmini { display: none !important; } .lpage { padding-bottom: 0; } }

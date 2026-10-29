@@ -64,7 +64,7 @@ export default function SharedListen() {
   const cur = songs[idx];
   useEffect(() => {
     const el = mainRef.current; if (!el || typeof IntersectionObserver === 'undefined') return;
-    const io = new IntersectionObserver(([e]) => setMainGone(!e.isIntersecting), { threshold: 0.05 });
+    const io = new IntersectionObserver(([e]) => setMainGone(!e.isIntersecting && e.boundingClientRect.top < 0), { threshold: 0 });
     io.observe(el); return () => io.disconnect();
   }, [data]); // eslint-disable-line
   useEffect(() => { if (data && ltab === 'songs' && (data.kind === 'song' || songs.length < 2)) setLtab('progress'); }, [data]); // eslint-disable-line
@@ -154,8 +154,8 @@ export default function SharedListen() {
       {ar?.header_url && <div className="lheader" style={{ backgroundImage: `url(${ar.header_url})` }} />}
       <div className="lwrap">
         <div className="ltop"><img src="/logo.png" alt="" className="llogo" /><span>CTRL ROOM</span></div>
-        <div className="lmain" ref={mainRef}>
-          <div className="npdisc ldisc"><Art src={artSrc} seed={artSeed} size={640} className="npart spin" /><span className="nphole" />
+        <div className="lmain">
+          <div className="npdisc ldisc" ref={mainRef}><Art src={artSrc} seed={artSeed} size={640} className="npart spin" /><span className="nphole" />
             <button className="lhub" onClick={toggle} disabled={!cur} aria-label={playing ? 'Pause' : 'Play'}><svg viewBox="0 0 24 24">{playing ? PAUSE : PLAY}</svg></button>
           </div>
           <div className="linfo">

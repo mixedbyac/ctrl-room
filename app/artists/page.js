@@ -71,7 +71,7 @@ function Artists() {
         <section className="page"><div className="adetail">
           {(eng || artists.length > 1) && <button className="aback" onClick={() => router.push('/artists')}>‹ All artists</button>}
           <ArtistHero name={artist.name} profile={prof(artist.name)} canEdit onChange={setProf}>
-            {eng && ver[artist.name.toLowerCase()] && <div className="acontact"><span className={`vbadge ${ver[artist.name.toLowerCase()].verified ? '' : 'pending'}`}>{ver[artist.name.toLowerCase()].verified ? <><BlueCheck />{ver[artist.name.toLowerCase()].verified} of {ver[artist.name.toLowerCase()].total} verified</> : 'No one verified yet'}</span></div>}
+            {eng && ver[artist.name.toLowerCase()] && <div className="acontact"><span className={`vbadge ${ver[artist.name.toLowerCase()].verified ? '' : 'pending'}`}>{ver[artist.name.toLowerCase()].verified ? <><BlueCheck />Verified</> : 'Not verified yet'}</span></div>}
             {eng && (artist.contact || artist.phone || artist.email) && <div className="acontact">
               {artist.contact && <span className="sichip">Contact <b>{artist.contact}</b></span>}
               {artist.phone && <span className="sichip mono">{artist.phone}</span>}

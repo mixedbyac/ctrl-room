@@ -11,6 +11,14 @@ import Cover from '@/components/Cover';
 import { mmss, deviceName, orderVersions, latestMix, currentMix } from '@/lib/format';
 import { makeArt, artOf } from '@/lib/art';
 
+/** Save one mix version to the computer/phone, named “Song v3.wav”. */
+export async function downloadVersion(song, v) {
+  const name = `${song.title} ${v.label}${(v.file_name || '').match(/\.[a-z0-9]{2,5}$/i)?.[0] || ''}`;
+  const { data, error } = await supabase().storage.from('mixes').createSignedUrl(v.storage_path, 300, { download: name });
+  if (error) return window.alert?.(error.message);
+  const a = document.createElement('a'); a.href = data.signedUrl; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+}
+
 /*
   One player for the whole app. It lives above the pages, so music keeps playing while you move around.
   Files play exactly as uploaded: a plain <audio> element at full volume, no processing.
@@ -452,6 +460,10 @@ function NowPlaying() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-7l-4 3v-3H5a1 1 0 01-1-1V6a1 1 0 011-1z" /><path d="M12 8.5v4M10 10.5h4" /></svg>
             <span>Comment</span>
           </button>
+          {v?.storage_path && (pl.eng || c.project?.allow_download) && <button className="npcomment npdl" onClick={() => downloadVersion(c.song, v)} aria-label={`Download ${v.label}`} title={`Download ${v.label}`}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>
+            <span>Download</span>
+          </button>}
           <div className="npqual"><QualityBadge v={v} size="lg" detail /></div>
         </div>
         {c.versions.length > 1 && (

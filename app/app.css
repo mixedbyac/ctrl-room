@@ -1827,3 +1827,8 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .seal-engineer .bluecheck { filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
 
 .emaillog{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px}.emaillog li{line-height:1.45}.emaillog .ok{color:#3ecf8e}.emaillog .bad{color:#ff6b6b}
+
+/* player header: Comment + Download side by side */
+.nphead { grid-auto-flow: row; }
+@media (min-width: 761px) { .nphead .npcomment { justify-self: center; } .nphead:has(.npdl) { grid-template-columns: 1fr auto auto 1fr; } .nphead:has(.npdl) > .nphead-t, .nphead:has(.npdl) > .npqual { grid-column: 1 / -1; } .nphead:has(.npdl) > .npcomment:not(.npdl) { grid-column: 2; } .nphead:has(.npdl) > .npdl { grid-column: 3; } }
+@media (max-width: 760px) { .nphead:has(.npdl) { grid-template-columns: minmax(0, 1fr) auto auto; } .npdl span { display: none; } }

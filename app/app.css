@@ -1865,3 +1865,7 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .copybtn { transition: background .2s, color .2s, transform .12s; min-width: 92px; }
 .copybtn:active { transform: scale(.96); }
 .copybtn.done { background: #3ecf8e !important; border-color: #3ecf8e !important; color: #0f0f10 !important; }
+/* share link rows: comment + download icons, any number of trailing bits */
+.ltracks button { grid-template-columns: 34px minmax(0, 1fr) !important; grid-auto-flow: column; grid-auto-columns: auto; }
+.ltracks .lrowd { gap: 0; }
+@media (max-width: 900px) { .ltracks .lrowc.lrowd { display: grid; } }

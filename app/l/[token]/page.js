@@ -11,7 +11,7 @@ import LinkComments from '@/components/LinkComments';
 import NoteComposer from '@/components/NoteComposer';
 import { SongProgress, SongDetails } from '@/components/SongInfo';
 import PoweredBy from '@/components/PoweredBy';
-import LinkDownload from '@/components/LinkDownload';
+import LinkDownload, { SongDownloadIcon } from '@/components/LinkDownload';
 
 const PLAY = <path d="M7 4.5v15l13-7.5z" />;
 const PAUSE = <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" />;
@@ -293,6 +293,7 @@ export default function SharedListen() {
                         onClick={(e) => { e.stopPropagation(); if (big && i === idx) { setBig(null); return; } if (i !== idx) pick(i); else if (!playing) toggle(); setBig({ compose: true }); }}
                         onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); e.currentTarget.click(); } }}>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-7l-4 3v-3H5a1 1 0 01-1-1V6a1 1 0 011-1z" /></svg></span>}
+                      {data.downloads && data.downloads !== 'off' && <SongDownloadIcon token={token} song={s} />}
                       <span className="mono muted">{mmss(s.version.duration || 0)}</span>
                     </button></li>
                   ))}

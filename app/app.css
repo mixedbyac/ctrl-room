@@ -1832,3 +1832,9 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .nphead { grid-auto-flow: row; }
 @media (min-width: 761px) { .nphead .npcomment { justify-self: center; } .nphead:has(.npdl) { grid-template-columns: 1fr auto auto 1fr; } .nphead:has(.npdl) > .nphead-t, .nphead:has(.npdl) > .npqual { grid-column: 1 / -1; } .nphead:has(.npdl) > .npcomment:not(.npdl) { grid-column: 2; } .nphead:has(.npdl) > .npdl { grid-column: 3; } }
 @media (max-width: 760px) { .nphead:has(.npdl) { grid-template-columns: minmax(0, 1fr) auto auto; } .npdl span { display: none; } }
+/* + menu: Allow downloads switch */
+.plusmenu .pmdl > span:nth-child(2) { flex: 1; min-width: 0; }
+.plusmenu .switch.sm { display: inline-block; width: 40px; height: 24px; border-radius: 12px; }
+.plusmenu .switch.sm i { width: 16px; height: 16px; top: 3px; left: 3px; }
+.plusmenu .switch.sm.on { background: #f5d547; border-color: #f5d547; }
+.plusmenu .switch.sm.on i { transform: translateX(16px); background: #0f0f10; }

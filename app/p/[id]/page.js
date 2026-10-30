@@ -186,7 +186,7 @@ export default function ProjectPage() {
                 <svg viewBox="0 0 24 24">{projectPlaying ? <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" /> : <path d="M7 4.5v15l13-7.5z" />}</svg></button>}
               <ShareButton kind="project" id={p.id} eng={eng} title={p.title} />
               {!eng && <span className="chipnote">{ready ? `${ready} mix${ready > 1 ? 'es' : ''} waiting on you` : "You're all caught up"}</span>}
-              {eng && <AddPlus unpaid={(inv.list || []).some((i) => i.status === 'unpaid')} onPick={(k) => setPanel(panel === k ? null : k)} />}
+              {eng && <AddPlus p={p} onSaved={load} unpaid={(inv.list || []).some((i) => i.status === 'unpaid')} onPick={(k) => setPanel(panel === k ? null : k)} />}
             </div>
           </div>
         </div>
@@ -349,8 +349,17 @@ function PanelShell({ onClose, children }) {
   );
 }
 
-function AddPlus({ onPick, unpaid }) {
+function AddPlus({ p, onSaved, onPick, unpaid }) {
   const [open, setOpen] = useState(false);
+  const [dl, setDl] = useState(!!p?.allow_download);
+  const [dlMsg, setDlMsg] = useState('');
+  useEffect(() => { setDl(!!p?.allow_download); }, [p?.allow_download]);
+  const toggleDl = async () => {
+    const next = !dl; setDl(next); setDlMsg('');
+    const { error } = await supabase().from('projects').update({ allow_download: next }).eq('id', p.id);
+    if (error) { setDl(!next); setDlMsg(/allow_download/.test(error.message) ? 'Run supabase/015_downloads.sql in Supabase first.' : error.message); return; }
+    onSaved?.();
+  };
   const box = useRef(null);
   useEffect(() => {
     if (!open) return;
@@ -373,6 +382,7 @@ function AddPlus({ onPick, unpaid }) {
         <div className="plusmenu" role="menu">
           <Row k="mixes" icon="↑" title="Add files / mixes" sub="Pick files, they go straight in (or drag them onto the page)" />
           <Row k="share" icon="@" title="Client access" sub="Who can open it, downloads" />
+          <button role="menuitemcheckbox" aria-checked={dl} className="pmdl" onClick={toggleDl}><span className="pmi">↓</span><span><b>Allow downloads</b><small>{dlMsg || (dl ? 'On: the artist’s team can download mixes' : 'Off: they can listen, not download')}</small></span><span className={`switch sm ${dl ? 'on' : ''}`} aria-hidden="true"><i /></span></button>
           <Row k="invoice" icon="$" title="Invoices" sub="Attach, show, lock until paid" dot={unpaid} />
           <Row k="edit" icon="✎" title="Edit details" sub="Title, artist, type, release" />
         </div>

@@ -404,7 +404,8 @@ function SharePanel({ p, onSaved }) {
     setMsg(error ? error.message : 'Saved. Anyone signing in with this email can open the project.');
     if (!error) onSaved();
   };
-  const copy = async () => { try { await navigator.clipboard.writeText(link); setMsg('Link copied.'); } catch { setMsg('Copy the link above.'); } };
+  const [copied, setCopied] = useState(false);
+  const copy = async () => { try { await navigator.clipboard.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 2200); } catch { setMsg('Copy the link above.'); } };
   return (
     <div className="panel" style={{ marginBottom: 24 }}>
       <h3>Share with your client</h3>
@@ -413,7 +414,7 @@ function SharePanel({ p, onSaved }) {
         <div className="fld"><label htmlFor="sh-e">Client email</label><input id="sh-e" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
         <div className="fld"><label htmlFor="sh-p">Client phone <span className="opt">for texts</span></label><input id="sh-p" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
       </div>
-      <div className="share-link"><code>{link}</code><button className="btn small" onClick={copy}>Copy link</button><button className="btn small primary" onClick={save}>Save</button></div>
+      <div className="share-link"><code>{link}</code><button className={`btn small copybtn ${copied ? 'done' : ''}`} onClick={copy}>{copied ? '✓ Copied' : 'Copy link'}</button><button className="btn small primary" onClick={save}>Save</button></div>
       <label className="invsw"><button type="button" className="switch" role="switch" aria-checked={!!p.allow_download} onClick={async () => {
         const { error } = await supabase().from('projects').update({ allow_download: !p.allow_download }).eq('id', p.id);
         setMsg(error ? (/allow_download/.test(error.message) ? 'Run supabase/015_downloads.sql in Supabase first.' : error.message) : !p.allow_download ? 'Downloads are on. The artist’s team can download mixes from the ⋯ menu.' : 'Downloads are off. They can listen, not download.');

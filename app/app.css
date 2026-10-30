@@ -1860,3 +1860,8 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .ldlmsg { flex-basis: 100%; font-size: 12.5px; color: var(--muted); }
 .lpage .linfo > .lcommentbtn + .ldl, .lpage .linfo .ldl { margin-top: -4px; }
 .npcomment.on { color: #f5d547 !important; border-color: rgba(245,213,71,.5) !important; }
+
+/* Copy link: the button itself confirms */
+.copybtn { transition: background .2s, color .2s, transform .12s; min-width: 92px; }
+.copybtn:active { transform: scale(.96); }
+.copybtn.done { background: #3ecf8e !important; border-color: #3ecf8e !important; color: #0f0f10 !important; }

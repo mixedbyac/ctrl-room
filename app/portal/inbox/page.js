@@ -10,6 +10,7 @@ import { fmtBytes, ago, todayISO } from '@/lib/format';
 export default function Inbox() {
   const { eng, session } = useApp();
   const [rows, setRows] = useState(null);
+  const [copied, setCopied] = useState(false);
   const [view, setView] = useState('inbox');
   const [msg, setMsg] = useState('');
   const load = useCallback(async () => {
@@ -51,7 +52,7 @@ export default function Inbox() {
           <h1 className="up">Portal inbox</h1>
           <p className="lede">Everything clients send through your Portal, filed into your Dropbox in a folder for each artist.</p>
           <div className="share-link" style={{ marginTop: 14 }}><code>{portalLink}</code>
-            <button className="btn small" onClick={async () => { try { await navigator.clipboard.writeText(portalLink); } catch {} }}>Copy Portal link</button>
+            <button className={`btn small copybtn ${copied ? 'done' : ''}`} onClick={async () => { try { await navigator.clipboard.writeText(portalLink); setCopied(true); setTimeout(() => setCopied(false), 2200); } catch {} }}>{copied ? '✓ Copied' : 'Copy Portal link'}</button>
             <Link className="btn small" href="/dropbox">Dropbox settings</Link></div>
         </div>
         <div className="inbox">

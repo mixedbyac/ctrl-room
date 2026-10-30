@@ -29,7 +29,16 @@ export default function ShareButton({ kind, id, eng, title, open: openProp, onOp
     return () => { document.removeEventListener('pointerdown', off); document.removeEventListener('keydown', esc); };
   }, [open]);
 
-  const copy = async () => { try { await navigator.clipboard.writeText(st.url); setMsg('Link copied.'); } catch { setMsg('Select the link and copy it.'); } };
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    let ok = false;
+    try { await navigator.clipboard.writeText(st.url); ok = true; } catch {
+      // older browsers / blocked clipboard: copy from the box instead
+      try { const el = box.current?.querySelector('.shlink input'); el?.focus(); el?.select(); ok = document.execCommand('copy'); } catch {}
+    }
+    if (ok) { setCopied(true); setMsg(''); try { navigator.vibrate?.(15); } catch {} setTimeout(() => setCopied(false), 2200); }
+    else setMsg('Couldn’t copy. Press and hold the link to copy it.');
+  };
   const native = async () => { try { await navigator.share({ title, url: st.url }); } catch {} };
   const canNative = typeof navigator !== 'undefined' && !!navigator.share;
 
@@ -44,7 +53,7 @@ export default function ShareButton({ kind, id, eng, title, open: openProp, onOp
             <p className="muted small">Anyone with the link can listen{kind === 'project' ? ' to every song' : ''}. No account needed. They can’t see notes or other versions.</p>
             <div className="shlink"><input readOnly value={st.url} onFocus={(e) => e.target.select()} aria-label="Share link" /></div>
             <div className="row-actions">
-              <button className="btn small primary" onClick={copy}>Copy link</button>
+              <button className={`btn small primary copybtn ${copied ? 'done' : ''}`} onClick={copy} aria-live="polite">{copied ? '✓ Copied' : 'Copy link'}</button>
               {canNative && <button className="btn small" onClick={native}>Share…</button>}
             </div>
           </>}

@@ -58,6 +58,14 @@ export default function ShareButton({ kind, id, eng, title, open: openProp, onOp
               <span><b>Comments on the link</b><span className="muted small">{st.comments ? 'People with the link can comment and react. Your notes show on the link too.' : 'Off: notes stay private to you and the project team.'}</span></span>
               <button className="switch" role="switch" aria-checked={!!st.comments} disabled={busy} onClick={() => call({ action: 'comments', on: !st.comments })}><i /></button>
             </label>
+            <div className="shrow shdl">
+              <span><b>Downloads on the link</b><span className="muted small">{st.downloads === 'anyone' ? 'Anyone with the link can download.' : st.downloads === 'team' ? 'Only the artist’s team (signed in) can download.' : 'Locked: listen only.'}</span></span>
+              <span className="seg" role="radiogroup" aria-label="Downloads on the link">
+                {[['off', 'Off'], ['team', 'Artist team'], ['anyone', 'Anyone']].map(([m, l]) => (
+                  <button key={m} type="button" role="radio" aria-checked={(st.downloads || 'off') === m} className={(st.downloads || 'off') === m ? 'on' : ''} disabled={busy} onClick={() => call({ action: 'downloads', mode: m })}>{l}</button>
+                ))}
+              </span>
+            </div>
             {kind === 'song' && !st.projectSharing && <p className="muted small">Sharing is off for the whole project, so this song can’t be shared either. Turn it on from the project page.</p>}
             {st.allowed && <button className="btn small quiet" disabled={busy} onClick={() => { if (confirm('Make a new link? The old one will stop working.')) call({ action: 'reset' }); }}>Reset link</button>}
           </div>}

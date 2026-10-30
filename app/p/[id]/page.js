@@ -128,6 +128,7 @@ export default function ProjectPage() {
   // comment from the tracklist: start the song if it isn't on, then pop the player up with the comment box
   const commentOn = async (s) => {
     if (!eng && lockingInvoice(inv.list)) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+    if (pl.expanded && pl.current?.song?.id === s.id) { pl.setExpanded(false); return; } // tap the comment icon again to close
     if (pl.current?.song?.id !== s.id) await pl.play({ songId: s.id, project: p, queue });
     pl.openComment();
   };

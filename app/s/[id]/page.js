@@ -150,7 +150,7 @@ export default function SongPage() {
             <div className="shbar">
               {hasMix && <ShareButton kind="song" id={song.id} eng={eng} title={song.title} />}
               <SongMenu page song={song} versions={versions} project={p} eng={eng} canEdit={eng || canEditArtist(p?.artist)} queue={queueIds.length ? queueIds : [id]} onChange={load} setMsg={setMsg}
-                onPlay={toggle} onComment={async () => { if (locked) return setMsg('Mixes unlock once the invoice is paid.'); if (!isCur) await start(0); pl.openComment(); }} />
+                onPlay={toggle} onComment={async () => { if (locked) return setMsg('Mixes unlock once the invoice is paid.'); if (isCur && pl.expanded) return pl.setExpanded(false); if (!isCur) await start(0); pl.openComment(); }} />
             </div>
             {hasMix && (
               <VersionStack title="Versions" song={song} project={p} versions={versions} eng={eng} canEdit={eng || canEditArtist(p?.artist)} viaAdmin={!eng}

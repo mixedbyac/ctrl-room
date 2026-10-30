@@ -65,6 +65,7 @@ export async function GET(req) {
   return json({
     credit,
     kind: song ? 'song' : 'project',
+    downloads: project.settings?.share_downloads || 'off',
     project: { title: project.title, artist: project.artist, type: project.type, release: project.release, seed: project.seed, cover: pcover },
     artist: artist || null,
     songs: list,

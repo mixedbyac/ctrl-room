@@ -1848,3 +1848,13 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .dlall .dlnote { position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 12px; padding: 6px 10px; border-radius: 10px; background: #1b1b1e; border: 1px solid var(--line); color: var(--ink); z-index: 61; }
 .dlall .dlmenu { left: 50%; right: auto; transform: translateX(-50%); width: min(300px, calc(100vw - 32px)); max-height: 60vh; overflow: auto; }
 @media (max-width: 760px) { .pinfo .prow .dlall .gear.shareicon { width: 46px; height: 46px; padding: 0; } }
+/* share popover: Downloads on the link (Off / Artist team / Anyone) */
+.shdl { grid-template-columns: 1fr !important; row-gap: 8px; }
+.seg { display: inline-flex; padding: 3px; border-radius: 999px; background: #0b0b0c; border: 1px solid rgba(255,255,255,.08); gap: 2px; justify-self: start; }
+.seg button { border: 0; background: none; color: var(--muted); font: inherit; font-size: 12.5px; font-weight: 650; padding: 6px 11px; border-radius: 999px; cursor: pointer; }
+.seg button.on { background: #f5d547; color: #0f0f10; }
+/* share link: download buttons */
+.ldl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ldlmsg { flex-basis: 100%; font-size: 12.5px; color: var(--muted); }
+.lpage .linfo > .lcommentbtn + .ldl, .lpage .linfo .ldl { margin-top: -4px; }
+.npcomment.on { color: #f5d547 !important; border-color: rgba(245,213,71,.5) !important; }

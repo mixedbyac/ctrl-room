@@ -456,7 +456,7 @@ function NowPlaying() {
             <p className="npsub"><ArtistName name={c.project.artist} /> · {c.project.title}</p>
             <p className="npsub"><Credit project={c.project} /></p>
           </div>
-          <button className="npcomment" onClick={() => { setPinAt(pl.time); setComposing(true); }} aria-label="Add a comment at this moment">
+          <button className={`npcomment ${composing ? 'on' : ''}`} onClick={() => { if (composing) { setComposing(false); return; } setPinAt(pl.time); setComposing(true); }} aria-pressed={composing} aria-label={composing ? 'Close the comment box' : 'Add a comment at this moment'}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-7l-4 3v-3H5a1 1 0 01-1-1V6a1 1 0 011-1z" /><path d="M12 8.5v4M10 10.5h4" /></svg>
             <span>Comment</span>
           </button>

@@ -11,6 +11,7 @@ import LinkComments from '@/components/LinkComments';
 import NoteComposer from '@/components/NoteComposer';
 import { SongProgress, SongDetails } from '@/components/SongInfo';
 import PoweredBy from '@/components/PoweredBy';
+import LinkDownload from '@/components/LinkDownload';
 
 const PLAY = <path d="M7 4.5v15l13-7.5z" />;
 const PAUSE = <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" />;
@@ -100,7 +101,7 @@ function SharePlayer({ cur, p, name, artSrc, artSeed, playing, toggle, time, dur
           <Art src={artSrc} seed={artSeed} size={900} className="npsquare sharesquare" />
           <div className="nphead">
             <div className="nphead-t"><h2 className="ttl">{cur.title}</h2><p className="npsub">{name} · {p.title}</p></div>
-            {canComment && <button className="npcomment" onClick={() => { setPinAt(time); setComposing(true); }} aria-label="Add a comment at this moment">
+            {canComment && <button className={`npcomment ${composing ? 'on' : ''}`} onClick={() => { if (composing) { setComposing(false); return; } setPinAt(time); setComposing(true); }} aria-pressed={composing} aria-label={composing ? 'Close the comment box' : 'Add a comment at this moment'}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-7l-4 3v-3H5a1 1 0 01-1-1V6a1 1 0 011-1z" /><path d="M12 8.5v4M10 10.5h4" /></svg><span>Comment</span></button>}
           </div>
           <div>
@@ -278,8 +279,9 @@ export default function SharedListen() {
               {data.kind === 'project' && <p className="lnow">{playing ? 'Playing' : 'Up'}: <b>{cur.title}</b></p>}
               <div><Wave peaks={cur.version.peaks} time={time} duration={dur} onSeek={seek} />
                 <div className="nptimes mono"><span>{mmss(time)}</span><span>{cur.approved ? 'Final mix' : 'Mix in progress'}</span><span>{mmss(dur)}</span></div></div>
-              {canComment && <button className="lcommentbtn" onClick={() => { if (!playing) toggle(); setBig({ compose: true }); }}>
+              {canComment && <button className="lcommentbtn" onClick={() => { if (big) { setBig(null); return; } if (!playing) toggle(); setBig({ compose: true }); }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-7l-4 3v-3H5a1 1 0 01-1-1V6a1 1 0 011-1z" /></svg>Comment at {mmss(time)}</button>}
+              {data.downloads && data.downloads !== 'off' && <LinkDownload token={token} mode={data.downloads} song={cur} many={data.kind === 'project' && songs.length > 1} />}
             </> : <p className="muted">There’s nothing to play here yet.</p>}
               {data.kind === 'project' && songs.length > 1 && (
                 <ol className="ltracks">
@@ -288,7 +290,7 @@ export default function SharedListen() {
                       <span className="mono ln"><span className="lnum">{i + 1}</span><svg viewBox="0 0 24 24" aria-hidden="true">{i === idx && playing ? PAUSE : PLAY}</svg></span>
                       <span className="lt">{s.title}{s.approved && <em className="lfinal">Final</em>}</span>
                       {canComment && <span className="lrowc" role="button" tabIndex={0} aria-label={`Comment on ${s.title}`} title="Comment on this song"
-                        onClick={(e) => { e.stopPropagation(); if (i !== idx) pick(i); else if (!playing) toggle(); setBig({ compose: true }); }}
+                        onClick={(e) => { e.stopPropagation(); if (big && i === idx) { setBig(null); return; } if (i !== idx) pick(i); else if (!playing) toggle(); setBig({ compose: true }); }}
                         onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); e.currentTarget.click(); } }}>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-7l-4 3v-3H5a1 1 0 01-1-1V6a1 1 0 011-1z" /></svg></span>}
                       <span className="mono muted">{mmss(s.version.duration || 0)}</span>
@@ -327,7 +329,7 @@ export default function SharedListen() {
           <button className="lminiart" onClick={() => setBig({ compose: false })} aria-label="Open the player"><Art src={cur.cover || p.cover} seed={cur.seed ?? p.seed} size={120} className="lminiimg" /></button>
           <button className="lminit" onClick={() => setBig({ compose: false })}><b>{cur.title}</b><span>{name}</span></button>
           <button className="lminibtn" onClick={toggle} aria-label={playing ? 'Pause' : 'Play'}><svg viewBox="0 0 24 24">{playing ? PAUSE : PLAY}</svg></button>
-          {canComment && <button className={`lminibtn ${quick ? 'on' : ''}`} onClick={() => setBig({ compose: true })} aria-label="Comment at this moment">
+          {canComment && <button className={`lminibtn ${quick ? 'on' : ''}`} onClick={() => setBig(big ? null : { compose: true })} aria-label={big ? 'Close' : 'Comment at this moment'}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ fill: 'none' }}><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-7l-4 3v-3H5a1 1 0 01-1-1V6a1 1 0 011-1z" /></svg></button>}
           {songs.length > 1 && idx < songs.length - 1 && <button className="lminibtn" onClick={() => pick(idx + 1)} aria-label="Next song"><svg viewBox="0 0 24 24"><path d="M13 12L4 5.5v13zM22 12l-9-6.5v13z" /></svg></button>}
           <span className="lminiprog" style={{ width: `${dur ? Math.min(100, (time / dur) * 100) : 0}%` }} />

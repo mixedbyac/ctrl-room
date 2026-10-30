@@ -8,6 +8,7 @@ import QualityBadge from '@/components/QualityBadge';
 import VersionStack, { StackIcon } from '@/components/VersionStack';
 import { InvoicePanel, InvoiceNotice, useInvoices, lockingInvoice } from '@/components/Invoices';
 import ShareButton from '@/components/ShareButton';
+import DownloadAll from '@/components/DownloadAll';
 import EditableTitle from '@/components/EditableTitle';
 import { measureVersion, needsMeasure } from '@/lib/measure';
 import { selectWithVersions } from '@/lib/embed';
@@ -185,6 +186,7 @@ export default function ProjectPage() {
               {firstPlayable && <button className="bigplay" onClick={() => (pl.current?.project?.id === p.id ? pl.toggle() : playSong(firstPlayable))} aria-label={projectPlaying ? 'Pause' : 'Play the project'}>
                 <svg viewBox="0 0 24 24">{projectPlaying ? <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" /> : <path d="M7 4.5v15l13-7.5z" />}</svg></button>}
               <ShareButton kind="project" id={p.id} eng={eng} title={p.title} />
+              <DownloadAll p={p} eng={eng} />
               {!eng && <span className="chipnote">{ready ? `${ready} mix${ready > 1 ? 'es' : ''} waiting on you` : "You're all caught up"}</span>}
               {eng && <AddPlus p={p} onSaved={load} unpaid={(inv.list || []).some((i) => i.status === 'unpaid')} onPick={(k) => setPanel(panel === k ? null : k)} />}
             </div>

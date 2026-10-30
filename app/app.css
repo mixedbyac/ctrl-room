@@ -1838,3 +1838,13 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .plusmenu .switch.sm i { width: 16px; height: 16px; top: 3px; left: 3px; }
 .plusmenu .switch.sm.on { background: #f5d547; border-color: #f5d547; }
 .plusmenu .switch.sm.on i { transform: translateX(16px); background: #0f0f10; }
+/* project Download button (next to Share / +) */
+.dlall { position: relative; display: inline-flex; }
+.dlall .shareicon svg { width: 20px; height: 20px; }
+.dlall .dllocked { opacity: .38; cursor: not-allowed; position: relative; }
+.dlall .dllocked:hover { opacity: .55; }
+.dlall .dllock { position: absolute; right: 4px; bottom: 4px; width: 14px; height: 14px; border-radius: 50%; background: #1b1b1e; display: grid; place-items: center; }
+.dlall .dllock svg { width: 10px !important; height: 10px !important; fill: currentColor; }
+.dlall .dlnote { position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 12px; padding: 6px 10px; border-radius: 10px; background: #1b1b1e; border: 1px solid var(--line); color: var(--ink); z-index: 61; }
+.dlall .dlmenu { left: 50%; right: auto; transform: translateX(-50%); width: min(300px, calc(100vw - 32px)); max-height: 60vh; overflow: auto; }
+@media (max-width: 760px) { .pinfo .prow .dlall .gear.shareicon { width: 46px; height: 46px; padding: 0; } }

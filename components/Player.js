@@ -13,7 +13,7 @@ import { makeArt, artOf } from '@/lib/art';
 
 /** Save one mix version to the computer/phone, named “Song v3.wav”. */
 export async function downloadVersion(song, v) {
-  const name = `${song.title} ${v.label}${(v.file_name || '').match(/\.[a-z0-9]{2,5}$/i)?.[0] || ''}`;
+  const name = `${String(song.title || 'Untitled').replace(/[\\/:*?"<>|]+/g, '-').trim()}${(v.file_name || '').match(/\.[a-z0-9]{2,5}$/i)?.[0] || ''}`;
   const { data, error } = await supabase().storage.from('mixes').createSignedUrl(v.storage_path, 300, { download: name });
   if (error) return window.alert?.(error.message);
   const a = document.createElement('a'); a.href = data.signedUrl; a.download = name; document.body.appendChild(a); a.click(); a.remove();

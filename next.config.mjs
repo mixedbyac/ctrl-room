@@ -32,6 +32,8 @@ const nextConfig = {
   eslint: { ignoreDuringBuilds: true },
   env: { NEXT_PUBLIC_BUILD_ID: process.env.VERCEL_GIT_COMMIT_SHA || 'dev' },
   poweredByHeader: false,
+  // lets link previews shrink cover art (stored in Supabase) to a 1200px image
+  images: { remotePatterns: [{ protocol: 'https', hostname: '*.supabase.co' }] },
   async headers() {
     return [
       { source: '/:path*', headers: securityHeaders },

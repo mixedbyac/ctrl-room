@@ -1,24 +1,8 @@
-import { SITE_URL } from '@/lib/site';
-import { shareInfo } from '@/lib/sharemeta';
+import { previewMeta } from '@/lib/previewmeta';
 
 export const dynamic = 'force-dynamic';
 
-// Link previews for share links: the cover art with the song / project and artist name.
-export async function generateMetadata({ params }) {
-  const site = SITE_URL;
-  let info = null;
-  try { info = await shareInfo(params.token); } catch {}
-  if (!info) return { title: 'CTRL ROOM', description: 'Listen in CTRL ROOM.', robots: { index: false } };
-  const title = `${info.artist} – ${info.title}`;
-  const description = [info.kind === 'song' ? info.project : `${info.count} song${info.count === 1 ? '' : 's'}`, info.credit, 'Listen in CTRL ROOM'].filter(Boolean).join(' · ');
-  const image = `${site}/api/og/${encodeURIComponent(params.token)}`;
-  return {
-    title, description,
-    robots: { index: false, follow: false },
-    openGraph: { title, description, type: 'music.song', siteName: 'CTRL ROOM', url: `${site}/l/${params.token}`, images: [{ url: image, alt: title }] },
-    twitter: { card: 'summary_large_image', title, description, images: [image] },
-    other: { 'og:image:secure_url': image },
-  };
-}
+// Link previews for share links: the cover art big, with the song / project name.
+export async function generateMetadata({ params }) { return previewMeta(params.token, `/l/${params.token}`); }
 
 export default function ShareLayout({ children }) { return children; }

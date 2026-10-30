@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { shareInfo } from '@/lib/sharemeta';
 import { admin } from '@/lib/server';
+import { SITE_URL } from '@/lib/site';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -19,6 +20,13 @@ export async function GET(req, { params }) {
       const { data } = await admin().storage.from('mixes').createSignedUrl(info.coverPath, 3600, { transform: { width: 1200, height: 1200, resize: 'cover', quality: 82 } });
       if (data?.signedUrl) { const t = await fetch(data.signedUrl, { method: 'HEAD', signal: AbortSignal.timeout(3000) }).catch(() => null); if (t?.ok) src = data.signedUrl; }
     } catch {}
+    // no Supabase resizing: let Vercel shrink it to a 1200px JPEG (big originals make iMessage fall back to a tiny thumbnail)
+    if (src === info.cover) {
+      try {
+        const r = await fetch(`${SITE_URL}/_next/image?url=${encodeURIComponent(info.cover)}&w=1200&q=80`, { headers: { Accept: 'image/jpeg' }, signal: AbortSignal.timeout(6000) });
+        if (r.ok && /image\//.test(r.headers.get('content-type') || '')) return new Response(r.body, { headers: { 'Content-Type': r.headers.get('content-type'), 'Cache-Control': CACHE } });
+      } catch {}
+    }
     try {
       const r = await fetch(src, { signal: AbortSignal.timeout(6000) });
       if (r.ok) return new Response(r.body, { headers: { 'Content-Type': r.headers.get('content-type') || 'image/jpeg', 'Cache-Control': CACHE } });

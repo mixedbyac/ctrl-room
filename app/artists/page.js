@@ -127,7 +127,7 @@ function Artists() {
             <div key={L}>
               <div className="agroup" id={`ag-${L}`}>{L}</div>
               {as.map((a) => { const st = stats(a);
-                const pill = st.next ? `Due ${st.next.s.eta === today ? 'today' : fmtDate(st.next.s.eta)}` : st.live.length ? `${st.live.length} in progress` : 'All approved';
+                const pill = st.next ? `Due ${st.next.s.eta === today ? 'today' : fmtDate(st.next.s.eta)}` : st.live.length ? `${st.live.length} in progress` : '';
                 return (
                   <Link key={a.name} className="arow" href={`/artists?a=${encodeURIComponent(a.name)}`}>
                     <ArtistAvatar name={a.name} profile={prof(a.name)} />
@@ -135,7 +135,7 @@ function Artists() {
                       <b className="aname"><span>{prof(a.name)?.display_name || a.name}</span>{eng && ver[a.name.toLowerCase()]?.artistVerified && <BlueCheck kind="artist" />}</b>
                       <small>{a.projects.length ? `${a.projects.length} project${a.projects.length > 1 ? 's' : ''}` : 'No projects yet'} · {st.songs.length} song{st.songs.length === 1 ? '' : 's'}{eng && ver[a.name.toLowerCase()] && !ver[a.name.toLowerCase()].artistVerified ? ` · ${ver[a.name.toLowerCase()].artistEmail ? 'artist not verified' : 'no artist email yet'}` : ''}</small>
                     </span>
-                    <span className="apill" style={st.live.length ? undefined : { color: 'var(--ok)' }}>{pill}</span><span className="chev" aria-hidden="true">›</span>
+                    <span className="apill">{pill}</span><span className="chev" aria-hidden="true">›</span>
                   </Link>
                 ); })}
             </div>

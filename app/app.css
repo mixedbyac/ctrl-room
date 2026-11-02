@@ -1876,3 +1876,4 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .pplreachlist { margin: 6px 0 0; padding-left: 18px; line-height: 1.6; max-height: 220px; overflow: auto; }
 @media (max-width: 600px) { .pplreach { flex-direction: column; } }
 .signform select.unset { color: var(--muted); }
+.arow .apill:empty { padding: 0; }

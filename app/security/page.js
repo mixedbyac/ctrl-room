@@ -1,4 +1,5 @@
 'use client';
+import PushSettings from '@/components/PushSettings';
 import { useEffect, useRef, useState } from 'react';
 import { supabase, api } from '@/lib/supabase';
 import { ENGINEER_KINDS, CLIENT_KINDS, prefOf } from '@/lib/notify';
@@ -71,7 +72,7 @@ function Settings() {
           {tabs.map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => go(k)}>{l}</button>)}
         </div>
         {tab === 'profile' && (eng ? <ProfileForm /> : <AccountBasics session={session} />)}
-        {tab === 'notifications' && <NotifySettings eng={eng} session={session} />}
+        {tab === 'notifications' && <><PushSettings /><NotifySettings eng={eng} session={session} /></>}
         {tab === 'security' && <>
         <div className="panel secpanel">
           <div className="shrow">
@@ -158,7 +159,7 @@ function NotifySettings({ eng, session }) {
   return (
     <div className="panel secpanel" id="notifications">
       <b>Notifications</b>
-      <span className="muted small">Choose what shows in your bell (in the app) and what gets emailed to you.</span>
+      <span className="muted small">Choose what shows in your bell and on your phone (in the app), and what gets emailed to you.</span>
       <div className="notifgrid">
         <span /><span className="nghead">In the app</span><span className="nghead">Email</span>
         {kinds.map(([k, label, sub]) => (

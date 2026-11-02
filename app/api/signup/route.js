@@ -1,7 +1,8 @@
 import { SITE_URL } from '@/lib/site';
 import { admin, json, fail } from '@/lib/server';
 import { limit } from '@/lib/ratelimit';
-import { notifyEngineers } from '@/lib/invite';
+import { notifyEngineers, sendConfirmEmail } from '@/lib/invite';
+import { confirmLink } from '@/lib/confirm';
 import { TITLES } from '@/lib/titles';
 import { fetchSpotifyArtist, spotifyArtistId } from '@/lib/spotify';
 
@@ -31,7 +32,7 @@ export async function POST(req) {
   if ((engs || []).some((r) => r.value.toLowerCase() === email) || (process.env.ENGINEER_EMAIL || '').toLowerCase() === email) {
     return fail('This email has engineer access, which is invite-only. Use the invite email you were sent, or sign in.');
   }
-  const { error } = await db.auth.admin.createUser({
+  const { data: made, error } = await db.auth.admin.createUser({
     email, password, email_confirm: true,
     user_metadata: { name, title, artist, phone, spotify, pw_set: true },
     app_metadata: { needs_verify: true }, // projects unlock after the email is confirmed (code) or the engineer confirms them
@@ -52,7 +53,10 @@ export async function POST(req) {
       }
     } catch {}
   }
+  // “confirm your email” right away, so CTRL ROOM knows it's really them
+  let confirmSent = false;
+  if (made?.user) confirmSent = (await sendConfirmEmail(made.user, confirmLink(made.user)).catch(() => ({ sent: false }))).sent;
   // let the engineer know (email + text when set up)
   await notifyEngineers(db, { name, email, artist, title, how: 'signup', origin: SITE_URL });
-  return json({ ok: true });
+  return json({ ok: true, confirmSent });
 }

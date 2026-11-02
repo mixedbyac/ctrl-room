@@ -7,6 +7,7 @@ import QualityBadge from '@/components/QualityBadge';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { pingPush } from '@/lib/pushclient';
 import Cover from '@/components/Cover';
 import { mmss, deviceName, orderVersions, latestMix, currentMix } from '@/lib/format';
 import { makeArt, artOf } from '@/lib/art';
@@ -395,6 +396,7 @@ function NowPlaying() {
     const { error } = await sb.from('notes').insert({ song_id: c.song.id, version_id: c.versionId, t: atIn == null ? null : Math.round(atIn * 10) / 10, body: text.trim(), author_name: pl.eng ? (name ? `${name} (Engineer)` : 'Engineer') : name, from_client: !pl.eng });
     setPosting(false);
     if (error) { setPosted(error.message); return false; }
+    pingPush({ kind: 'note', songId: c.song.id, body: text.trim() });
     setComposing(false); setText(''); setPosted(atIn == null ? `General note added on ${pl.version?.label || 'this mix'}.` : `Comment added at ${mmss(atIn)} on ${pl.version?.label || 'this mix'}.`);
     setTimeout(() => setPosted(''), 3500);
   };

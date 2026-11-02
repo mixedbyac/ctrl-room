@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase, api } from '@/lib/supabase';
 
 /** New accounts: prove the email is yours (6-digit code) before projects unlock. */
@@ -8,6 +8,17 @@ export default function VerifyBanner({ email, onDone }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  // came back from the “Confirm my email” link: pick up the change
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get('confirmed') === '1') { supabase().auth.refreshSession().then(() => { onDone?.(); setStep('done'); }); history.replaceState(null, '', window.location.pathname); }
+    else if (q.get('confirm') === 'expired') { setMsg('That confirmation link expired. Send a new one.'); history.replaceState(null, '', window.location.pathname); }
+  }, []); // eslint-disable-line
+  const sendLink = async () => {
+    setBusy(true); setMsg('');
+    try { await api('/api/confirm', {}); setStep('sent'); } catch (e) { setMsg(e.message); }
+    setBusy(false);
+  };
   const send = async () => {
     setBusy(true); setMsg('');
     const { error } = await supabase().auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
@@ -27,9 +38,11 @@ export default function VerifyBanner({ email, onDone }) {
   return (
     <div className="verifybar" role="status">
       <div><b>Confirm it’s you to see your projects</b>
-        <span>For your music’s safety, new accounts confirm their email once. Or ask your engineer to confirm you.</span></div>
-      {step === 'ask'
-        ? <button className="btn small primary" disabled={busy} onClick={send}>{busy ? 'Sending…' : `Email a code to ${email}`}</button>
+        <span>We emailed you a link when you signed up. Tap it once so CTRL ROOM knows this email is really yours. Or ask your engineer to confirm you.</span></div>
+      {step === 'ask' ? <span className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          <button className="btn small primary" disabled={busy} onClick={sendLink}>{busy ? 'Sending…' : 'Email me a confirmation link'}</button>
+          <button className="btn small quiet" disabled={busy} onClick={send}>Use a code instead</button></span>
+        : step === 'sent' ? <span className="small">Sent to <b>{email}</b>. Tap <b>Confirm my email</b> in it (check spam too). <button className="link small" onClick={sendLink} disabled={busy}>Send again</button></span>
         : <form onSubmit={check} className="lockform"><input inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit code" value={code} onChange={(e) => setCode(e.target.value)} aria-label="Code" autoFocus /><button className="btn small primary" disabled={busy || code.trim().length < 6}>{busy ? 'Checking…' : 'Confirm'}</button></form>}
       {msg && <p className="ferr" style={{ margin: 0, flexBasis: '100%' }}>{msg}</p>}
     </div>

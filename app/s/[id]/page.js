@@ -1,4 +1,5 @@
 'use client';
+import { pingPush } from '@/lib/pushclient';
 import ArtistName from '@/components/ArtistName';
 import Credit from '@/components/Credit';
 import { CaseButtons } from '@/components/TitleCase';
@@ -260,6 +261,7 @@ function Decision({ eng, song, v, versions, notes, reload, setMsg, setTab }) {
         const { error } = await sb.rpc('approve_version', { p_song: song.id, p_version: v.id });
         setConfirming(false);
         if (error) return setErr(error.message);
+        pingPush({ kind: 'approve', songId: song.id });
         document.querySelector('.bigdisc')?.classList.add('stamp'); setTimeout(() => document.querySelector('.bigdisc')?.classList.remove('stamp'), 1500);
         reload();
       }}>Yes, approve {v.label}</button></div>;
@@ -356,7 +358,7 @@ function Notes({ notes, reactions, v, versions, time, playing, seek, setVid, eng
     const t = mode === 'time' ? Math.round(at * 10) / 10 : null;
     const ok = await insert({ song_id: song.id, version_id: v?.id || null, t, t_end: t != null && end != null && end > t ? Math.round(end * 10) / 10 : null, body: body.trim(), author_name: myName, from_client: !eng });
     setBusy(false);
-    if (ok) { setBody(''); setPinned(null); setEnd(null); reload(); }
+    if (ok) { pingPush({ kind: 'note', songId: song.id, body: body.trim() }); setBody(''); setPinned(null); setEnd(null); reload(); }
   };
   const actions = {
     reply: async (parent, text) => { if (await insert({ song_id: song.id, version_id: parent.version_id, parent_id: parent.id, t: null, body: text, author_name: myName, from_client: !eng })) reload(); },

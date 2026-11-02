@@ -1,13 +1,15 @@
 import { limit } from '@/lib/ratelimit';
 import { admin, json, fail } from '@/lib/server';
 
+import { pushTo } from '@/lib/push';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // Comments on share links, only when the engineer allows it for that project.
 async function resolveLink(db, t, songId) {
   if (!t || !songId) return null;
-  const { data: s } = await db.from('songs').select('id, project_id, share_token, sharing').eq('id', songId).maybeSingle();
+  const { data: s } = await db.from('songs').select('id, title, project_id, share_token, sharing').eq('id', songId).maybeSingle();
   if (!s || s.sharing === false) return null;
   const { data: p } = await db.from('projects').select('id, share_token, sharing, settings, archived').eq('id', s.project_id).maybeSingle();
   if (!p || p.sharing === false || p.archived) return null;
@@ -62,5 +64,10 @@ export async function POST(req) {
   const atEnd = Number.isFinite(+b.atEnd) && b.atEnd !== null && at != null && +b.atEnd > at ? Math.round(+b.atEnd * 10) / 10 : null;
   const { data, error } = await db.from('notes').insert({ song_id: ok.song.id, version_id: b.versionId || null, t: parent ? null : at, t_end: parent ? null : atEnd, body, author_name: `${name} (link)`, author_email: null, from_client: true, guest: true, parent_id: parent }).select('id').single();
   if (error) return fail(/column/.test(error.message) ? 'Comments need a database update (010_comments.sql).' : error.message, 500);
+  try { // a heads-up on the engineers' phones
+    const { data: es } = await db.from('app_config').select('value').like('key', 'engineer_email%');
+    const to = [process.env.ENGINEER_EMAIL, ...(es || []).map((r) => r.value)].filter(Boolean);
+    await pushTo(to, { title: `${name} · ${ok.song.title || 'a song'}`, body: String(body).slice(0, 140), url: `/s/${ok.song.id}#notes` }, { kind: 'notes' });
+  } catch {}
   return json({ id: data.id });
 }

@@ -1,4 +1,5 @@
 'use client';
+import { pingPush } from '@/lib/pushclient';
 import { SITE_URL } from '@/lib/site';
 import NotifyClient from '@/components/NotifyClient';
 import ArtistName from '@/components/ArtistName';
@@ -142,7 +143,7 @@ export default function ProjectPage() {
     let ok = 0, bad = [];
     for (const { s: x, v } of approvable) {
       const { error } = await supabase().rpc('approve_version', { p_song: x.id, p_version: v.id });
-      if (error) bad.push(`${x.title}: ${error.message}`); else ok++;
+      if (error) bad.push(`${x.title}: ${error.message}`); else { ok++; pingPush({ kind: 'approve', songId: x.id }); }
     }
     setSelBusy(false); setSel(new Set()); setSelecting(false);
     setSelMsg(bad.length ? `Approved ${ok}. Couldn’t approve ${bad.join('; ')}` : `Approved ${ok} song${ok > 1 ? 's' : ''}. Your engineer has been told.`);

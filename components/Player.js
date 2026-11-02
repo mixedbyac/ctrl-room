@@ -153,7 +153,7 @@ export function PlayerProvider({ eng, children }) {
     if (!b) return;
     const now = () => (old ? old.currentTime : 0);
     const swap = () => {
-      if (token !== switching.current) return; // they tapped another version meanwhile
+      if (token !== switching.current) { if (b !== curAudio()) { b.pause(); b.muted = false; } return; } // they tapped another version meanwhile
       try { b.currentTime = Math.min(now(), (b.duration || Infinity) - 0.05); } catch {}
       const next = { ...curRef.current, versionId };
       curRef.current = next; setCurrent(next); setDuration(b.duration || v.duration || 0);

@@ -230,7 +230,7 @@ function DeliverVersion({ song, versions, onDone, setMsg }) {
     <div className={`row-actions deliverbox ${hot ? 'hot' : ''}`}
       onDragOver={(e) => { e.preventDefault(); setHot(true); }} onDragLeave={() => setHot(false)}
       onDrop={(e) => { e.preventDefault(); setHot(false); if (!busy) deliverAll(e.dataTransfer?.files); }}>
-      <label className="btn small" htmlFor={inputId} style={{ cursor: 'pointer' }}>{busy || (hot ? 'Drop to deliver' : '+ Deliver new versions')}</label>
+      <button type="button" className="btn small" disabled={!!busy} onClick={() => document.getElementById(inputId)?.click()}>{busy || (hot ? 'Drop to deliver' : '+ Deliver new versions')}</button>
       <input id={inputId} className="vh" type="file" multiple accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.flac" onChange={(e) => { const l = Array.from(e.target.files || []); e.target.value = ''; deliverAll(l); }} disabled={!!busy} />
       <label className="smsopt"><input type="checkbox" checked={text} onChange={(e) => setText(e.target.checked)} /> Email the client</label>
     </div>
@@ -599,7 +599,7 @@ function AddDemo({ song, eng, onDone, setMsg }) {
   return (
     <div className={`row-actions deliverbox adddemo ${hot ? 'hot' : ''}`} onDragOver={(e) => { e.preventDefault(); setHot(true); }} onDragLeave={() => setHot(false)}
       onDrop={(e) => { e.preventDefault(); setHot(false); if (!busy) go(e.dataTransfer?.files?.[0]); }}>
-      <label className="btn small quiet" htmlFor={id} style={{ cursor: 'pointer' }}>{busy || (hot ? 'Drop the demo' : '+ Add demo')}</label>
+      <button type="button" className="btn small quiet" disabled={!!busy} onClick={() => document.getElementById(id)?.click()}>{busy || (hot ? 'Drop the demo' : '+ Add demo')}</button>
       <input id={id} className="vh" type="file" accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.flac" disabled={!!busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; go(f); }} />
       <span className="muted small">{eng ? 'The rough or demo the mixes get compared to.' : 'Got a rough or demo? Add it so you can compare every mix to it.'}</span>
     </div>

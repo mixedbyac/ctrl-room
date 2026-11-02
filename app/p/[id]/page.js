@@ -19,7 +19,8 @@ import { useParams } from 'next/navigation';
 import { supabase, api } from '@/lib/supabase';
 import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
-import { fmtDate, shortDate, statusText, mmss, latestMix, mixesOf, currentMix, fmtBytes, todayISO } from '@/lib/format';
+import { fmtDate, shortDate, statusText, mmss, latestMix, mixesOf, currentMix, fmtBytes, todayISO, demoOf } from '@/lib/format';
+import { uploadDemo } from '@/lib/demo';
 import { parseMixName, matchSong } from '@/lib/filename';
 import { deliverFile } from '@/lib/deliver';
 import { usePlayer } from '@/components/Player';
@@ -200,6 +201,7 @@ export default function ProjectPage() {
         {!eng && <InvoiceNotice list={inv.list} />}
         {eng && <AddMixes p={p} onSaved={load} />}
         {eng && panel === 'add' && <PanelShell onClose={() => setPanel(null)}><AddSong p={p} onSaved={() => { load(); setPanel(null); }} /></PanelShell>}
+        {eng && panel === 'demo' && <PanelShell onClose={() => setPanel(null)}><DemoPanel p={p} onSaved={load} /></PanelShell>}
         {eng && panel === 'edit' && <PanelShell onClose={() => setPanel(null)}><EditProject p={p} onSaved={() => { load(); reloadProjects(); setPanel(null); }} /></PanelShell>}
 
         {p.songs.length > 0 && <TrackStats songs={p.songs} eng={eng} onMeasured={load} />}
@@ -374,7 +376,8 @@ function AddPlus({ p, onSaved, onPick, unpaid }) {
   const pick = (k) => { setOpen(false); onPick(k); };
   const Row = ({ k, icon, title, sub, dot }) => k === 'mixes'
     // a label opens the file picker in the same tap (Safari needs that)
-    ? <label role="menuitem" htmlFor="addmix-file" className="pmlabel" onClick={() => setOpen(false)}><span className="pmi">{icon}</span><span><b>{title}</b><small>{sub}</small></span></label>
+    // open the file picker inside the tap itself, then close the menu a beat later (closing first made the Mac app and some browsers drop the tap)
+    ? <button role="menuitem" onClick={() => { document.getElementById('addmix-file')?.click(); setTimeout(() => setOpen(false), 50); }}><span className="pmi">{icon}</span><span><b>{title}</b><small>{sub}</small></span></button>
     : <button role="menuitem" onClick={() => pick(k)}><span className="pmi">{icon}</span><span><b>{title}{dot ? <span className="gdot" aria-label="unpaid" style={{ position: 'static', display: 'inline-block', marginLeft: 6 }} /> : null}</b><small>{sub}</small></span></button>;
   return (
     <span className="addplus" ref={box}>
@@ -385,6 +388,7 @@ function AddPlus({ p, onSaved, onPick, unpaid }) {
       {open && (
         <div className="plusmenu" role="menu">
           <Row k="mixes" icon="↑" title="Add files / mixes" sub="Pick files, they go straight in (or drag them onto the page)" />
+          <Row k="demo" icon="◐" title="Add demos" sub="The artist’s rough version, for before/after" />
           <Row k="share" icon="@" title="Client access" sub="Who can open it, downloads" />
           <button role="menuitemcheckbox" aria-checked={dl} className="pmdl" onClick={toggleDl}><span className="pmi">↓</span><span><b>Allow downloads</b><small>{dlMsg || (dl ? 'On: the artist’s team can download mixes' : 'Off: they can listen, not download')}</small></span><span className={`switch sm ${dl ? 'on' : ''}`} aria-hidden="true"><i /></span></button>
           <Row k="invoice" icon="$" title="Invoices" sub="Attach, show, lock until paid" dot={unpaid} />
@@ -392,6 +396,51 @@ function AddPlus({ p, onSaved, onPick, unpaid }) {
         </div>
       )}
     </span>
+  );
+}
+
+/** + › Add demos: a demo for any song, or new songs straight from demo files. */
+function DemoPanel({ p, onSaved }) {
+  const input = useRef(null), target = useRef(null);
+  const [busy, setBusy] = useState('');
+  const [msg, setMsg] = useState('');
+  const AUDIO = /\.(wav|aiff?|mp3|m4a|flac)$/i;
+  const open = (songId) => { target.current = songId; input.current?.click(); };
+  const go = async (list) => {
+    const files = Array.from(list || []).filter((f) => f.size > 0 && AUDIO.test(f.name));
+    if (!files.length) return setMsg('Pick WAV, AIFF, FLAC, MP3 or M4A files.');
+    const sb = supabase(); let pos = p.songs.reduce((m, s) => Math.max(m, s.position || 0), 0); const done = [], bad = [];
+    for (const [i, file] of files.entries()) {
+      try {
+        let songId = target.current;
+        if (!songId) { // new song from the demo's file name (or a song with that name already here)
+          const title = parseMixName(file.name, { artist: p.artist, project: p.title }).title || file.name.replace(/\.[^.]+$/, '');
+          const hit = matchSong(p.songs, title);
+          if (hit) songId = hit.id;
+          else { const { data, error } = await sb.from('songs').insert({ project_id: p.id, title: title.trim(), position: ++pos, seed: Math.floor(Math.random() * 1e9) }).select('id').single(); if (error) throw error; songId = data.id; }
+        }
+        await uploadDemo({ songId, file, onStatus: (m) => setBusy(files.length > 1 ? `${i + 1}/${files.length} · ${m}` : m) });
+        done.push(file.name);
+      } catch (e) { bad.push(`${file.name}: ${e.message}`); }
+    }
+    setBusy(''); target.current = null;
+    setMsg([done.length ? `Added ${done.length} demo${done.length > 1 ? 's' : ''}.` : '', bad.length ? `Couldn’t add ${bad.join('; ')}` : ''].filter(Boolean).join(' '));
+    if (done.length) onSaved();
+  };
+  return (
+    <div className="panel demopanel" style={{ marginBottom: 24 }}
+      onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); e.stopPropagation(); target.current = null; go(e.dataTransfer?.files); }}>
+      <h3>Add demos</h3>
+      <p className="muted small" style={{ margin: 0 }}>Pick a song, or drop demo files here to make new songs from their names. A demo sits under the mixes so everyone can hear the before and after.</p>
+      <ul className="demolist">
+        {p.songs.map((s) => { const has = demoOf(s.versions || []);
+          return <li key={s.id}><span className="ttl">{s.title}</span>{has ? <span className="muted small">✓ {has.label}</span> : null}
+            <button className="btn small" disabled={!!busy} onClick={() => open(s.id)}>{has ? 'Replace' : 'Add demo'}</button></li>; })}
+      </ul>
+      <div className="row-actions"><button className="btn small primary" disabled={!!busy} onClick={() => open(null)}>+ New songs from demos</button>{busy && <span className="small muted">{busy}</span>}</div>
+      {msg && <p className="toast-inline">{msg}</p>}
+      <input ref={input} className="vh" type="file" multiple accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.flac" onChange={(e) => { const l = Array.from(e.target.files || []); e.target.value = ''; go(target.current ? l.slice(0, 1) : l); }} />
+    </div>
   );
 }
 

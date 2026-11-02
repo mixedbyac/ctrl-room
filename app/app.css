@@ -1923,14 +1923,14 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 
 /* the Apple Music-style quality tag in players: quiet, and tap it for the details */
 .qtag { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border: 0; border-radius: 7px; background: rgba(255,255,255,.1); color: rgba(255,255,255,.72);
-  font: inherit; font-family: var(--sans, inherit); font-size: 13px; font-weight: 550; letter-spacing: 0; cursor: pointer; transition: background .15s, color .15s; }
-.qtag svg { width: 18px; height: 11px; }
+  font-family: Geist, -apple-system, BlinkMacSystemFont, system-ui, sans-serif; font-size: 13px; font-weight: 550; letter-spacing: 0; line-height: 1; text-transform: none; white-space: nowrap; cursor: pointer; transition: background .15s, color .15s; }
+.qtag svg { width: 20px; height: 12px; flex: none; display: block; overflow: visible; }
 .qtag:hover { background: rgba(255,255,255,.16); color: #fff; }
 .qtag.hires { color: rgba(255,224,130,.95); }
 .qsheet { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: 24px; background: rgba(0,0,0,.45); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); animation: qfade .18s ease; }
 .qcard { width: min(100%, 340px); display: grid; gap: 10px; padding: 26px 18px 18px; border-radius: 28px; background: rgba(44,44,48,.92); border: 1px solid rgba(255,255,255,.1); box-shadow: 0 30px 80px -20px #000; color: #f4f4f5; text-align: left; animation: qpop .25s cubic-bezier(.2,.8,.2,1); }
 .qicon { justify-self: center; display: grid; place-items: center; width: 64px; height: 40px; color: rgba(255,255,255,.7); margin-bottom: 6px; }
-.qicon svg { width: 64px; height: 36px; }
+.qicon svg { width: 62px; height: 35px; display: block; overflow: visible; }
 .qicon.hires { color: #f5d547; }
 .qcard > b { font-size: 19px; padding: 0 8px; }
 .qcard > p { margin: 0; padding: 0 8px; font-size: 14.5px; line-height: 1.45; color: rgba(255,255,255,.62); }
@@ -1942,3 +1942,11 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 @keyframes qfade { from { opacity: 0; } }
 @keyframes qpop { from { opacity: 0; transform: scale(.94) translateY(8px); } }
 @media (prefers-reduced-motion: reduce) { .qsheet, .qcard { animation: none; } }
+
+/* the time row with the tag in the middle: time · Lossless · time left, on every screen size */
+.nptimes { align-items: center; }
+.nptimes > span:first-child, .nptimes .npleft, .nptimes .npdur { flex: 1 1 0; }
+.nptimes .npleft, .nptimes .npdur { text-align: right; }
+.nptimes .npfmt { flex: 0 0 auto; }
+.nptimes .npfmt:has(.qtag) { display: inline-flex !important; }
+.qcard dd { font-family: Geist, -apple-system, system-ui, sans-serif; font-variant-numeric: tabular-nums; }

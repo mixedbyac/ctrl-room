@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { quality } from '@/lib/quality';
 
-const WAVES = <svg viewBox="0 0 28 16" aria-hidden="true"><path d="M2 12c2-8 4-8 5 0s3 8 5 0 3-8 5 0 3 8 5 0 3-6 4-4" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" fill="none" /></svg>;
+// three looping waves, drawn inside the box so nothing gets cut off
+const WAVES = <svg viewBox="0 0 32 18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 13.5C5.5 13.5 6 4 9 4s2.8 9.5 5.2 9.5S16.8 4 19.6 4s2.6 9.5 5 9.5S27.4 6 29 6" /><path d="M6.5 13.5C8.6 13.5 9.4 7.5 11.2 7.5M16.9 13.5c2.1 0 2.9-6 4.7-6" opacity=".55" /></svg>;
 
 /**
  * "Lossless" / "Hi-Res Lossless" badge for a version. size: 'sm' | 'md' | 'lg'. detail adds "24-bit / 96 kHz".

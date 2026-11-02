@@ -37,7 +37,7 @@ export default function ApproveButton({ songId, versionId, label, title, approve
   return (
     <span className="apvwrap">
       {tip && <span className="apvtip" role="status" onClick={hideTip}>Happy with it? Approve it here<button aria-label="Got it" onClick={hideTip}>×</button></span>}
-      <button type="button" className="apvbtn" onClick={open}>{CHECK}<span>Approve{label ? ` ${label}` : ''}</span></button>
+      <button type="button" className="apvbtn" onClick={open}>{CHECK}<span>Approve</span></button>
       {ask && typeof document !== 'undefined' && createPortal(
         <div className="qsheet" role="dialog" aria-modal="true" aria-label="Approve this mix" onClick={() => setAsk(null)}>
           <div className="qcard apvcard" onClick={(e) => e.stopPropagation()}>

@@ -62,7 +62,7 @@ export default function LinkDownload({ token, mode, song, many }) {
   const signin = mode === 'team' && /team/i.test(msg);
   return (
     <span className="ldl">
-      <button className="lcommentbtn" onClick={all} disabled={busy} title={mode === 'team' ? 'For the artist’s team' : undefined}>{DL_ICON}{many ? 'Download all' : 'Download'}</button>
+      <button className="lcommentbtn" onClick={all} disabled={busy} title={many ? 'Download all' : 'Download'} aria-label={many ? 'Download all' : 'Download'}>{DL_ICON}<span>{many ? 'Download all' : 'Download'}</span></button>
       {msg && <span className="ldlmsg" role="status">{msg}{signin && <> <a className="link" href={`/login?next=${encodeURIComponent(`/l/${token}`)}`}>Sign in</a></>}</span>}
     </span>
   );

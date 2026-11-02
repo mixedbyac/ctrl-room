@@ -1973,3 +1973,12 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .nprow .apvbtn { height: 36px; font-size: 14px; }
 /* share link: comment, approve and download in one row */
 .lacts { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+/* share link actions, kept simple: one yellow Approve, then round icon buttons */
+.lacts { gap: 8px; }
+.lacts .lcommentbtn { width: 40px; height: 40px; padding: 0; justify-content: center; font-size: 0; gap: 0; border-radius: 50%; }
+.lacts .lcommentbtn svg { width: 18px; height: 18px; }
+.lacts .ldl { display: contents; }
+.lacts .ldl .lcommentbtn span { display: none; }
+.lacts .ldlmsg { flex-basis: 100%; font-size: 12.5px; }
+.apvtip { font-size: 12.5px; padding: 6px 6px 6px 10px; }

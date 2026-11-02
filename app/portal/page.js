@@ -1,4 +1,5 @@
 'use client';
+import { TITLES } from '@/lib/titles';
 import InlineText from '@/components/InlineText';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -22,7 +23,7 @@ const blank = () => ({ k: Math.random().toString(36).slice(2), title: '', bpm: '
 
 export default function Portal() {
   const { session, email: myEmail, projects } = useApp();
-  const [f, setF] = useState({ name: '', artist: '', email: '', phone: '', spotify: '', message: '', title: '', type: 'EP', release: '', deadline: '' });
+  const [f, setF] = useState({ name: '', artist: '', email: '', phone: '', spotify: '', message: '', title: '', who: 'Artist', type: 'EP', release: '', deadline: '' });
   const [mode, setMode] = useState('new');
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 1e9));
   const [songs, setSongs] = useState([blank()]);
@@ -103,7 +104,7 @@ export default function Portal() {
     setState('sending');
     try {
       const r = await api('/api/portal', {
-        name: f.name, email: f.email, phone: f.phone, artist: f.artist, spotify: f.spotify, message: f.message, deadline: f.deadline || null,
+        name: f.name, email: f.email, phone: f.phone, artist: f.artist, who: f.who, spotify: f.spotify, message: f.message, deadline: f.deadline || null,
         projectId: mode === 'new' ? null : mode,
         project: { title: autoTitle || 'Untitled', type: autoType, release: null, seed },
         songs: songs.map((s) => ({ title: s.title, bpm: s.bpm, key: s.key, ref: s.ref, notes: s.notes })),
@@ -187,6 +188,7 @@ export default function Portal() {
               <div className="two">
                 <div className="fld"><label htmlFor="fArtist">Artist name</label><input id="fArtist" value={f.artist} onChange={set('artist')} /></div>
                 <div className="fld"><label htmlFor="fName">Your name</label><input id="fName" autoComplete="name" value={f.name} onChange={set('name')} /></div>
+                <div className="fld"><label htmlFor="fWho">I’m the…</label><select id="fWho" value={f.who} onChange={set('who')}>{TITLES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
                 <div className="fld"><label htmlFor="fEmail">Email <span className="opt">you'll sign in with this</span></label><input id="fEmail" type="email" autoComplete="email" value={f.email} onChange={set('email')} /></div>
                 <div className="fld"><label htmlFor="fPhone">Phone <span className="opt">for text updates</span></label><input id="fPhone" type="tel" autoComplete="tel" value={f.phone} onChange={set('phone')} /></div>
               </div>

@@ -2,6 +2,7 @@ import { SITE_URL } from '@/lib/site';
 import { admin, userFrom, engineerFrom, jwtClaims, json, fail } from '@/lib/server';
 import { limit } from '@/lib/ratelimit';
 import { invitePerson } from '@/lib/invite';
+import { autoJoin } from '@/lib/autojoin';
 
 export const runtime = 'nodejs';
 
@@ -35,6 +36,7 @@ export async function POST(req) {
     const proof = (claims.amr || []).find((a) => ['otp', 'magiclink', 'email/signup', 'recovery'].includes(a.method));
     if (!proof || Date.now() / 1000 - (proof.timestamp || 0) > 30 * 60) return fail('Sign in with the code from your email first.', 403);
     await db.auth.admin.updateUserById(user.id, { app_metadata: { ...(user.app_metadata || {}), needs_verify: false } });
+    await autoJoin(db, user);
     return json({ ok: true });
   }
   if (!(await engineerFrom(req)).user) return fail('Only the engineer can do that.', 403);
@@ -85,6 +87,7 @@ export async function POST(req) {
       u = r.user; invited = { sent: r.sent, link: r.link };
     }
     await db.auth.admin.updateUserById(u.id, { app_metadata: { ...(u.app_metadata || {}), needs_verify: false, vouched: true } });
+    await autoJoin(db, u);
     return json({ ok: true, invited });
   }
   return fail('Unknown action.');

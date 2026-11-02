@@ -1,5 +1,6 @@
 import { limit } from '@/lib/ratelimit';
-import { admin, userFrom, canSee, json, fail } from '@/lib/server';
+import { admin, userFrom, canSee, json, fail, setConfig } from '@/lib/server';
+import { TITLES } from '@/lib/titles';
 import { fetchSpotifyArtist, spotifyArtistId } from '@/lib/spotify';
 
 export const runtime = 'nodejs';
@@ -16,6 +17,8 @@ export async function POST(req) {
   if (!/^\S+@\S+\.\S+$/.test(email)) return fail('Add a valid email address.');
   if (!songs.length) return fail('Add at least one song.');
 
+  // what the sender does (Artist, Manager…): decides their role once they make an account and confirm their email
+  if (TITLES.includes(b.who)) await setConfig(`sender_title:${email}`, b.who).catch(() => {});
   const deadline = /^\d{4}-\d{2}-\d{2}$/.test(String(b.deadline || '')) ? b.deadline : null; // client's "need it by" becomes the song's due date
   const db = admin();
   let project;

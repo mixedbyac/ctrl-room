@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { admin, userFrom, jwtClaims, json, fail } from '@/lib/server';
 import { limit } from '@/lib/ratelimit';
+import { autoJoin } from '@/lib/autojoin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -37,6 +38,8 @@ export async function POST(req) {
   const user = await userFrom(req);
   if (!user || !b.refresh_token || String(b.refresh_token).length > 200) return fail('Sign in first.', 401);
   jar.set(NAME, String(b.refresh_token), opts);
+  // confirmed accounts that sent files / are a project's contact: make sure they're on that artist with the right role
+  if (!user.app_metadata?.needs_verify) await autoJoin(admin(), user);
   // a remembered device (two-step) stays remembered while you keep using it
   try {
     const sid = jwtClaims((req.headers.get('authorization') || '').slice(7))?.session_id;

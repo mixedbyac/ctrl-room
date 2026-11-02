@@ -3,6 +3,7 @@ import { admin, userFrom, json, fail } from '@/lib/server';
 import { SITE_URL } from '@/lib/site';
 import { sendConfirmEmail } from '@/lib/invite';
 import { confirmLink, confirmOk } from '@/lib/confirm';
+import { autoJoin } from '@/lib/autojoin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -19,6 +20,7 @@ export async function GET(req) {
   if (error || !user) return bad('expired');
   if (!confirmOk(user, exp, sig)) return bad('expired');
   await db.auth.admin.updateUserById(id, { email_confirm: true, app_metadata: { ...(user.app_metadata || {}), needs_verify: false, email_confirmed_by: 'link' } });
+  await autoJoin(db, user);
   return Response.redirect(`${SITE_URL}/?confirmed=1`, 302);
 }
 

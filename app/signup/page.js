@@ -13,7 +13,7 @@ function Signup() {
   const params = useSearchParams();
   const next = params.get('next') || '/';
   const { session } = useApp();
-  const [f, setF] = useState({ name: params.get('name') || '', title: '', artist: params.get('artist') || '', email: params.get('email') || '', phone: '', spotify: '', password: '', website: '' });
+  const [f, setF] = useState({ name: params.get('name') || '', title: TITLES.includes(params.get('title')) ? params.get('title') : '', artist: params.get('artist') || '', email: params.get('email') || '', phone: '', spotify: '', password: '', website: '' });
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');

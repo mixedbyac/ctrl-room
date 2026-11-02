@@ -1,4 +1,5 @@
 'use client';
+import { drawWave } from '@/lib/wavedraw';
 import { pingPush } from '@/lib/pushclient';
 import ArtistName from '@/components/ArtistName';
 import Credit from '@/components/Credit';
@@ -290,20 +291,7 @@ function Scrub({ v, notes, time, dur, seek, eng, plays, header = null }) {
   const peaks = v?.peaks || null;
   useEffect(() => {
     const c = cv.current; if (!c) return;
-    const r = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1, W = Math.round(r.width * dpr), H = Math.round(r.height * dpr);
-    if (!W || !H) return;
-    if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
-    const g = c.getContext('2d'); g.clearRect(0, 0, W, H);
-    const step = 3 * dpr, bw = 2 * dpr, n = Math.floor(W / step), prog = dur ? time / dur : 0;
-    for (let i = 0; i < n; i++) {
-      let p = 0.05;
-      if (peaks?.length) { const a = Math.floor((i / n) * peaks.length), b = Math.max(a + 1, Math.floor(((i + 1) / n) * peaks.length)); p = 0; for (let j = a; j < b; j++) p = Math.max(p, peaks[j] || 0); }
-      const h = Math.max(2 * dpr, Math.min(1, p) * H * 0.96), y = (H - h) / 2;
-      g.fillStyle = i / n < prog ? '#f4f4f5' : '#47474d';
-      g.fillRect(i * step, y, bw, h);
-    }
-    g.fillStyle = '#f5d547'; g.fillRect(Math.round(prog * W) - dpr, 0, Math.max(2, 2 * dpr), H);
-    if (hover != null) { g.globalAlpha = 0.4; g.fillStyle = '#f4f4f5'; g.fillRect(Math.round(hover * dpr), 0, Math.max(1, dpr), H); g.globalAlpha = 1; }
+    drawWave(c, { peaks, prog: dur ? time / dur : 0, hover });
   });
   const xToT = (e) => { const r = wrap.current.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * dur; };
   const vNotes = notes.filter((n) => n.version_id === v?.id && n.t != null).sort((a, b) => a.t - b.t);

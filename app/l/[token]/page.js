@@ -1,4 +1,5 @@
 'use client';
+import { drawWave } from '@/lib/wavedraw';
 import { makeArt } from '@/lib/art';
 import Credit, { BlueCheck } from '@/components/Credit';
 import QualityBadge from '@/components/QualityBadge';
@@ -26,18 +27,7 @@ function Wave({ peaks, time, duration, onSeek }) {
   const cv = useRef(null), wrap = useRef(null);
   useEffect(() => {
     const el = cv.current; if (!el) return;
-    const r = el.getBoundingClientRect(), dpr = window.devicePixelRatio || 1, W = Math.round(r.width * dpr), H = Math.round(r.height * dpr);
-    if (!W || !H) return;
-    if (el.width !== W || el.height !== H) { el.width = W; el.height = H; }
-    const g = el.getContext('2d'); g.clearRect(0, 0, W, H);
-    const step = 3 * dpr, n = Math.floor(W / step), prog = duration ? time / duration : 0;
-    for (let i = 0; i < n; i++) {
-      let p = 0.08;
-      if (peaks?.length) { const a = Math.floor((i / n) * peaks.length), b = Math.max(a + 1, Math.floor(((i + 1) / n) * peaks.length)); p = 0; for (let j = a; j < b; j++) p = Math.max(p, peaks[j] || 0); }
-      const h = Math.max(2 * dpr, Math.min(1, p) * H * 0.96);
-      g.fillStyle = i / n < prog ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.28)';
-      g.fillRect(i * step, (H - h) / 2, 2 * dpr, h);
-    }
+    drawWave(el, { peaks, prog: duration ? time / duration : 0 });
   });
   const at = (e) => { const r = wrap.current.getBoundingClientRect(); onSeek(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * duration); };
   return <div ref={wrap} className="npwave lwave" onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); at(e); }} onPointerMove={(e) => { if (e.buttons) at(e); }}><canvas ref={cv} /></div>;

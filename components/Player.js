@@ -7,6 +7,7 @@ import QualityBadge from '@/components/QualityBadge';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { drawWave } from '@/lib/wavedraw';
 import { pingPush } from '@/lib/pushclient';
 import Cover from '@/components/Cover';
 import { mmss, deviceName, orderVersions, latestMix, currentMix } from '@/lib/format';
@@ -293,20 +294,7 @@ function MiniPlayer() {
   const cv = useRef(null), wrap = useRef(null);
   const c = pl.current, v = pl.version;
   useEffect(() => {
-    const el = cv.current; if (!el) return;
-    const r = el.getBoundingClientRect(), dpr = window.devicePixelRatio || 1, W = Math.round(r.width * dpr), H = Math.round(r.height * dpr);
-    if (!W || !H) return;
-    if (el.width !== W || el.height !== H) { el.width = W; el.height = H; }
-    const g = el.getContext('2d'); g.clearRect(0, 0, W, H);
-    const pk = v?.peaks, step = 3 * dpr, n = Math.floor(W / step), prog = pl.duration ? pl.time / pl.duration : 0;
-    for (let i = 0; i < n; i++) {
-      let p = 0.08;
-      if (pk?.length) { const a = Math.floor((i / n) * pk.length), b = Math.max(a + 1, Math.floor(((i + 1) / n) * pk.length)); p = 0; for (let j = a; j < b; j++) p = Math.max(p, pk[j] || 0); }
-      const h = Math.max(2 * dpr, Math.min(1, p) * H * 0.95);
-      g.fillStyle = i / n < prog ? '#f4f4f5' : '#47474d';
-      g.fillRect(i * step, (H - h) / 2, 1.5 * dpr, h);
-    }
-    g.fillStyle = '#f5d547'; g.fillRect(Math.round(prog * W) - dpr, 0, 2 * dpr, H);
+    drawWave(cv.current, { peaks: v?.peaks, prog: pl.duration ? pl.time / pl.duration : 0, size: 'sm' });
   });
   if (!c || !v) return null;
   const seekAt = (e) => { const r = wrap.current.getBoundingClientRect(); pl.seek(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * pl.duration); };
@@ -337,19 +325,7 @@ function Wave({ peaks, time, duration, onSeek, height = 72 }) {
   const cv = useRef(null), wrap = useRef(null);
   useEffect(() => {
     const el = cv.current; if (!el) return;
-    const r = el.getBoundingClientRect(), dpr = window.devicePixelRatio || 1, W = Math.round(r.width * dpr), H = Math.round(r.height * dpr);
-    if (!W || !H) return;
-    if (el.width !== W || el.height !== H) { el.width = W; el.height = H; }
-    const g = el.getContext('2d'); g.clearRect(0, 0, W, H);
-    const step = 3 * dpr, n = Math.floor(W / step), prog = duration ? time / duration : 0;
-    for (let i = 0; i < n; i++) {
-      let p = 0.08;
-      if (peaks?.length) { const a = Math.floor((i / n) * peaks.length), b = Math.max(a + 1, Math.floor(((i + 1) / n) * peaks.length)); p = 0; for (let j = a; j < b; j++) p = Math.max(p, peaks[j] || 0); }
-      const h = Math.max(2 * dpr, Math.min(1, p) * H * 0.96);
-      g.fillStyle = i / n < prog ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.28)';
-      g.fillRect(i * step, (H - h) / 2, 2 * dpr, h);
-    }
-    g.fillStyle = '#f5d547'; g.fillRect(Math.round(prog * W) - dpr, 0, 2 * dpr, H);
+    drawWave(el, { peaks, prog: duration ? time / duration : 0 });
   });
   const at = (e) => { const r = wrap.current.getBoundingClientRect(); onSeek(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * duration); };
   return (

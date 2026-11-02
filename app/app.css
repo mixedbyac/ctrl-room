@@ -1985,3 +1985,6 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 
 .mailart { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); margin-left: auto; margin-right: 10px; cursor: pointer; white-space: nowrap; }
 .mailart input { accent-color: var(--sig); }
+
+.vs-item[draggable="true"] { cursor: grab; }
+.vs-item.dragging { opacity: .45; }

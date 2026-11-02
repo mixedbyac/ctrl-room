@@ -64,7 +64,7 @@ export default function ProjectPage() {
 
   const load = useCallback(async () => {
     const sb = supabase();
-    const cols = 'id,label,note,created_at,storage_path,file_name,duration,lufs,peak_db,rms_db,file_format,sample_rate,bit_depth,file_size,lossless';
+    const cols = 'id,label,note,created_at,position,storage_path,file_name,duration,lufs,peak_db,rms_db,file_format,sample_rate,bit_depth,file_size,lossless';
     let { data, error } = await selectWithVersions((V) => sb.from('projects').select(`*, songs(*, ${V}(${cols}))`).eq('id', id).single());
     if (error && /column/i.test(error.message)) ({ data, error } = await selectWithVersions((V) => sb.from('projects').select(`*, songs(*, ${V}(*))`).eq('id', id).single())); // older database
     if (data) data.songs = (data.songs || []).sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at));

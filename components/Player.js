@@ -206,6 +206,32 @@ export function PlayerProvider({ eng, children }) {
     });
   }, [signed]);
 
+  // a version was added or reordered anywhere: every player picks it up right away
+  useEffect(() => {
+    const on = async (e) => {
+      const { songId, activeId } = e.detail || {};
+      const c = curRef.current;
+      if (!c || c.song.id !== songId) return;
+      const sb = supabase();
+      const [{ data: vs }, { data: s }] = await Promise.all([
+        sb.from('versions').select('*').eq('song_id', songId).order('created_at'),
+        sb.from('songs').select('*').eq('id', songId).single(),
+      ]);
+      if (!vs?.length) return;
+      const list = orderVersions(vs);
+      await signed(list.map((v) => v.storage_path));
+      const now = curRef.current; if (!now || now.song.id !== songId) return;
+      const next = { ...now, song: s ? { ...now.song, ...s } : now.song, versions: list };
+      curRef.current = next; setCurrent(next);
+      // not playing right now: line up the new active version so it's what plays next
+      const want = activeId || s?.active_version;
+      const a = audios.current[now.versionId];
+      if (want && want !== now.versionId && (!a || a.paused)) switchVersion(want);
+    };
+    window.addEventListener('ctrl-room:versions', on);
+    return () => window.removeEventListener('ctrl-room:versions', on);
+  }, [signed, switchVersion]);
+
   const step = useCallback(async (dir, auto = false) => {
     const c = curRef.current;
     if (!c) return;

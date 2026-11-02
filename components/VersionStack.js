@@ -7,7 +7,7 @@ import { usePlayer } from '@/components/Player';
 import InlineText from '@/components/InlineText';
 import QualityBadge from '@/components/QualityBadge';
 import { deliverFile } from '@/lib/deliver';
-import { orderVersions, latestMix, currentMix, isDemo, shortDate, mmss } from '@/lib/format';
+import { orderVersions, latestMix, currentMix, isDemo, shortDate, mmss, stackOrder } from '@/lib/format';
 
 export const StackIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5 9-5z" /><path d="M3 13l9 5 9-5" /><path d="M3 17.5l9 5 9-5" opacity=".55" /></svg>
@@ -23,7 +23,11 @@ const baseName = (n) => String(n || '').replace(/\.[a-z0-9]{2,5}$/i, '').replace
  */
 export default function VersionStack({ song, project, versions, noteCounts = {}, eng, canEdit = eng, viaAdmin = false, queue, onChange, selectedId = null, onSelect = null, title = null }) {
   const pl = usePlayer();
-  const list = [...orderVersions(versions)].reverse(); // newest on top, demo at the bottom
+  const [local, setLocal] = useState(null); // order while you drag, before it saves
+  useEffect(() => { setLocal(null); }, [versions, song.active_version]);
+  const base = stackOrder(song, versions); // active on top, then your order, demo at the bottom
+  const list = local ? local.map((id) => versions.find((v) => v.id === id)).filter(Boolean).concat(base.filter((v) => !local.includes(v.id))) : base;
+  const [dragId, setDragId] = useState(null);
   const latest = latestMix(versions), active = currentMix(song, versions);
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState('');
@@ -61,6 +65,34 @@ export default function VersionStack({ song, project, versions, noteCounts = {},
       else { const { error } = await supabase().from('songs').update({ active_version: next }).eq('id', song.id); if (error) throw new Error(/active_version/.test(error.message) ? 'Run supabase/011_admins.sql in Supabase first.' : error.message); }
       setMsg(next ? `${v.label} is now the active version.` : 'Back to the newest version.'); onChange?.();
     } catch (e) { setMsg(e.message); }
+  };
+  // your order: the one on top is the active version (it's what plays first)
+  const reorder = async (ids) => {
+    const mixIds = ids.filter((id) => { const v = versions.find((x) => x.id === id); return v && !isDemo(v); });
+    if (!mixIds.length) return;
+    setLocal(ids); setMenu(null);
+    try {
+      const sb = supabase();
+      if (viaAdmin) await api('/api/admin', { action: 'active', songId: song.id, versionId: mixIds[0] });
+      else { const { error } = await sb.from('songs').update({ active_version: mixIds[0] }).eq('id', song.id); if (error) throw error; }
+      const res = await Promise.all(mixIds.map((id, i) => sb.from('versions').update({ position: i }).eq('id', id)));
+      const bad = res.find((r) => r.error);
+      const top = versions.find((v) => v.id === mixIds[0]);
+      setMsg(bad && /position/.test(bad.error.message) ? `${top?.label} is now the active version. To keep the rest of your order, run supabase/020_version_order.sql in Supabase once.` : `${top?.label} is on top and plays first.`);
+      window.dispatchEvent(new CustomEvent('ctrl-room:versions', { detail: { songId: song.id, activeId: mixIds[0] } }));
+      onChange?.();
+    } catch (e) { setMsg(e.message); setLocal(null); }
+  };
+  const move = (v, dir) => {
+    const ids = list.filter((x) => !isDemo(x)).map((x) => x.id), i = ids.indexOf(v.id), j = i + dir;
+    if (i < 0 || j < 0 || j >= ids.length) return;
+    [ids[i], ids[j]] = [ids[j], ids[i]]; reorder(ids);
+  };
+  const dropOn = (target) => {
+    if (!dragId || dragId === target.id || isDemo(target)) return setDragId(null);
+    const ids = list.filter((x) => !isDemo(x)).map((x) => x.id).filter((id) => id !== dragId);
+    ids.splice(ids.indexOf(target.id), 0, dragId);
+    setDragId(null); reorder(ids);
   };
   const remove = async (v) => {
     setMenu(null);
@@ -100,7 +132,9 @@ export default function VersionStack({ song, project, versions, noteCounts = {},
         const on = playing(v) || (selectedId === v.id && !(pl.current?.song?.id === song.id)), n = noteCounts[v.id] || 0;
         const name = v.note && !/^the starting point$/i.test(v.note) ? v.note : baseName(v.file_name) || `${song.title} ${v.label}`;
         return (
-          <div key={v.id} className={`vs-item ${on ? 'on' : ''} ${on && pl.playing ? 'live' : ''} ${isDemo(v) ? 'demo' : ''}`} onClick={() => play(v)} role="button" tabIndex={0}
+          <div key={v.id} className={`vs-item ${on ? 'on' : ''} ${on && pl.playing ? 'live' : ''} ${isDemo(v) ? 'demo' : ''} ${dragId === v.id ? 'dragging' : ''}`} onClick={() => play(v)} role="button" tabIndex={0}
+            draggable={canEdit && !isDemo(v)} onDragStart={(e) => { setDragId(v.id); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', v.id); } catch {} }}
+            onDragOver={(e) => { if (dragId && !isDemo(v)) { e.preventDefault(); e.stopPropagation(); } }} onDrop={(e) => { if (dragId) { e.preventDefault(); e.stopPropagation(); dropOn(v); } }} onDragEnd={() => setDragId(null)}
             onKeyDown={(e) => { if (e.key === 'Enter' && e.target === e.currentTarget) play(v); }} aria-label={`Play ${v.label}`}>
             <span className="vs-node" aria-hidden="true">{on && pl.playing ? <span className="eq"><span /><span /><span /></span> : null}</span>
             <span className="vs-main">
@@ -115,7 +149,11 @@ export default function VersionStack({ song, project, versions, noteCounts = {},
                 <div className="vs-menu" role="menu">
                   <button role="menuitem" onClick={() => { setMenu(null); play(v); }}>{on && pl.playing ? 'Pause' : 'Play'}</button>
                   <Link role="menuitem" href={`/s/${song.id}?v=${v.id}`}>Open with notes</Link>
-                  {canEdit && !isDemo(v) && <button role="menuitem" onClick={() => makeActive(v)}>{song.active_version === v.id ? 'Use newest instead' : 'Make active version'}</button>}
+                  {canEdit && !isDemo(v) && v.id !== active?.id && <button role="menuitem" onClick={() => reorder([v.id, ...list.filter((x) => !isDemo(x) && x.id !== v.id).map((x) => x.id)])}>Make active (move to top)</button>}
+                  {canEdit && !isDemo(v) && list.filter((x) => !isDemo(x)).length > 1 && <>
+                    {list.filter((x) => !isDemo(x))[0]?.id !== v.id && <button role="menuitem" onClick={() => move(v, -1)}>Move up</button>}
+                    {list.filter((x) => !isDemo(x)).at(-1)?.id !== v.id && <button role="menuitem" onClick={() => move(v, 1)}>Move down</button>}
+                  </>}
                   {eng && <button role="menuitem" className="danger" onClick={() => remove(v)}>Delete version</button>}
                 </div>
               )}

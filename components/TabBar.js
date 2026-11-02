@@ -55,6 +55,7 @@ export default function TabBar({ eng, projects, email, signOut, unseen, verified
               <Link href="/whats-new">What’s new{unseen && <i className="tabdot" />}</Link>
               <Link href="/settings">Settings</Link>
               <Link href="/protect">How your music is protected</Link>
+              <Link href="/about">About CTRL ROOM</Link>
               {eng && <a href="/mac">Get the Mac app</a>}
             </div>
             <div className="morefoot">

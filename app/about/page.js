@@ -3,6 +3,7 @@ import './about.css';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { PORTAL_URL } from '@/lib/site';
+import { useApp } from '@/components/AppShell';
 
 const BARS = 96;
 // a song-shaped waveform: quiet intro, a lift, the drop, a breakdown, the outro
@@ -29,6 +30,7 @@ const N = CHAPTERS.length;
 const clamp = (v) => Math.max(0, Math.min(1, v));
 
 export default function About() {
+  const { session } = useApp() || {};
   const stage = useRef(null);
   const [step, setStep] = useState(0);
   const [still, setStill] = useState(false);
@@ -56,7 +58,7 @@ export default function About() {
     <main className={`ab ${still ? 'still' : ''}`}>
       <header className="abtop">
         <Link href="/about" className="ablogo"><img src="/logo.png" alt="" /><span>CTRL ROOM</span></Link>
-        <nav><Link href="/login">Sign in</Link></nav>
+        <nav>{session ? <Link href="/">Back to CTRL ROOM</Link> : <Link href="/login">Sign in</Link>}</nav>
       </header>
 
       <section className="abhero">

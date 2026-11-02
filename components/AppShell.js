@@ -84,7 +84,7 @@ export default function AppShell({ children }) {
   }, [session, needMfa, reloadProjects]);
 
   useEffect(() => {
-    if (session === null && !isPublic) router.replace(pathname === '/' ? '/about' : `/login?next=${encodeURIComponent(pathname)}`);
+    if (session === null && !isPublic) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
   }, [session, isPublic, pathname, router]);
 
   const [unseen, setUnseen] = useState(false);
@@ -189,6 +189,9 @@ export default function AppShell({ children }) {
               {unseen && <span className="newdot" aria-label="New" />}
             </Link>
           )}
+          <Link className="navitem" href="/about">
+            <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg></span>About CTRL ROOM
+          </Link>
           {session && eng && !inMacApp && (
             <a className="navitem" href="/mac">
               <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /></svg></span>Get the Mac app

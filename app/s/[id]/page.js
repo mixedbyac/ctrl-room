@@ -1,4 +1,5 @@
 'use client';
+import { emailArtistOn, setEmailArtist, notifyArtist } from '@/lib/notifyartist';
 import { drawWave } from '@/lib/wavedraw';
 import { pingPush } from '@/lib/pushclient';
 import ArtistName from '@/components/ArtistName';
@@ -334,11 +335,19 @@ function Notes({ notes, reactions, v, versions, time, playing, seek, setVid, eng
   notes.filter((n) => n.version_id === v?.id && n.t != null && !n.parent_id).sort((a, b) => a.t - b.t).forEach((n, i) => { nums[n.id] = i + 1; });
   const myName = eng ? (meName ? `${meName} (Engineer)` : 'Engineer') : meName || null;
   const sqlHint = (m) => (/parent_id|t_end|note_reactions/.test(String(m)) ? 'Replies and reactions need a quick database update: run supabase/010_comments.sql in Supabase.' : m);
+  const [mailArtist, setMailArtist] = useState(true);
+  useEffect(() => { setMailArtist(emailArtistOn()); }, []);
+  const [mailed, setMailed] = useState('');
   const insert = async (row) => {
-    let { error } = await supabase().from('notes').insert(row);
-    if (error && /t_end|parent_id|guest/.test(error.message) && !row.parent_id) { const { t_end, ...old } = row; ({ error } = await supabase().from('notes').insert(old)); }
+    let { data, error } = await supabase().from('notes').insert(row).select('id').single();
+    if (error && /t_end|parent_id|guest/.test(error.message) && !row.parent_id) { const { t_end, ...old } = row; ({ data, error } = await supabase().from('notes').insert(old).select('id').single()); }
     if (error) setErr(sqlHint(error.message)); else setErr('');
-    return !error;
+    return error ? false : (data?.id || true);
+  };
+  // engineer: tell the artist by email (replies always do, new notes when the box is ticked)
+  const tell = (id, isReply) => {
+    if (!eng || typeof id !== 'string' || (!isReply && !mailArtist)) return;
+    notifyArtist(id).then((r) => { if (r?.sent) { setMailed(isReply ? 'Reply emailed to the artist.' : 'Emailed to the artist.'); setTimeout(() => setMailed(''), 3500); } });
   };
   const post = async () => {
     if (!body.trim()) return;
@@ -346,10 +355,10 @@ function Notes({ notes, reactions, v, versions, time, playing, seek, setVid, eng
     const t = mode === 'time' ? Math.round(at * 10) / 10 : null;
     const ok = await insert({ song_id: song.id, version_id: v?.id || null, t, t_end: t != null && end != null && end > t ? Math.round(end * 10) / 10 : null, body: body.trim(), author_name: myName, from_client: !eng });
     setBusy(false);
-    if (ok) { pingPush({ kind: 'note', songId: song.id, body: body.trim() }); setBody(''); setPinned(null); setEnd(null); reload(); }
+    if (ok) { pingPush({ kind: 'note', songId: song.id, body: body.trim() }); tell(ok, false); setBody(''); setPinned(null); setEnd(null); reload(); }
   };
   const actions = {
-    reply: async (parent, text) => { if (await insert({ song_id: song.id, version_id: parent.version_id, parent_id: parent.id, t: null, body: text, author_name: myName, from_client: !eng })) reload(); },
+    reply: async (parent, text) => { const id = await insert({ song_id: song.id, version_id: parent.version_id, parent_id: parent.id, t: null, body: text, author_name: myName, from_client: !eng }); if (id) { tell(id, true); reload(); } },
     react: async (n, emoji, on) => {
       const sb = supabase();
       const { error } = on ? await sb.from('note_reactions').insert({ note_id: n.id, emoji, who: me }) : await sb.from('note_reactions').delete().eq('note_id', n.id).eq('emoji', emoji).eq('who', me);
@@ -386,9 +395,11 @@ function Notes({ notes, reactions, v, versions, time, playing, seek, setVid, eng
             {mode === 'time' && end != null && <button className="repin" onClick={() => setEnd(null)}>No end</button>}
             {mode === 'time' && pinned != null && <button className="repin" onClick={() => { setPinned(time); setEnd(null); }}>Start from now</button>}
           </span>
+          {eng && <label className="mailart" title="Replies to the artist's notes are always emailed to them"><input type="checkbox" checked={mailArtist} onChange={(e) => { setMailArtist(e.target.checked); setEmailArtist(e.target.checked); }} /> Email the artist</label>}
           <button className="post" onClick={post} disabled={!body.trim() || busy}>{mode === 'time' ? `Post at ${fmt(at)}${end != null && end > at ? `–${fmt(end)}` : ''}` : 'Post'}</button>
         </div>
       </div>
+      {mailed && <p className="toast-inline">{mailed}</p>}
       {err && <p className="ferr">{err}</p>}
       {list.some((n) => !n.parent_id) ? (
         <CommentList notes={list} reactions={reactions} me={me} nameOf={nameOf} canResolve={eng}

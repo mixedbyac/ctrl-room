@@ -1982,3 +1982,6 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .lacts .ldl .lcommentbtn span { display: none; }
 .lacts .ldlmsg { flex-basis: 100%; font-size: 12.5px; }
 .apvtip { font-size: 12.5px; padding: 6px 6px 6px 10px; }
+
+.mailart { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); margin-left: auto; margin-right: 10px; cursor: pointer; white-space: nowrap; }
+.mailart input { accent-color: var(--sig); }

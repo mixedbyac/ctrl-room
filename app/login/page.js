@@ -15,6 +15,7 @@ function Login() {
   const { session } = useApp();
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
+  const [side, setSide] = useState(params.get('new') ? 'new' : 'in');
   const [step, setStep] = useState('email');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -71,6 +72,13 @@ function Login() {
       <div className="logincard">
         <img src="/logo.png" alt="" className="loginlogo" />
         <h1 className="up">CTRL ROOM</h1>
+        <div className="doors" role="tablist" aria-label="Sign in or make an account">
+          <button role="tab" aria-selected={side === 'in'} className={side === 'in' ? 'on' : ''} onClick={() => setSide('in')}>Sign in</button>
+          <button role="tab" aria-selected={side === 'new'} className={side === 'new' ? 'on' : ''} onClick={() => setSide('new')}>I’m new</button>
+          <span className="doorknob" aria-hidden="true" />
+        </div>
+        <div className={`flipper ${side === 'new' ? 'turned' : ''}`}>
+        <div className="face front" aria-hidden={side !== 'in'} inert={side !== 'in' ? '' : undefined}>
         {step === 'password' ? (
           <>
             <p>Sign in with your password.</p>
@@ -101,9 +109,19 @@ function Login() {
           </>
         )}
         {err && <p className="ferr">{err}</p>}
-        <p className="muted small authswitch"><Link className="link" href="/protect">How your music is protected</Link></p>
-        <p className="muted small authswitch"><Link className="link" href="/about">What is CTRL ROOM?</Link> · Artist? <Link className="link" href={`/signup${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`}>Create an account</Link> · Engineers join by invite</p>
+        </div>
+        <div className="face back" aria-hidden={side !== 'new'} inert={side !== 'new' ? '' : undefined}>
+          <p className="backlede">Artists and their teams make a free account to hear every mix, leave notes at the exact second and approve.</p>
+          <Link className="btn primary" href={`/signup${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`}>Create an account</Link>
+          <Link className="link" href="/about">Take the tour first</Link>
+          <p className="muted small">Engineers join by invite from their studio.</p>
+        </div>
+        </div>
       </div>
+      <Link className="safebadge" href="/protect" title="How your music is protected">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 018 0v3" /></svg>
+        <span>Private by design</span>
+      </Link>
       <PoweredBy className="pinned" />
     </div>
   );

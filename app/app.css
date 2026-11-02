@@ -1877,3 +1877,20 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 @media (max-width: 600px) { .pplreach { flex-direction: column; } }
 .signform select.unset { color: var(--muted); }
 .arow .apill:empty { padding: 0; }
+
+/* sign-in: two doors (Sign in / I'm new) and a card that turns over */
+.doors { position: relative; display: grid; grid-template-columns: 1fr 1fr; width: 100%; max-width: 300px; padding: 4px; border-radius: 999px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); }
+.doors button { position: relative; z-index: 1; height: 38px; border: 0; background: none; color: rgba(255,255,255,.6); font: inherit; font-size: 14px; font-weight: 650; border-radius: 999px; cursor: pointer; transition: color .25s; }
+.doors button.on { color: #0f0f10; }
+.doorknob { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); border-radius: 999px; background: var(--sig, #f5d547); transition: transform .35s cubic-bezier(.2,.8,.2,1); }
+.doors button:nth-child(2).on ~ .doorknob { transform: translateX(100%); }
+.flipper { display: grid; width: 100%; perspective: 1400px; }
+.flipper > .face { grid-area: 1 / 1; display: grid; gap: 14px; justify-items: center; align-content: start; backface-visibility: hidden; -webkit-backface-visibility: hidden; transition: transform .6s cubic-bezier(.2,.8,.2,1), opacity .3s; }
+.flipper > .back { transform: rotateY(-180deg); opacity: 0; }
+.flipper.turned > .front { transform: rotateY(180deg); opacity: 0; }
+.flipper.turned > .back { transform: none; opacity: 1; }
+.flipper .backlede { color: var(--ink, #f4f4f5) !important; font-size: 17px; line-height: 1.45; max-width: 30ch; }
+.safebadge { position: absolute; z-index: 2; top: calc(16px + env(safe-area-inset-top, 0px)); right: 16px; display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,.7); text-decoration: none; border: 1px solid rgba(255,255,255,.1); background: rgba(11,11,12,.5); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.safebadge svg { width: 14px; height: 14px; color: var(--sig, #f5d547); }
+.safebadge:hover { color: #fff; border-color: rgba(255,255,255,.25); }
+@media (prefers-reduced-motion: reduce) { .flipper > .face, .doorknob { transition: none; } }

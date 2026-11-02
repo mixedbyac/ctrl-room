@@ -3,9 +3,16 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/supabase';
 import { pushSupport, turnOnPush, turnOffPush, thisDeviceOn } from '@/lib/pushclient';
 import { deviceName } from '@/lib/format';
+import { isMacApp, macNotifyOn, setMacNotify, macNotifyPermission } from '@/lib/native';
 
 /** Settings › Notifications: get CTRL ROOM notifications on this phone or computer. */
 export default function PushSettings() {
+  const [mac, setMac] = useState(null);
+  useEffect(() => { setMac(isMacApp()); }, []);
+  return mac === null ? null : mac ? <MacNotify /> : <WebPush />;
+}
+
+function WebPush() {
   const [sup, setSup] = useState(null);
   const [on, setOn] = useState(false);
   const [devices, setDevices] = useState([]);
@@ -44,6 +51,28 @@ export default function PushSettings() {
         </div>
       )}
       {devices.length > 0 && <span className="small muted">On for: {devices.map((d) => d.device || 'a device').join(', ')}</span>}
+      {msg && <span className="small" role="status">{msg}</span>}
+    </div>
+  );
+}
+
+/** In the Mac app: real macOS banners (and the unread count on the Dock icon). */
+function MacNotify() {
+  const [on, setOn] = useState(false);
+  const [msg, setMsg] = useState('');
+  useEffect(() => { (async () => setOn(macNotifyOn() && (await macNotifyPermission(false))))(); }, []);
+  const enable = async () => {
+    setMsg('');
+    const ok = await macNotifyPermission(true);
+    if (!ok) return setMsg('macOS didn’t allow it. Open System Settings › Notifications › CTRL ROOM and turn on Allow notifications, then try again.');
+    setMacNotify(true); setOn(true); setMsg('On. New files, notes and approvals show up as Mac notifications while CTRL ROOM is open (even with the window closed).');
+  };
+  const disable = () => { setMacNotify(false); setOn(false); setMsg('Off in the Mac app.'); };
+  return (
+    <div className="panel secpanel" id="push">
+      <b>Mac notifications {on && <span className="tbadge ok">✓ On</span>}</b>
+      <span className="muted small">Banners in the corner of your screen and a count on the Dock icon. Uses the same choices as “In the app” below.</span>
+      <div className="row" style={{ gap: 10 }}>{on ? <button className="btn small quiet" onClick={disable}>Turn off</button> : <button className="btn small primary" onClick={enable}>Turn on</button>}</div>
       {msg && <span className="small" role="status">{msg}</span>}
     </div>
   );

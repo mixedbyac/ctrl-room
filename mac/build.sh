@@ -9,8 +9,8 @@ APP="$OUT/CTRL ROOM.app"
 rm -rf "$OUT" && mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 echo "› Compiling (Apple silicon + Intel)"
-swiftc -O -target arm64-apple-macos12 -o "$OUT/CTRLROOM-arm64" Sources/main.swift -framework Cocoa -framework WebKit
-swiftc -O -target x86_64-apple-macos12 -o "$OUT/CTRLROOM-x86_64" Sources/main.swift -framework Cocoa -framework WebKit
+swiftc -O -target arm64-apple-macos12 -o "$OUT/CTRLROOM-arm64" Sources/main.swift -framework Cocoa -framework WebKit -framework UserNotifications
+swiftc -O -target x86_64-apple-macos12 -o "$OUT/CTRLROOM-x86_64" Sources/main.swift -framework Cocoa -framework WebKit -framework UserNotifications
 lipo -create -output "$APP/Contents/MacOS/CTRLROOM" "$OUT/CTRLROOM-arm64" "$OUT/CTRLROOM-x86_64"
 
 echo "› Bundle"

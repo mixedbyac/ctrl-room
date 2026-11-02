@@ -1,4 +1,5 @@
 'use client';
+import { isMacApp, macNotify, macBadge } from '@/lib/native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
@@ -8,9 +9,14 @@ import { ago, mmss } from '@/lib/format';
 import { useNames, nameFor } from '@/components/Names';
 
 /** The bell: what's happened lately (listens, notes, approvals, new mixes…), filtered by your notification settings. */
+// plain text from a bell line (for Mac banners)
+const plain = (n) => n == null || typeof n === 'boolean' ? '' : typeof n === 'string' || typeof n === 'number' ? String(n) : Array.isArray(n) ? n.map(plain).join('') : plain(n.props?.children);
+const banner = { ids: new Set(), primed: false };
+
 export default function Bell() {
   const { session, eng } = useApp();
   const [items, setItems] = useState([]);
+  const loadedOnce = useRef(false);
   const [open, setOpen] = useState(false);
   const [seen, setSeen] = useState(() => session?.user?.user_metadata?.notif_seen || '');
   const box = useRef(null);
@@ -40,9 +46,17 @@ export default function Bell() {
       (up.data || []).forEach((x) => out.push({ id: `u${x.id}`, at: x.created_at, icon: /ready/i.test(x.body) ? '♪' : '•', text: <><b>{x.songs?.title}</b>: {x.body}</>, sub: x.songs?.projects?.title || '', href: `/s/${x.song_id}` }));
       (no.data || []).forEach((x) => out.push({ id: `n${x.id}`, at: x.created_at, icon: '✎', text: <><b>Your engineer</b> left a note on <b>{x.songs?.title}</b>{x.t != null ? ` at ${mmss(x.t)}` : ''}</>, sub: `“${x.body}”`, href: `/s/${x.song_id}#notes` }));
     }
+    loadedOnce.current = true;
     setItems(out.filter((x) => x.at).sort((a, b) => b.at.localeCompare(a.at)).slice(0, 40));
   }, [session, eng, names]); // eslint-disable-line
   useEffect(() => { load(); const t = setInterval(load, 60000); return () => clearInterval(t); }, [load]);
+  // Mac app: a banner for anything new since the app opened, and the unread count on the Dock icon
+  useEffect(() => {
+    if (!isMacApp() || !session) return;
+    if (!banner.primed) { items.forEach((x) => banner.ids.add(x.id)); if (items.length || loadedOnce.current) banner.primed = true; return; }
+    items.filter((x) => !banner.ids.has(x.id)).slice(0, 3).forEach((x) => { banner.ids.add(x.id); macNotify({ id: x.id, title: plain(x.text), body: plain(x.sub), url: x.href }); });
+    macBadge(items.filter((x) => !seen || x.at > seen).length);
+  }, [items, seen]); // eslint-disable-line
   useEffect(() => {
     if (!open) return;
     const off = (e) => { if (box.current && !box.current.contains(e.target)) setOpen(false); };

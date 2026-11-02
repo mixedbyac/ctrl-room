@@ -6,6 +6,7 @@
 import Cocoa
 import WebKit
 import UniformTypeIdentifiers
+import UserNotifications
 
 let HOME = URL(string: Bundle.main.object(forInfoDictionaryKey: "CTRLHomeURL") as? String ?? "https://ctrl-room.app")!
 let AUDIO_EXT: Set<String> = ["wav", "wave", "aif", "aiff", "aifc", "flac", "mp3", "m4a", "aac", "ogg", "opus"]
@@ -82,7 +83,7 @@ func expandAudio(_ urls: [URL]) -> [URL] {
     return out.sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, NSWindowDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, NSWindowDelegate, UNUserNotificationCenterDelegate {
     var window: NSWindow!
     var web: WKWebView!
     let server = FileServer()
@@ -126,6 +127,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         window.makeKeyAndOrderFront(nil)
 
         buildMenu()
+        UNUserNotificationCenter.current().delegate = self
         web.load(URLRequest(url: HOME))
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -209,7 +211,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             sendChunk(id: id, data: data, index: 0, total: total)
         } else if type == "pick" {
             uploadMixes(nil)
+        } else if type == "notify-perm" {
+            // the page asks once (Settings › Notifications); macOS shows its Allow prompt
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { ok, _ in
+                DispatchQueue.main.async { self.web.evaluateJavaScript("window.__ctrlNotifyPerm && window.__ctrlNotifyPerm(\(ok))", completionHandler: nil) }
+            }
+        } else if type == "notify-status" {
+            UNUserNotificationCenter.current().getNotificationSettings { st in
+                let ok = st.authorizationStatus == .authorized || st.authorizationStatus == .provisional
+                DispatchQueue.main.async { self.web.evaluateJavaScript("window.__ctrlNotifyPerm && window.__ctrlNotifyPerm(\(ok))", completionHandler: nil) }
+            }
+        } else if type == "notify" {
+            let c = UNMutableNotificationContent()
+            c.title = body["title"] as? String ?? "CTRL ROOM"
+            c.body = body["body"] as? String ?? ""
+            c.sound = .default
+            if let u = body["url"] as? String { c.userInfo = ["url": u] }
+            let id = body["id"] as? String ?? UUID().uuidString
+            UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: id, content: c, trigger: nil), withCompletionHandler: nil)
+        } else if type == "badge" {
+            let n = body["count"] as? Int ?? 0
+            NSApp.dockTile.badgeLabel = n > 0 ? (n > 99 ? "99+" : String(n)) : nil
         }
+    }
+
+    // MARK: notifications
+
+    // show the banner even while CTRL ROOM is in front
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler done: @escaping (UNNotificationPresentationOptions) -> Void) {
+        done([.banner, .sound, .list])
+    }
+    // clicking one opens that page
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler done: @escaping () -> Void) {
+        if let path = response.notification.request.content.userInfo["url"] as? String, let url = URL(string: path, relativeTo: HOME)?.absoluteURL {
+            web.load(URLRequest(url: url))
+        }
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        done()
     }
 
     func sendChunk(id: String, data: Data, index: Int, total: Int) {

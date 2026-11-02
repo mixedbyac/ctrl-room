@@ -39,8 +39,17 @@ export default function AppShell({ children }) {
 
   useEffect(() => {
     const sb = supabase();
-    sb.auth.getSession().then(({ data }) => setSession(data.session || null));
-    const { data: sub } = sb.auth.onAuthStateChange((_e, s) => setSession(s || null));
+    const keep = (s) => { if (s?.refresh_token) fetch('/api/session', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${s.access_token}` }, body: JSON.stringify({ refresh_token: s.refresh_token }) }).catch(() => {}); };
+    sb.auth.getSession().then(async ({ data }) => {
+      if (data.session) { setSession(data.session); keep(data.session); return; }
+      // the browser forgot the sign-in (iPhone Safari clears it after a week away): use the backup
+      try {
+        const r = await fetch('/api/session', { cache: 'no-store' }).then((x) => x.json());
+        if (r.session) { const { data: d } = await sb.auth.setSession(r.session); if (d?.session) return setSession(d.session); }
+      } catch {}
+      setSession(null);
+    });
+    const { data: sub } = sb.auth.onAuthStateChange((e, s) => { setSession(s || null); if (e === 'SIGNED_IN' || e === 'TOKEN_REFRESHED') keep(s); });
     return () => sub.subscription.unsubscribe();
   }, []);
 
@@ -94,7 +103,7 @@ export default function AppShell({ children }) {
     return installNativeBridge(() => { if (pathname !== '/') router.push('/'); });
   }, [eng, pathname, router]);
 
-  const signOut = async () => { await supabase().auth.signOut(); router.replace('/login'); };
+  const signOut = async () => { await fetch('/api/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clear: true }) }).catch(() => {}); await supabase().auth.signOut(); router.replace('/login'); };
   const canEditArtist = (artist) => eng || adminArtists.includes(String(artist || '').toLowerCase());
   const value = { session, email: session?.user?.email || '', eng, projects, reloadProjects, signOut, canEditArtist };
 

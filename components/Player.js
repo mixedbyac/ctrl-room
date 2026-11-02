@@ -11,7 +11,7 @@ import { drawWave } from '@/lib/wavedraw';
 import { pingPush } from '@/lib/pushclient';
 import { emailArtistOn, notifyArtist } from '@/lib/notifyartist';
 import Cover from '@/components/Cover';
-import { mmss, deviceName, orderVersions, latestMix, currentMix } from '@/lib/format';
+import { mmss, deviceName, orderVersions, latestMix, currentMix, stackOrder, shortDate } from '@/lib/format';
 import { makeArt, artOf } from '@/lib/art';
 
 /** Save one mix version to the computer/phone, named “Song v3.wav”. */
@@ -371,8 +371,9 @@ function MiniPlayer() {
         <button className="mopen" onClick={() => pl.setExpanded(!pl.expanded)} aria-label={`Open the player for ${c.song.title}`}><Cover as="div" {...artOf(c.song, c.project)} size={120} className="mart spin" /></button>
         <button className="mtext" onClick={() => pl.setExpanded(!pl.expanded)}>
           <b><span id="mtitle">{c.song.title}</span>{pl.playing && <span className="eq"><span /><span /><span /></span>}</b>
-          <span>{c.project.title} · {v.label}</span>
+          <span>{c.project.title}</span>
         </button>
+        {c.versions.length > 1 && <VersionPicker up compact />}
         <div className="mwave" ref={wrap} onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); seekAt(e); }} onPointerMove={(e) => { if (e.buttons) seekAt(e); }}><canvas ref={cv} /></div>
         <span className="mtime mono">{mmss(pl.time)} / {mmss(pl.duration)}</span>
         <div className="mctl">
@@ -398,6 +399,44 @@ function Wave({ peaks, time, duration, onSeek, height = 72 }) {
     <div ref={wrap} className="npwave" style={{ height }} onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); at(e); }} onPointerMove={(e) => { if (e.buttons) at(e); }}>
       <canvas ref={cv} />
     </div>
+  );
+}
+
+/** One small button showing the version you're on; tap it for the list (active on top). Switching keeps your spot. */
+function VersionPicker({ up = false, compact = false }) {
+  const pl = usePlayer();
+  const c = pl.current;
+  const [open, setOpen] = useState(false);
+  const box = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const off = (e) => { if (box.current && !box.current.contains(e.target)) setOpen(false); };
+    const esc = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('pointerdown', off); document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', off); document.removeEventListener('keydown', esc); };
+  }, [open]);
+  if (!c) return null;
+  const cur = c.versions.find((x) => x.id === c.versionId);
+  const list = stackOrder(c.song, c.versions);
+  const active = currentMix(c.song, c.versions);
+  return (
+    <span className={`vpick ${compact ? 'compact' : ''} ${up ? 'up' : ''}`} ref={box} onClick={(e) => e.stopPropagation()}>
+      <button type="button" className="vpickbtn" onClick={() => setOpen(!open)} aria-expanded={open} aria-haspopup="listbox" title="Switch version (keeps your spot)">
+        <span className="mono">{cur?.label || 'Version'}</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 10l5 5 5-5" /></svg>
+      </button>
+      {open && (
+        <div className="vpicklist" role="listbox" aria-label="Versions">
+          {list.map((x) => (
+            <button key={x.id} role="option" aria-selected={x.id === c.versionId} onClick={() => { pl.switchVersion(x.id); setOpen(false); }}>
+              <span className="mono">{x.label}</span>
+              <small>{/^demo/i.test(x.label || '') ? '' : x.id === active?.id ? 'Active' : x.created_at ? shortDate(x.created_at) : ''}{c.song.approved_version === x.id ? ' · Approved' : ''}</small>
+              {x.id === c.versionId && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>}
+            </button>
+          ))}
+        </div>
+      )}
+    </span>
   );
 }
 
@@ -503,9 +542,7 @@ function NowPlaying() {
         {/* one quiet row: versions on the left, comment + download on the right */}
         <div className="nprow">
           {c.versions.length > 1 ? (
-            <div className="npvers" role="group" aria-label="Versions (switching keeps your spot)">
-              {c.versions.map((x) => <button key={x.id} aria-pressed={x.id === c.versionId} onClick={() => pl.switchVersion(x.id)} title="Switch version, keeps your spot">{x.label}</button>)}
-            </div>
+            <VersionPicker />
           ) : <span />}
           {!pl.eng && v && !/^demo/i.test(v.label || '') && (
             <ApproveButton songId={c.song.id} versionId={v.id} label={v.label} title={c.song.title} approved={c.song.approved_version === v.id} />

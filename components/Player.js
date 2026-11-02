@@ -3,6 +3,7 @@ import ArtistName from '@/components/ArtistName';
 import NoteComposer from '@/components/NoteComposer';
 import { SongProgress, SongDetails } from '@/components/SongInfo';
 import QualityBadge from '@/components/QualityBadge';
+import ApproveButton from '@/components/ApproveButton';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
@@ -478,6 +479,9 @@ function NowPlaying() {
               {c.versions.map((x) => <button key={x.id} aria-pressed={x.id === c.versionId} onClick={() => pl.switchVersion(x.id)} title="Switch version, keeps your spot">{x.label}</button>)}
             </div>
           ) : <span />}
+          {!pl.eng && v && !/^demo/i.test(v.label || '') && (
+            <ApproveButton songId={c.song.id} versionId={v.id} label={v.label} title={c.song.title} approved={c.song.approved_version === v.id} />
+          )}
           <span className="npicons">
             <button className={`npicon ${composing ? 'on' : ''}`} onClick={() => { if (composing) { setComposing(false); return; } setPinAt(pl.time); setComposing(true); }} aria-pressed={composing} aria-label={composing ? 'Close the comment box' : 'Comment at this moment'} title="Comment">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-7l-4 3v-3H5a1 1 0 01-1-1V6a1 1 0 011-1z" /></svg>

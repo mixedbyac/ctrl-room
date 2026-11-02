@@ -67,6 +67,10 @@ export default function ShareButton({ kind, id, eng, title, open: openProp, onOp
               <span><b>Comments on the link</b><span className="muted small">{st.comments ? 'People with the link can comment and react. Your notes show on the link too.' : 'Off: notes stay private to you and the project team.'}</span></span>
               <button className="switch" role="switch" aria-checked={!!st.comments} disabled={busy} onClick={() => call({ action: 'comments', on: !st.comments })}><i /></button>
             </label>
+            <label className="shrow">
+              <span><b>Approve button on the link</b><span className="muted small">{st.approve ? 'The artist’s team can approve right from the link (they sign in first).' : 'Off: they approve from CTRL ROOM.'}</span></span>
+              <button className="switch" role="switch" aria-checked={!!st.approve} disabled={busy} onClick={() => call({ action: 'approve', on: !st.approve })}><i /></button>
+            </label>
             <div className="shdl">
               <b>Downloads</b>
               <div className="seg3" role="radiogroup" aria-label="Who can download from the link">

@@ -14,6 +14,7 @@ import NoteComposer from '@/components/NoteComposer';
 import { SongProgress, SongDetails } from '@/components/SongInfo';
 import PoweredBy from '@/components/PoweredBy';
 import LinkDownload, { SongDownloadIcon } from '@/components/LinkDownload';
+import ApproveButton from '@/components/ApproveButton';
 
 const PLAY = <path d="M7 4.5v15l13-7.5z" />;
 const PAUSE = <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" />;
@@ -270,9 +271,12 @@ export default function SharedListen() {
               {data.kind === 'project' && <p className="lnow">{playing ? 'Playing' : 'Up'}: <b>{cur.title}</b></p>}
               <div><Wave peaks={cur.version.peaks} time={time} duration={dur} onSeek={seek} />
                 <div className="nptimes mono"><span>{mmss(time)}</span><span className="npfmt">{quality(cur.version) ? <QualityBadge v={cur.version} info /> : cur.approved ? 'Final mix' : 'Mix in progress'}</span><span>{mmss(dur)}</span></div></div>
+              <div className="lacts">
+              {data.approve !== false && <ApproveButton songId={cur.id} versionId={cur.version.id} label={cur.version.label} title={cur.title} approved={cur.approved} signInHref={`/login?next=${encodeURIComponent(`/l/${token}`)}`} tipKey="cr_tip_approve_link" />}
               {canComment && <button className="lcommentbtn" onClick={() => { if (big) { setBig(null); return; } if (!playing) toggle(); setBig({ compose: true }); }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-7l-4 3v-3H5a1 1 0 01-1-1V6a1 1 0 011-1z" /></svg>Comment at {mmss(time)}</button>}
               {data.downloads && data.downloads !== 'off' && <LinkDownload token={token} mode={data.downloads} song={cur} many={data.kind === 'project' && songs.length > 1} />}
+              </div>
             </> : <p className="muted">There’s nothing to play here yet.</p>}
               {data.kind === 'project' && songs.length > 1 && (
                 <ol className="ltracks">

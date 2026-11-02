@@ -1950,3 +1950,26 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .nptimes .npfmt { flex: 0 0 auto; }
 .nptimes .npfmt:has(.qtag) { display: inline-flex !important; }
 .qcard dd { font-family: Geist, -apple-system, system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+
+/* Approve: clear yellow button, a one-time tip, and a confirm card */
+.apvwrap { position: relative; display: inline-flex; }
+.apvbtn { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 18px 0 14px; border-radius: 999px; border: 0; background: var(--sig, #f5d547); color: #0f0f10; font: inherit; font-family: Geist, -apple-system, system-ui, sans-serif; font-size: 15px; font-weight: 750; cursor: pointer; white-space: nowrap; transition: transform .12s, filter .15s; }
+.apvbtn svg { width: 18px; height: 18px; }
+.apvbtn:hover { filter: brightness(1.06); }
+.apvbtn:active { transform: scale(.97); }
+.apvbtn.done { background: rgba(62,207,142,.14); color: #3ecf8e; cursor: default; box-shadow: inset 0 0 0 1px rgba(62,207,142,.4); }
+.apvtip { position: absolute; bottom: calc(100% + 10px); left: 0; z-index: 5; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; padding: 8px 8px 8px 12px; border-radius: 12px; background: #fff; color: #0f0f10; font-size: 13px; font-weight: 600; box-shadow: 0 14px 34px -12px rgba(0,0,0,.8); animation: apvbob 2.4s ease-in-out infinite; cursor: pointer; }
+.apvtip::after { content: ''; position: absolute; top: 100%; left: 26px; border: 6px solid transparent; border-top-color: #fff; }
+.apvtip button { border: 0; background: rgba(0,0,0,.08); color: #0f0f10; width: 20px; height: 20px; border-radius: 50%; font-size: 14px; line-height: 1; cursor: pointer; }
+@keyframes apvbob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+.apvcard { text-align: center; justify-items: center; }
+.apvicon { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--sig, #f5d547); color: #0f0f10; margin-bottom: 4px; }
+.apvicon svg { width: 28px; height: 28px; }
+.apvcard .qok, .apvcard .qno { width: 100%; display: grid; place-items: center; text-decoration: none; }
+.apvcard .apvok { background: var(--sig, #f5d547); }
+.qno { height: 44px; border: 0; border-radius: 999px; background: rgba(255,255,255,.1); color: #f4f4f5; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .apvtip { animation: none; } }
+/* player row with Approve */
+.nprow .apvbtn { height: 36px; font-size: 14px; }
+/* share link: comment, approve and download in one row */
+.lacts { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }

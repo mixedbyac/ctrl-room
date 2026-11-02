@@ -1,5 +1,12 @@
 {
   "crons": [
-    { "path": "/api/health", "schedule": "17 12 * * *" }
+    {
+      "path": "/api/health",
+      "schedule": "17 12 * * *"
+    },
+    {
+      "path": "/api/cron/reminders",
+      "schedule": "41 15 * * *"
+    }
   ]
 }

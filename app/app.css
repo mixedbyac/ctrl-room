@@ -1869,3 +1869,10 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .ltracks button { grid-template-columns: 34px minmax(0, 1fr) !important; grid-auto-flow: column; grid-auto-columns: auto; }
 .ltracks .lrowd { gap: 0; }
 @media (max-width: 900px) { .ltracks .lrowc.lrowd { display: grid; } }
+
+/* People: invite everyone without an account */
+.pplreach { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.pplreach > span { display: grid; gap: 4px; min-width: 0; }
+.pplreachlist { margin: 6px 0 0; padding-left: 18px; line-height: 1.6; max-height: 220px; overflow: auto; }
+@media (max-width: 600px) { .pplreach { flex-direction: column; } }
+.signform select.unset { color: var(--muted); }

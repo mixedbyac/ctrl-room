@@ -1,6 +1,7 @@
 'use client';
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { TITLES } from '@/lib/titles';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useApp } from '@/components/AppShell';
@@ -12,7 +13,7 @@ function Signup() {
   const params = useSearchParams();
   const next = params.get('next') || '/';
   const { session } = useApp();
-  const [f, setF] = useState({ name: '', artist: params.get('artist') || '', email: params.get('email') || '', phone: '', spotify: '', password: '', website: '' });
+  const [f, setF] = useState({ name: params.get('name') || '', title: '', artist: params.get('artist') || '', email: params.get('email') || '', phone: '', spotify: '', password: '', website: '' });
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -24,7 +25,9 @@ function Signup() {
     e.preventDefault();
     setErr('');
     if (!f.name.trim()) return setErr('Add your name.');
+    if (!f.title) return setErr('Pick what you do (Artist, Manager…).');
     if (!/^\S+@\S+\.\S+$/.test(f.email.trim())) return setErr('Enter a valid email address.');
+    if (f.title === 'Artist' && !f.artist.trim()) return setErr('Add your artist name.');
     if (f.password.length < 8) return setErr('Use a password with at least 8 characters.');
     setBusy(true);
     try {
@@ -48,8 +51,13 @@ function Signup() {
         <form onSubmit={submit} className="signform" noValidate>
           <div className="two">
             <div className="fld"><label htmlFor="su-n">Your name</label><input id="su-n" autoComplete="name" value={f.name} onChange={set('name')} autoFocus /></div>
-            <div className="fld"><label htmlFor="su-a">Artist name <span className="opt">optional</span></label><input id="su-a" value={f.artist} onChange={set('artist')} /></div>
+            <div className="fld"><label htmlFor="su-t">I’m the…</label>
+              <select id="su-t" value={f.title} onChange={set('title')} className={f.title ? '' : 'unset'}>
+                <option value="" disabled>Pick one</option>
+                {TITLES.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select></div>
           </div>
+          <div className="fld"><label htmlFor="su-a">{f.title === 'Artist' ? 'Your artist name' : 'Artist you work with'} <span className="opt">{f.title === 'Artist' ? '' : 'optional'}</span></label><input id="su-a" value={f.artist} onChange={set('artist')} /></div>
           <SpotifyField id="su-s" label="Spotify artist link" value={f.spotify} onChange={(v) => setF((x) => ({ ...x, spotify: v }))} onArtist={(a) => setF((x) => ({ ...x, artist: x.artist.trim() ? x.artist : a.name || '' }))} />
           <div className="fld"><label htmlFor="su-e">Email</label><input id="su-e" type="email" autoComplete="email" value={f.email} onChange={set('email')} /></div>
           <div className="fld"><label htmlFor="su-p">Password <span className="opt">8+ characters</span></label>

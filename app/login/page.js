@@ -44,6 +44,12 @@ function Login() {
     setBusy(false);
     if (error) return setErr("That code didn't work. Check the latest email, or send a new one.");
     markEntering();
+    // brand-new account from an email code: set a name, a password and what they do first
+    try {
+      const { data } = await supabase().auth.getUser();
+      const u = data?.user;
+      if (u && !u.user_metadata?.pw_set && Date.now() - new Date(u.created_at).getTime() < 30 * 60 * 1000) return router.replace(`/welcome${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`);
+    } catch {}
     router.replace(next);
   };
 

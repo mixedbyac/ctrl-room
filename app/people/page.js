@@ -5,6 +5,7 @@ import { useApp, TopBar } from '@/components/AppShell';
 import { BlueCheck } from '@/components/Credit';
 import { useArtists } from '@/components/TitleCase';
 import { ago } from '@/lib/format';
+import { roleForTitle } from '@/lib/titles';
 
 /** Engineer: everyone who has a CTRL ROOM account, who they're with, and quick ways to add them to an artist. */
 export default function PeoplePage() {
@@ -15,8 +16,21 @@ export default function PeoplePage() {
   const [filter, setFilter] = useState('all');
   const [msg, setMsg] = useState('');
   const artists = useArtists();
+  const [reach, setReach] = useState(null); // people with an email in CTRL ROOM but no account
+  const [reaching, setReaching] = useState(false);
+  const loadReach = () => api('/api/people', { action: 'reach' }).then((r) => setReach(r.list || [])).catch(() => setReach([]));
+  const sendReach = async () => {
+    if (!reach?.length || !window.confirm(`Email ${reach.length} ${reach.length === 1 ? 'person' : 'people'} an invite to make their CTRL ROOM account?`)) return;
+    setReaching(true); setMsg('Sending…');
+    try {
+      const r = await api('/api/people', { action: 'reach', send: true });
+      setMsg(`Sent ${r.sent} invite${r.sent === 1 ? '' : 's'}.${r.failed?.length ? ` ${r.failed.length} didn’t go out: ${r.failed.slice(0, 3).map((f) => `${f.email} (${f.reason})`).join(', ')}.` : ''}${r.more ? ` ${r.more} more left, press it again.` : ''}`);
+      loadReach();
+    } catch (e) { setMsg(e.message); }
+    setReaching(false);
+  };
   const load = () => api('/api/people', { action: 'list' }).then((r) => setList(r.people || [])).catch((e) => { setErr(e.message); setList([]); });
-  useEffect(() => { if (session && eng) load(); }, [session, eng]); // eslint-disable-line
+  useEffect(() => { if (session && eng) { load(); loadReach(); } }, [session, eng]); // eslint-disable-line
   const shown = useMemo(() => (list || []).filter((p) => {
     if (filter === 'new' && p.artists.length) return false;
     if (filter === 'teams' && (!p.artists.length || p.engineer)) return false;
@@ -30,7 +44,8 @@ export default function PeoplePage() {
   const counts = { all: list?.length || 0, new: (list || []).filter((p) => !p.artists.length && !p.engineer).length };
   const add = async (p, artist) => {
     if (!artist) return;
-    try { await api('/api/people', { action: 'add', email: p.email, artist }); setMsg(`${p.name || p.email} is now on ${artist}’s team.`); load(); } catch (e) { setMsg(e.message); }
+    const role = roleForTitle(p.title);
+    try { await api('/api/people', { action: 'add', email: p.email, artist, role }); setMsg(`${p.name || p.email} is now on ${artist}’s team as ${role}.`); load(); } catch (e) { setMsg(e.message); }
   };
   const verify = async (p) => { try { await api('/api/verify', { action: 'confirm', email: p.email }); setMsg(`${p.name || p.email} is verified.`); load(); } catch (e) { setMsg(e.message); } };
   return (
@@ -46,6 +61,14 @@ export default function PeoplePage() {
             ))}
           </div>
         </div>
+        {reach && reach.length > 0 && (
+          <div className="panel pplreach">
+            <span><b>{reach.length} {reach.length === 1 ? 'person has' : 'people have'} an email here but no account</b>
+              <small className="muted">Artist team members and project contacts get an invite straight into their projects. People who only sent files get a “make your account” email. Everyone also gets a reminder a day after they send files.</small>
+              <details><summary className="small">See who</summary><ul className="small pplreachlist">{reach.map((x) => <li key={x.email}>{x.name ? `${x.name} · ` : ''}{x.email}{x.artist ? <span className="muted"> · {x.artist}</span> : null}<span className="muted"> · {x.kind === 'team' ? 'team invite' : 'sent files'}</span></li>)}</ul></details></span>
+            <button className="btn small primary" disabled={reaching} onClick={sendReach}>{reaching ? 'Sending…' : 'Invite them all'}</button>
+          </div>
+        )}
         {err && <p className="ferr">{err}</p>}
         {msg && <p className="toast-inline">{msg}</p>}
         {list === null ? <p className="muted">Loading…</p> : (
@@ -54,7 +77,7 @@ export default function PeoplePage() {
               <li key={p.email} className="pplrow">
                 <span className="pplav">{p.photo ? <img src={p.photo} alt="" /> : (p.name || p.email)[0].toUpperCase()}</span>
                 <span className="pplmain">
-                  <b>{p.name || p.email.replace(/@.*/, '')}{p.state === 'verified' && <BlueCheck kind={p.engineer ? 'engineer' : p.artists.some((a) => /^artist$/i.test(a.role)) ? 'artist' : 'user'} />}{p.engineer && <em className="pplrole">Engineer</em>}</b>
+                  <b>{p.name || p.email.replace(/@.*/, '')}{p.state === 'verified' && <BlueCheck kind={p.engineer ? 'engineer' : p.artists.some((a) => /^artist$/i.test(a.role)) ? 'artist' : 'user'} />}{p.engineer ? <em className="pplrole">Engineer</em> : p.title ? <em className="pplrole">{p.title}</em> : null}</b>
                   <small>{p.email}</small>
                   <span className="pplmeta">
                     {p.artists.length ? p.artists.map((a) => <span key={a.artist} className="pplchip">{a.artist}<i>{a.role}</i></span>) : <span className="pplnone">{p.artistHint ? `Signed up as “${p.artistHint}”` : 'Not on an artist yet'}</span>}
@@ -64,6 +87,8 @@ export default function PeoplePage() {
                 {!p.engineer && (
                   <span className="pplacts">
                     {p.state !== 'verified' && <button className="btn small" onClick={() => verify(p)}>Verify</button>}
+                    {(() => { const match = p.artistHint && artists.find((a) => a.toLowerCase() === p.artistHint.toLowerCase()); return match && !p.artists.some((x) => x.artist.toLowerCase() === match.toLowerCase())
+                      ? <button className="btn small primary" onClick={() => add(p, match)} title={`Add to ${match} as ${roleForTitle(p.title)}`}>Add to {match}</button> : null; })()}
                     <select defaultValue="" onChange={(e) => { add(p, e.target.value); e.target.value = ''; }} aria-label={`Add ${p.email} to an artist`}>
                       <option value="" disabled>Add to artist…</option>
                       {artists.filter((a) => !p.artists.some((x) => x.artist.toLowerCase() === a.toLowerCase())).map((a) => <option key={a} value={a}>{a}</option>)}

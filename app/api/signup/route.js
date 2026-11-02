@@ -2,6 +2,7 @@ import { SITE_URL } from '@/lib/site';
 import { admin, json, fail } from '@/lib/server';
 import { limit } from '@/lib/ratelimit';
 import { notifyEngineers } from '@/lib/invite';
+import { TITLES } from '@/lib/titles';
 import { fetchSpotifyArtist, spotifyArtistId } from '@/lib/spotify';
 
 export const runtime = 'nodejs';
@@ -13,11 +14,13 @@ export async function POST(req) {
   const b = await req.json().catch(() => null);
   const name = String(b?.name || '').trim().slice(0, 100);
   const artist = String(b?.artist || '').trim().slice(0, 100);
+  const title = TITLES.includes(b?.title) ? b.title : '';
   const email = String(b?.email || '').trim().toLowerCase();
   const phone = String(b?.phone || '').trim().slice(0, 30);
   const spotify = String(b?.spotify || '').trim().slice(0, 300);
   const password = String(b?.password || '');
   if (!name) return fail('Add your name.');
+  if (!title) return fail('Pick what you do (Artist, Manager…).');
   if (!/^\S+@\S+\.\S+$/.test(email)) return fail('Enter a valid email address.');
   if (password.length < 8) return fail('Use a password with at least 8 characters.');
   if (b?.website) return json({ ok: true }); // bots fill hidden fields
@@ -30,7 +33,7 @@ export async function POST(req) {
   }
   const { error } = await db.auth.admin.createUser({
     email, password, email_confirm: true,
-    user_metadata: { name, artist, phone, spotify },
+    user_metadata: { name, title, artist, phone, spotify, pw_set: true },
     app_metadata: { needs_verify: true }, // projects unlock after the email is confirmed (code) or the engineer confirms them
   });
   if (error) {
@@ -50,6 +53,6 @@ export async function POST(req) {
     } catch {}
   }
   // let the engineer know (email + text when set up)
-  await notifyEngineers(db, { name, email, artist, how: 'signup', origin: SITE_URL });
+  await notifyEngineers(db, { name, email, artist, title, how: 'signup', origin: SITE_URL });
   return json({ ok: true });
 }

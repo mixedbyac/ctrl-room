@@ -127,6 +127,8 @@ export function PlayerProvider({ eng, children }) {
     if (q) setQueue(q);
     const a = audioFor(v);
     if (!a) return;
+    // the other versions get ready too (just the start; they buffer around the playhead as the song plays)
+    vs.forEach((x) => { if (x.id !== v.id) { const o = audioFor(x); if (o && o.paused && o.readyState < 2) o.preload = 'metadata'; } });
     setDuration(a.duration || v.duration || 0);
     const go = () => { try { a.currentTime = at || 0; } catch {} setTime(at || 0); if (autoplay) a.play().then(() => setPlaying(true)).catch(() => setPlaying(false)); };
     if (a.readyState >= 1) go(); else a.addEventListener('loadedmetadata', go, { once: true });
@@ -137,23 +139,56 @@ export function PlayerProvider({ eng, children }) {
   const toggle = useCallback(() => (playing ? pause() : resume()), [playing, pause, resume]);
   const seek = useCallback((t) => { const a = curAudio(); if (a) { a.currentTime = Math.max(0, Math.min(t, a.duration || t)); setTime(a.currentTime); } }, []); // eslint-disable-line
 
-  /** Same song, different version, same spot in the song. */
+  /** Same song, different version, same spot in the song. Seamless: the old one keeps playing until the new one is ready right there. */
+  const switching = useRef(0);
   const switchVersion = useCallback(async (versionId) => {
     const c = curRef.current;
     if (!c || versionId === c.versionId) return;
     const v = c.versions.find((x) => x.id === versionId);
     if (!v) return;
-    const old = curAudio(), t = old ? old.currentTime : 0, was = playing;
-    if (old) old.pause();
-    await signed([v.storage_path]);
-    const next = { ...c, versionId };
-    curRef.current = next;
-    setCurrent(next);
+    const old = curAudio(), was = playing;
+    const token = ++switching.current;
+    if (!urls.current[v.storage_path]) await signed([v.storage_path]);
     const b = audioFor(v);
     if (!b) return;
-    const go = () => { try { b.currentTime = Math.min(t, b.duration || t); } catch {} setDuration(b.duration || 0); if (was) b.play().catch(() => {}); };
-    if (b.readyState >= 1) go(); else b.addEventListener('loadedmetadata', go, { once: true });
+    const now = () => (old ? old.currentTime : 0);
+    const swap = () => {
+      if (token !== switching.current) return; // they tapped another version meanwhile
+      try { b.currentTime = Math.min(now(), (b.duration || Infinity) - 0.05); } catch {}
+      const next = { ...curRef.current, versionId };
+      curRef.current = next; setCurrent(next); setDuration(b.duration || v.duration || 0);
+      if (was) {
+        b.play().then(() => { if (old && old !== b) old.pause(); setPlaying(true); }).catch(() => { if (old) old.pause(); setPlaying(false); });
+      } else if (old && old !== b) old.pause();
+    };
+    // already buffered at this spot: switch right away
+    const ready = () => { const t = now(); for (let k = 0; k < b.buffered.length; k++) if (b.buffered.start(k) <= t && b.buffered.end(k) > t + 1) return true; return false; };
+    if (b.readyState >= 3 && ready()) return swap();
+    // otherwise: line the new one up a hair ahead, let it buffer while the old one keeps playing, then swap
+    const prime = () => {
+      try { b.currentTime = Math.min(now() + 0.25, (b.duration || Infinity) - 0.05); } catch {}
+      let done = false;
+      const fin = () => { if (done) return; done = true; b.removeEventListener('canplay', fin); clearTimeout(cap); swap(); };
+      b.addEventListener('canplay', fin);
+      const cap = setTimeout(fin, 2500); // never wait forever
+      if (b.readyState >= 3) fin();
+    };
+    if (b.readyState >= 1) prime(); else b.addEventListener('loadedmetadata', prime, { once: true });
   }, [playing, audioFor, signed]); // eslint-disable-line
+
+  // keep the other versions of this song warmed up near the playhead, so switching is instant
+  const warm = useRef(0);
+  const warmSiblings = useCallback((t) => {
+    const c = curRef.current;
+    if (!c) return;
+    c.versions.filter((x) => x.id !== c.versionId).slice(-4).forEach((x) => {
+      const b = audioFor(x);
+      if (!b || !b.paused || b.readyState < 1) return;
+      let ok = false;
+      for (let k = 0; k < b.buffered.length; k++) if (b.buffered.start(k) <= t && b.buffered.end(k) > t + 4) ok = true;
+      if (!ok) { try { b.currentTime = t; } catch {} }
+    });
+  }, [audioFor]);
 
   /** Refresh the current song's versions (after a delivery or rename) without stopping. */
   const refresh = useCallback((songId, versions) => {
@@ -190,6 +225,7 @@ export function PlayerProvider({ eng, children }) {
       const r = rot.current, dt = Math.min(0.05, (ts - (r.last || ts)) / 1000); r.last = ts;
       const a = curAudio();
       if (a && playing && ts - r.lastSet > 200) { r.lastSet = ts; setTime(a.currentTime); }
+      if (a && playing && ts - warm.current > 3000) { warm.current = ts; warmSiblings(a.currentTime); }
       const target = playing ? 1 : 0;
       r.vel += (target - r.vel) * (target > r.vel ? 2.2 : 1.1) * dt;
       if (Math.abs(r.vel) > 0.001 && !phone.current) { r.angle = (r.angle + r.vel * 200 * dt) % 360; document.body.style.setProperty('--rot', r.angle.toFixed(2) + 'deg'); } // phones don't spin covers: skip the work

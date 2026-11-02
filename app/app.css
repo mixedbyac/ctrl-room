@@ -1906,3 +1906,17 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .demolist { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 2px; }
 .demolist li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px; padding: 8px 4px; border-top: 1px solid var(--line); }
 .demolist li .ttl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+
+/* Now Playing, decluttered: title + artist, one row of versions and icons, the waveform, the controls */
+.nprow { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; }
+.nprow .npvers { justify-content: flex-start; margin: 0; }
+.npicons { display: inline-flex; gap: 6px; }
+.npicon { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: none; border: 1px solid rgba(255,255,255,.14); color: rgba(255,255,255,.8); cursor: pointer; transition: color .15s, border-color .15s, background .15s; }
+.npicon svg { width: 17px; height: 17px; }
+.npicon:hover { color: #fff; border-color: rgba(255,255,255,.3); }
+.npicon.on { color: var(--sig); border-color: rgba(245,213,71,.5); background: rgba(245,213,71,.08); }
+.nptimes .npfmt { display: inline-flex; justify-content: center; }
+@media (min-width: 761px) {
+  .np .npfrom { visibility: hidden; }
+  .np .npskip { display: none; }
+}

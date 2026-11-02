@@ -1,6 +1,5 @@
 'use client';
 import ArtistName from '@/components/ArtistName';
-import Credit from '@/components/Credit';
 import NoteComposer from '@/components/NoteComposer';
 import { SongProgress, SongDetails } from '@/components/SongInfo';
 import QualityBadge from '@/components/QualityBadge';
@@ -423,7 +422,6 @@ function NowPlaying() {
       <div className="npinner">
         <div className="nptop">
           <span className="npfrom">Playing from <b>{c.project.title}</b></span>
-          <Link className="npopen" href={`/s/${c.song.id}`} onClick={close}>Notes &amp; details</Link>
           <button className="npclose" onClick={close} aria-label="Close the player"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg></button>
         </div>
         <div className="npdisc"><Cover as="div" {...artOf(c.song, c.project)} size={640} className="npart spin" /><span className="nphole" /></div>
@@ -431,25 +429,25 @@ function NowPlaying() {
         <div className="nphead">
           <div className="nphead-t">
             <h2 className="ttl">{c.song.title}</h2>
-            <p className="npsub"><ArtistName name={c.project.artist} /> · {c.project.title}</p>
-            <p className="npsub"><Credit project={c.project} /></p>
+            <p className="npsub"><ArtistName name={c.project.artist} />{c.project.title && c.project.title.toLowerCase() !== c.song.title.toLowerCase() ? <> · {c.project.title}</> : null}</p>
           </div>
-          <button className={`npcomment ${composing ? 'on' : ''}`} onClick={() => { if (composing) { setComposing(false); return; } setPinAt(pl.time); setComposing(true); }} aria-pressed={composing} aria-label={composing ? 'Close the comment box' : 'Add a comment at this moment'}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-7l-4 3v-3H5a1 1 0 01-1-1V6a1 1 0 011-1z" /><path d="M12 8.5v4M10 10.5h4" /></svg>
-            <span>Comment</span>
-          </button>
-          {v?.storage_path && (pl.eng || c.project?.allow_download) && <button className="npcomment npdl" onClick={() => downloadVersion(c.song, v)} aria-label={`Download ${v.label}`} title={`Download ${v.label}`}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>
-            <span>Download</span>
-          </button>}
-          <div className="npqual"><QualityBadge v={v} size="lg" detail /></div>
         </div>
-        {c.versions.length > 1 && (
-          <div className="npvers" role="group" aria-label="Versions">
-            {c.versions.map((x) => <button key={x.id} aria-pressed={x.id === c.versionId} onClick={() => pl.switchVersion(x.id)}>{x.label}</button>)}
-            <span className="nphint">keeps your spot</span>
-          </div>
-        )}
+        {/* one quiet row: versions on the left, comment + download on the right */}
+        <div className="nprow">
+          {c.versions.length > 1 ? (
+            <div className="npvers" role="group" aria-label="Versions (switching keeps your spot)">
+              {c.versions.map((x) => <button key={x.id} aria-pressed={x.id === c.versionId} onClick={() => pl.switchVersion(x.id)} title="Switch version, keeps your spot">{x.label}</button>)}
+            </div>
+          ) : <span />}
+          <span className="npicons">
+            <button className={`npicon ${composing ? 'on' : ''}`} onClick={() => { if (composing) { setComposing(false); return; } setPinAt(pl.time); setComposing(true); }} aria-pressed={composing} aria-label={composing ? 'Close the comment box' : 'Comment at this moment'} title="Comment">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-7l-4 3v-3H5a1 1 0 01-1-1V6a1 1 0 011-1z" /></svg>
+            </button>
+            {v?.storage_path && (pl.eng || c.project?.allow_download) && <button className="npicon" onClick={() => downloadVersion(c.song, v)} aria-label={`Download ${v.label}`} title="Download">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>
+            </button>}
+          </span>
+        </div>
         <div>
           <div className="npwavewrap">
             <Wave peaks={v?.peaks} time={pl.time} duration={pl.duration} onSeek={pl.seek} height={52} />
@@ -467,7 +465,7 @@ function NowPlaying() {
               </span>
             )}
           </div>
-          <div className="nptimes mono"><span>{mmss(pl.time)}</span><span className="npfmt">{v?.file_format ? `${v.file_format} · as delivered` : 'Original file'}</span><span className="npdur">{mmss(pl.duration)}</span><span className="npleft">-{mmss(Math.max(0, pl.duration - pl.time))}</span></div>
+          <div className="nptimes mono"><span>{mmss(pl.time)}</span><span className="npfmt"><QualityBadge v={v} /></span><span className="npdur">{mmss(pl.duration)}</span><span className="npleft">-{mmss(Math.max(0, pl.duration - pl.time))}</span></div>
         </div>
             {composing && (
           <NoteComposer now={pl.time} start={pinAt} duration={pl.duration} label={`On ${pl.version?.label || 'this mix'}`} onAt={(t) => setPinAt(t)}

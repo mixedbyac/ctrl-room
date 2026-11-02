@@ -3,6 +3,7 @@ import { drawWave } from '@/lib/wavedraw';
 import { makeArt } from '@/lib/art';
 import Credit, { BlueCheck } from '@/components/Credit';
 import QualityBadge from '@/components/QualityBadge';
+import { quality } from '@/lib/quality';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Cover from '@/components/Cover';
@@ -262,13 +263,13 @@ export default function SharedListen() {
           <div className="linfo">
             <p className="leyebrow">{data.kind === 'song' ? p.title : `${songs.length} song${songs.length === 1 ? '' : 's'}${p.release ? ` · ${new Date(p.release + 'T12:00').getFullYear()}` : ''}`}</p>
             <h1 className="ttl">{data.kind === 'song' ? cur?.title || 'Nothing to play yet' : p.title}</h1>
-            <div className="lartist">{ar?.image_url && <img src={ar.image_url} alt="" />}<span>{name}</span>{cur && <QualityBadge v={cur.version} size="md" />}</div>
+            <div className="lartist">{ar?.image_url && <img src={ar.image_url} alt="" />}<span>{name}</span></div>
             {data.credit && (data.credit.profile ? <p className="lcredit"><Credit profile={data.credit.profile} /></p>
               : <p className="credit lcredit">{data.credit.photo && <img src={data.credit.photo} alt="" />}<span>{data.credit.text}</span>{data.credit.verified && <BlueCheck kind="engineer" />}</p>)}
             {cur ? <>
               {data.kind === 'project' && <p className="lnow">{playing ? 'Playing' : 'Up'}: <b>{cur.title}</b></p>}
               <div><Wave peaks={cur.version.peaks} time={time} duration={dur} onSeek={seek} />
-                <div className="nptimes mono"><span>{mmss(time)}</span><span>{cur.approved ? 'Final mix' : 'Mix in progress'}</span><span>{mmss(dur)}</span></div></div>
+                <div className="nptimes mono"><span>{mmss(time)}</span><span className="npfmt">{quality(cur.version) ? <QualityBadge v={cur.version} info /> : cur.approved ? 'Final mix' : 'Mix in progress'}</span><span>{mmss(dur)}</span></div></div>
               {canComment && <button className="lcommentbtn" onClick={() => { if (big) { setBig(null); return; } if (!playing) toggle(); setBig({ compose: true }); }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-7l-4 3v-3H5a1 1 0 01-1-1V6a1 1 0 011-1z" /></svg>Comment at {mmss(time)}</button>}
               {data.downloads && data.downloads !== 'off' && <LinkDownload token={token} mode={data.downloads} song={cur} many={data.kind === 'project' && songs.length > 1} />}

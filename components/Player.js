@@ -465,7 +465,7 @@ function NowPlaying() {
               </span>
             )}
           </div>
-          <div className="nptimes mono"><span>{mmss(pl.time)}</span><span className="npfmt"><QualityBadge v={v} /></span><span className="npdur">{mmss(pl.duration)}</span><span className="npleft">-{mmss(Math.max(0, pl.duration - pl.time))}</span></div>
+          <div className="nptimes mono"><span>{mmss(pl.time)}</span><span className="npfmt"><QualityBadge v={v} info /></span><span className="npdur">{mmss(pl.duration)}</span><span className="npleft">-{mmss(Math.max(0, pl.duration - pl.time))}</span></div>
         </div>
             {composing && (
           <NoteComposer now={pl.time} start={pinAt} duration={pl.duration} label={`On ${pl.version?.label || 'this mix'}`} onAt={(t) => setPinAt(t)}

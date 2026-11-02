@@ -305,7 +305,7 @@ function MiniPlayer() {
         <button className="mopen" onClick={() => pl.setExpanded(!pl.expanded)} aria-label={`Open the player for ${c.song.title}`}><Cover as="div" {...artOf(c.song, c.project)} size={120} className="mart spin" /></button>
         <button className="mtext" onClick={() => pl.setExpanded(!pl.expanded)}>
           <b><span id="mtitle">{c.song.title}</span>{pl.playing && <span className="eq"><span /><span /><span /></span>}</b>
-          <span>{c.project.title} · {v.label}<QualityBadge v={v} short /></span>
+          <span>{c.project.title} · {v.label}</span>
         </button>
         <div className="mwave" ref={wrap} onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); seekAt(e); }} onPointerMove={(e) => { if (e.buttons) seekAt(e); }}><canvas ref={cv} /></div>
         <span className="mtime mono">{mmss(pl.time)} / {mmss(pl.duration)}</span>

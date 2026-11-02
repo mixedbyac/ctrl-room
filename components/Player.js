@@ -158,6 +158,7 @@ export function PlayerProvider({ eng, children }) {
       const next = { ...curRef.current, versionId };
       curRef.current = next; setCurrent(next); setDuration(b.duration || v.duration || 0);
       if (was) {
+        b.muted = false;
         b.play().then(() => { if (old && old !== b) old.pause(); setPlaying(true); }).catch(() => { if (old) old.pause(); setPlaying(false); });
       } else if (old && old !== b) old.pause();
     };
@@ -167,6 +168,8 @@ export function PlayerProvider({ eng, children }) {
     // otherwise: line the new one up a hair ahead, let it buffer while the old one keeps playing, then swap
     const prime = () => {
       try { b.currentTime = Math.min(now() + 0.25, (b.duration || Infinity) - 0.05); } catch {}
+      // phones (iPhone especially) only start audio from the tap itself: start the new one silently now, unmute on the swap
+      if (was) { b.muted = true; b.play().catch(() => {}); }
       let done = false;
       const fin = () => { if (done) return; done = true; b.removeEventListener('canplay', fin); clearTimeout(cap); swap(); };
       b.addEventListener('canplay', fin);

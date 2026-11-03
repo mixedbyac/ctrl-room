@@ -66,6 +66,15 @@ export default function SongMenu({ song, versions = [], project, eng, canEdit, q
     setBusy('');
   };
 
+  const removeDemo = async () => {
+    if (!demo || !window.confirm(`Delete the demo of ${song.title}? Its file and notes go too.`)) return;
+    const sb = supabase();
+    const { data, error } = await sb.from('versions').delete().eq('id', demo.id).select('id');
+    if (error || !data?.length) return say(error?.message || 'Couldn’t delete the demo. Refresh and try again.');
+    if (demo.storage_path) await sb.storage.from('mixes').remove([demo.storage_path]).catch(() => {});
+    window.dispatchEvent(new CustomEvent('ctrl-room:versions', { detail: { songId: song.id } }));
+    say('Demo deleted.'); onChange?.();
+  };
   const canDownload = has && last?.storage_path && (eng || project?.allow_download);
   const download = async () => {
     shut();
@@ -100,23 +109,24 @@ export default function SongMenu({ song, versions = [], project, eng, canEdit, q
             <>
               <button className="sback" onClick={() => setView('menu')}>‹ {song.title}</button>
               <dl className="sinfo-list">{info.map(([k, v]) => <div key={k}><dt>{k}</dt><dd className="mono">{v}</dd></div>)}</dl>
+              <span className="smore2">
+                {has && onVersions && <button role="menuitem" onClick={() => { shut(); onVersions(); }}>{versionsOpen ? 'Hide versions' : `Versions (${versions.length})`}</button>}
+                {canEdit && onRename && <button role="menuitem" onClick={() => { shut(); onRename(); }}>Rename</button>}
+                {canEdit && onMove && index > 0 && <button role="menuitem" onClick={() => { shut(); onMove(-1); }}>Move up</button>}
+                {canEdit && onMove && index < count - 1 && <button role="menuitem" onClick={() => { shut(); onMove(1); }}>Move down</button>}
+                {!page && <Link role="menuitem" href={`/s/${song.id}`} onClick={shut}>All notes &amp; details</Link>}
+              </span>
             </>
           ) : (
             <>
               <p className="spoptitle ttl">{song.title}</p>
-              {has && <button role="menuitem" onClick={() => { shut(); onPlay ? onPlay() : isCur ? pl.toggle() : pl.play({ songId: song.id, project, queue }); }}>{isCur && pl.playing ? 'Pause' : 'Play'}</button>}
-              {has && <button role="menuitem" onClick={() => { shut(); onComment?.(); }}>Add a comment</button>}
-              {has && onVersions && <button role="menuitem" onClick={() => { shut(); onVersions(); }}>{versionsOpen ? 'Hide versions' : `Versions (${versions.length})`}</button>}
-              {has && <button role="menuitem" onClick={() => { shut(); setSharing(true); }}>Share song</button>}
-              <button role="menuitem" onClick={() => setView('info')}>More info</button>
+              {has && <button role="menuitem" onClick={() => { shut(); setSharing(true); }}>Share</button>}
               {canDownload && <button role="menuitem" onClick={download}>Download {last.label}</button>}
               {eng && song.status === 'approved' && project?.id && <button role="menuitem" onClick={async () => { shut(); say('Sending the final file…'); try { const r = await api('/api/send-finals', { projectId: project.id, songIds: [song.id] }); say(`Sent ${song.title} to ${r.sent} ${r.sent === 1 ? 'person' : 'people'}.`); } catch (e) { say(e.message); } }}>Send file to artist</button>}
               {eng && <button role="menuitem" onClick={() => { shut(); mixIn.current?.click(); }}>Deliver new versions</button>}
               {(eng || canEdit) && !demo && <button role="menuitem" onClick={() => { shut(); demoIn.current?.click(); }}>Add a demo</button>}
-              {canEdit && onRename && <button role="menuitem" onClick={() => { shut(); onRename(); }}>Rename</button>}
-              {canEdit && onMove && index > 0 && <button role="menuitem" onClick={() => { shut(); onMove(-1); }}>Move up</button>}
-              {canEdit && onMove && index < count - 1 && <button role="menuitem" onClick={() => { shut(); onMove(1); }}>Move down</button>}
-              {!page && <Link role="menuitem" href={`/s/${song.id}`} onClick={shut}>All notes &amp; details</Link>}
+              {eng && demo && <button role="menuitem" className="danger" onClick={() => { shut(); removeDemo(); }}>Delete the demo</button>}
+              <button role="menuitem" onClick={() => setView('info')}>More…</button>
             </>
           )}
         </div>

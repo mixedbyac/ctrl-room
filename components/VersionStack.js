@@ -99,8 +99,10 @@ export default function VersionStack({ song, project, versions, noteCounts = {},
     if (!window.confirm(`Delete ${v.label} of ${song.title}? Its file and notes go too. This can’t be undone.`)) return;
     const sb = supabase();
     if (song.approved_version === v.id) await sb.from('songs').update({ approved_version: null, approved_at: null, status: 'review' }).eq('id', song.id);
-    const { error } = await sb.from('versions').delete().eq('id', v.id);
+    const { data: gone, error } = await sb.from('versions').delete().eq('id', v.id).select('id');
     if (error) return setMsg(error.message);
+    if (!gone?.length) return setMsg(`Couldn’t delete ${v.label}. Refresh the page and try again.`);
+    window.dispatchEvent(new CustomEvent('ctrl-room:versions', { detail: { songId: song.id } }));
     if (v.storage_path) await sb.storage.from('mixes').remove([v.storage_path]).catch(() => {});
     setMsg(`Deleted ${v.label}.`); onChange?.();
   };

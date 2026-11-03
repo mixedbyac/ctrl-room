@@ -16,7 +16,14 @@ export default function Inbox() {
   const [view, setView] = useState('inbox');
   const [msg, setMsg] = useState('');
   const load = useCallback(async () => {
-    const { data } = await supabase().from('uploads').select('*, projects(id,title,seed,artist,cover_path)').order('created_at', { ascending: false }).limit(100);
+    const sb = supabase();
+    const { data } = await sb.from('uploads').select('*, projects(id,title,seed,artist,cover_path)').order('created_at', { ascending: false }).limit(100);
+    // downloaded sends file themselves into Archived (also ones downloaded before this existed)
+    // (once: after that, a send you move back to the inbox stays there)
+    let done = false; try { done = localStorage.getItem('ctrl-inbox-autoarchived') === '1'; } catch {}
+    const stale = done ? [] : (data || []).filter((u) => u.downloaded_at && u.archived === false);
+    try { localStorage.setItem('ctrl-inbox-autoarchived', '1'); } catch {}
+    if (stale.length) { const { error } = await sb.from('uploads').update({ archived: true }).in('id', stale.map((u) => u.id)); if (!error) stale.forEach((u) => { u.archived = true; }); }
     setRows(data || []);
   }, []);
   useEffect(() => { if (eng) load(); }, [eng, load]);
@@ -26,7 +33,7 @@ export default function Inbox() {
 
   const markDownloaded = async (u) => {
     const sb = supabase();
-    await sb.from('uploads').update({ downloaded_at: new Date().toISOString() }).eq('id', u.id);
+    await sb.from('uploads').update({ downloaded_at: new Date().toISOString(), archived: true }).eq('id', u.id); // downloaded = done: straight to Archived
     for (const s of u.songs || []) {
       if (!s.files) continue;
       await sb.from('songs').update({ downloaded_at: todayISO() }).eq('id', s.songId);

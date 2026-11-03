@@ -138,7 +138,7 @@ export default function Portal() {
         const audio = s.files.filter((x) => isAudio(x.name));
         const demo = audio.find((x) => fileKind(x.webkitRelativePath || x.name) === 'Rough mix')
           || (audio.length === 1 && ['Audio', 'Beat'].includes(fileKind(audio[0].name)) ? audio[0] : null);
-        if (demo && demo.size <= 45 * 1024 * 1024) {
+        if (demo && demo.size <= 1024 * 1024 * 1024) { // demos up to 1 GB (Supabase Pro)
           try { setProgress((pr) => ({ ...pr, file: `${demo.name} (demo)` })); await uploadDemo({ songId: match.songId, file: demo, uploadId: r.uploadId }); } catch { /* the files still went to Dropbox */ }
         }
       }

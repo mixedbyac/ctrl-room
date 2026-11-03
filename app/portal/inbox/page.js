@@ -5,10 +5,12 @@ import Link from 'next/link';
 import { supabase, api } from '@/lib/supabase';
 import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
+import SendOut from '@/components/SendOut';
 import { fmtBytes, ago, todayISO } from '@/lib/format';
 
 export default function Inbox() {
   const { eng, session } = useApp();
+  const [tool, setTool] = useState(null);
   const [rows, setRows] = useState(null);
   const [copied, setCopied] = useState(false);
   const [view, setView] = useState('inbox');
@@ -54,6 +56,12 @@ export default function Inbox() {
           <div className="share-link" style={{ marginTop: 14 }}><code>{portalLink}</code>
             <button className={`btn small copybtn ${copied ? 'done' : ''}`} onClick={async () => { try { await navigator.clipboard.writeText(portalLink); setCopied(true); setTimeout(() => setCopied(false), 2200); } catch {} }}>{copied ? '✓ Copied' : 'Copy Portal link'}</button>
             <Link className="btn small" href="/dropbox">Dropbox settings</Link></div>
+          <div className="ptools" role="tablist" aria-label="Portal tools">
+            <button role="tab" aria-selected={tool === 'link'} onClick={() => setTool(tool === 'link' ? null : 'link')}>⇪ Link for one project</button>
+            <button role="tab" aria-selected={tool === 'send'} onClick={() => setTool(tool === 'send' ? null : 'send')}>➚ Send files to an artist</button>
+          </div>
+          {tool === 'link' && <ProjectLink />}
+          {tool === 'send' && <SendOut />}
         </div>
         <div className="inbox">
           <div className="itabs" role="tablist">
@@ -86,5 +94,31 @@ export default function Inbox() {
         </div>
       </section>
     </>
+  );
+}
+
+/** A sendfileshere link for one project: whatever's sent with it drops straight into that project. */
+function ProjectLink() {
+  const { projects = [] } = useApp() || {};
+  const [pid, setPid] = useState('');
+  const [url, setUrl] = useState('');
+  const [msg, setMsg] = useState('');
+  const [copied, setCopied] = useState(false);
+  const get = (id, reset = false) => { setUrl(''); setMsg(''); if (!id) return; api('/api/portal/linkfor', { projectId: id, reset }).then((r) => setUrl(r.url)).catch((e) => setMsg(e.message)); };
+  const copy = async () => { try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2200); } catch { setMsg('Select the link and copy it.'); } };
+  return (
+    <div className="panel sendout" style={{ marginTop: 14 }}>
+      <h3>Link for one project</h3>
+      <p className="muted small" style={{ margin: 0 }}>Files sent with this link go straight into that project: no account and no picking a project. Same song names add to those songs; new names become new songs.</p>
+      <div className="fld"><label htmlFor="pl-p">Project</label>
+        <select id="pl-p" value={pid} onChange={(e) => { setPid(e.target.value); get(e.target.value); }}>
+          <option value="">Pick a project…</option>
+          {projects.filter((p) => !p.archived).map((p) => <option key={p.id} value={p.id}>{p.artist ? `${p.artist} · ` : ''}{p.title}</option>)}
+        </select></div>
+      {pid && <div className="share-link"><code>{url || 'Making the link…'}</code>
+        <button className={`btn small copybtn ${copied ? 'done' : ''}`} onClick={copy} disabled={!url}>{copied ? '✓ Copied' : 'Copy link'}</button>
+        <button className="btn small quiet" disabled={!url} onClick={() => { if (window.confirm('Make a new link? The old one stops working.')) get(pid, true); }}>Reset</button></div>}
+      {msg && <p className="toast-inline">{msg}</p>}
+    </div>
   );
 }

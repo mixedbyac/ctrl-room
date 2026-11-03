@@ -50,7 +50,7 @@ export default function ShareButton({ kind, id, eng, title, open: openProp, onOp
           <p className="shtitle">Share this {what}</p>
           {!st && !msg && <p className="muted small">Getting the link…</p>}
           {st?.allowed && <>
-            <p className="muted small">Anyone with the link can listen{kind === 'project' ? ' to every song' : ''}. No account needed. They can’t see notes or other versions.</p>
+            <p className="muted small">Anyone with the link can listen{kind === 'project' ? ' to every song' : ''}. No account needed. They can’t see your private notes.</p>
             <div className="shlink"><input readOnly value={st.url} onFocus={(e) => e.target.select()} aria-label="Share link" /></div>
             <div className="row-actions">
               <button className={`btn small primary copybtn ${copied ? 'done' : ''}`} onClick={copy} aria-live="polite">{copied ? '✓ Copied' : 'Copy link'}</button>
@@ -66,6 +66,10 @@ export default function ShareButton({ kind, id, eng, title, open: openProp, onOp
             <label className="shrow">
               <span><b>Comments on the link</b><span className="muted small">{st.comments ? 'People with the link can comment and react. Your notes show on the link too.' : 'Off: notes stay private to you and the project team.'}</span></span>
               <button className="switch" role="switch" aria-checked={!!st.comments} disabled={busy} onClick={() => call({ action: 'comments', on: !st.comments })}><i /></button>
+            </label>
+            <label className="shrow">
+              <span><b>All versions on the link</b><span className="muted small">{st.versions ? 'People can flip between every version (and the demo).' : 'Off: only the current mix plays.'}</span></span>
+              <button className="switch" role="switch" aria-checked={!!st.versions} disabled={busy} onClick={() => call({ action: 'versions', on: !st.versions })}><i /></button>
             </label>
             <label className="shrow">
               <span><b>Approve button on the link</b><span className="muted small">{st.approve ? 'The artist’s team can approve right from the link (they sign in first).' : 'Off: they approve from CTRL ROOM.'}</span></span>

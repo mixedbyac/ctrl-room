@@ -135,6 +135,37 @@ function SharePlayer({ cur, p, name, artSrc, artSeed, playing, toggle, time, dur
   );
 }
 
+/** The version button on a share link: tap for the list, pick one, keep your spot. */
+function LinkVersions({ list, cur, approvedId, onPick }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const off = (e) => { if (box.current && !box.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('pointerdown', off);
+    return () => document.removeEventListener('pointerdown', off);
+  }, [open]);
+  return (
+    <span className="vpick up" ref={box}>
+      <button type="button" className="vpickbtn" style={{ height: 40 }} onClick={() => setOpen(!open)} aria-expanded={open} aria-haspopup="listbox" title="Switch version (keeps your spot)">
+        <span className="mono">{cur.label}</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 10l5 5 5-5" /></svg>
+      </button>
+      {open && (
+        <div className="vpicklist" role="listbox" aria-label="Versions">
+          {list.map((x, i) => (
+            <button key={x.id} role="option" aria-selected={x.id === cur.id} onClick={() => { onPick(x.id); setOpen(false); }}>
+              <span className="mono">{x.label}</span>
+              <small>{x.demo ? '' : approvedId === x.id ? 'Approved' : i === 0 ? 'Latest' : x.created_at ? new Date(x.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}</small>
+              {x.id === cur.id && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>}
+            </button>
+          ))}
+        </div>
+      )}
+    </span>
+  );
+}
+
 export default function SharedListen() {
   const { token } = useParams();
   const [ltab, setLtab] = useState('progress');
@@ -179,9 +210,23 @@ export default function SharedListen() {
       .then((r) => r.json()).then((j) => { if (j.id) t.id = j.id; }).catch(() => {}).finally(() => { t.creating = false; });
   }, [token]);
 
+  // switching versions: keep the spot (and keep playing if it was)
+  const resume = useRef(null);
+  const switchVersion = (vid) => {
+    const nv = cur?.vlist?.find((x) => x.id === vid);
+    if (!nv || nv.id === cur.version.id) return;
+    const a = audio.current;
+    resume.current = { t: a ? a.currentTime : 0, play: !!(a && !a.paused) };
+    setData((d) => ({ ...d, songs: d.songs.map((s, i) => (i === idx ? { ...s, version: nv } : s)) }));
+  };
   useEffect(() => {
     if (!cur) return;
     const a = new Audio(); a.preload = 'auto'; a.src = cur.version.url; a.volume = 1;
+    const res = resume.current; resume.current = null;
+    if (res) {
+      const go = () => { try { a.currentTime = Math.min(res.t, (a.duration || res.t + 1) - 0.05); } catch {} setTime(res.t); if (res.play) a.play().then(() => setPlaying(true)).catch(() => setPlaying(false)); };
+      if (a.readyState >= 1) go(); else a.addEventListener('loadedmetadata', go, { once: true });
+    }
     audio.current = a;
     track.current = { songId: cur.id, vid: cur.version.id, id: null, listened: 0, duration: cur.version.duration, bins: new Set(), last: 0, saved: 0 };
     const onMeta = () => setDur(a.duration || cur.version.duration || 0);
@@ -203,9 +248,10 @@ export default function SharedListen() {
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    setTime(0); setDur(cur.version.duration || 0);
+    if (!res) setTime(0);
+    setDur(cur.version.duration || 0);
     return () => { cancelAnimationFrame(raf); a.pause(); a.removeEventListener('loadedmetadata', onMeta); a.removeEventListener('ended', onEnd); report(); audio.current = null; };
-  }, [cur?.id]); // eslint-disable-line
+  }, [cur?.id, cur?.version?.id]); // eslint-disable-line
 
   // lock screen / Control Center: cover art, title, artist and controls
   useEffect(() => {
@@ -272,7 +318,8 @@ export default function SharedListen() {
               <div><Wave peaks={cur.version.peaks} time={time} duration={dur} onSeek={seek} />
                 <div className="nptimes mono"><span>{mmss(time)}</span><span className="npfmt">{quality(cur.version) ? <QualityBadge v={cur.version} info /> : cur.approved ? 'Final mix' : 'Mix in progress'}</span><span>{mmss(dur)}</span></div></div>
               <div className="lacts">
-              {data.approve !== false && <ApproveButton songId={cur.id} versionId={cur.version.id} label={cur.version.label} title={cur.title} approved={cur.approved} signInHref={`/login?next=${encodeURIComponent(`/l/${token}`)}`} tipKey="cr_tip_approve_link" />}
+              {cur.vlist?.length > 1 && <LinkVersions list={cur.vlist} cur={cur.version} approvedId={cur.approvedVersion} onPick={switchVersion} />}
+              {data.approve !== false && <ApproveButton songId={cur.id} versionId={cur.version.id} label={cur.version.label} title={cur.title} approved={cur.approved && (!cur.approvedVersion || cur.approvedVersion === cur.version.id)} signInHref={`/login?next=${encodeURIComponent(`/l/${token}`)}`} tipKey="cr_tip_approve_link" />}
               {canComment && <button className="lcommentbtn" title="Comment at this moment" onClick={() => { if (big) { setBig(null); return; } if (!playing) toggle(); setBig({ compose: true }); }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-7l-4 3v-3H5a1 1 0 01-1-1V6a1 1 0 011-1z" /></svg>Comment at {mmss(time)}</button>}
               {data.downloads && data.downloads !== 'off' && <LinkDownload token={token} mode={data.downloads} song={cur} many={data.kind === 'project' && songs.length > 1} />}

@@ -28,6 +28,11 @@ export async function POST(req) {
     const { data: pr } = await db.from('projects').select('settings').eq('id', projectId).single();
     await db.from('projects').update({ settings: { ...(pr?.settings || {}), share_comments: !!b.on } }).eq('id', projectId);
   }
+  if (action === 'versions') {
+    if (!eng) return fail('Only the engineer can change that.', 403);
+    const { data: pr } = await db.from('projects').select('settings').eq('id', projectId).single();
+    await db.from('projects').update({ settings: { ...(pr?.settings || {}), share_versions: !!b.on } }).eq('id', projectId);
+  }
   if (action === 'approve') {
     if (!eng) return fail('Only the engineer can change that.', 403);
     const { data: pr } = await db.from('projects').select('settings').eq('id', projectId).single();
@@ -48,7 +53,7 @@ export async function POST(req) {
 
   const allowed = proj?.sharing !== false && row.sharing !== false;
   const { data: pset } = await db.from('projects').select('settings').eq('id', projectId).single();
-  const out = { allowed, sharing: row.sharing !== false, projectSharing: proj?.sharing !== false, comments: !!pset?.settings?.share_comments, downloads: pset?.settings?.share_downloads || 'off', approve: pset?.settings?.share_approve !== false, url: null };
+  const out = { allowed, sharing: row.sharing !== false, projectSharing: proj?.sharing !== false, comments: !!pset?.settings?.share_comments, downloads: pset?.settings?.share_downloads || 'off', approve: pset?.settings?.share_approve !== false, versions: pset?.settings?.share_versions !== false, url: null };
   if (!allowed) return json(out);
   let token = row.share_token;
   if (!token) {

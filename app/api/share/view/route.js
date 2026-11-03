@@ -47,7 +47,16 @@ export async function GET(req) {
       const { data: c } = await db.storage.from('mixes').createSignedUrl(artPath, 60 * 60 * 6);
       cover = c?.signedUrl || null;
     }
-    list.push({ id: s.id, title: s.title, seed: artSeed, cover, approved: s.status === 'approved',
+    // every version, so people on the link can flip between them (on unless the engineer turned it off)
+    let vlist = null;
+    if (project.settings?.share_versions !== false && vs.length > 1) {
+      const { data: us } = await db.storage.from('mixes').createSignedUrls(vs.map((x) => x.storage_path), 60 * 60 * 6);
+      const shape = (x, url) => ({ id: x.id, label: x.label, duration: x.duration, peaks: x.peaks, url, file_format: x.file_format, bit_depth: x.bit_depth, sample_rate: x.sample_rate, created_at: x.created_at, demo: isDemo(x) });
+      const act = v.id;
+      vlist = vs.map((x, i) => (us?.[i]?.signedUrl ? shape(x, us[i].signedUrl) : null)).filter(Boolean)
+        .sort((a, b) => (a.id === act ? -1 : b.id === act ? 1 : a.demo !== b.demo ? (a.demo ? 1 : -1) : String(b.created_at).localeCompare(String(a.created_at))));
+    }
+    list.push({ id: s.id, title: s.title, seed: artSeed, cover, approved: s.status === 'approved', approvedVersion: s.approved_version || null, vlist,
       bpm: s.bpm || null, key: s.musical_key || null, versions: vs.filter((x) => !isDemo(x)).length,
       steps: { received: s.received_at || null, mixing: s.mixing_at || null, review: (vs.filter((x) => !isDemo(x)).at(-1)?.created_at || '').slice(0, 10) || null, approved: s.approved_at ? String(s.approved_at).slice(0, 10) : null },
       version: { id: v.id, label: v.label, duration: v.duration, peaks: v.peaks, url: u.signedUrl, file_format: v.file_format, bit_depth: v.bit_depth, sample_rate: v.sample_rate, created_at: v.created_at } });
@@ -67,6 +76,7 @@ export async function GET(req) {
     kind: song ? 'song' : 'project',
     downloads: project.settings?.share_downloads || 'off',
     approve: project.settings?.share_approve !== false,
+    showVersions: project.settings?.share_versions !== false,
     project: { title: project.title, artist: project.artist, type: project.type, release: project.release, seed: project.seed, cover: pcover },
     artist: artist || null,
     songs: list,

@@ -112,7 +112,14 @@ export default function Portal() {
     songs.forEach((s, i) => { if (!s.title.trim()) s.title = `Song ${i + 1}`; });
     if (bytes > LIMIT_SEND) return setErr(`That’s ${fmtBytes(bytes)}. Each upload can be up to 2 GB, so send the rest in a second upload.`);
     if (!fileCount) return setErr('Add files for at least one song. Drop them on the song they belong to.');
+    return doSend(songs, f);
+  };
 
+  // sends the songs' files (used by the full form and by a project's simple drop link)
+  const doSend = async (songs, f) => {
+    const bytes = songs.reduce((n, s) => n + s.files.reduce((m, x) => m + x.size, 0), 0);
+    const fileCount = songs.reduce((n, s) => n + s.files.length, 0);
+    setErr('');
     setState('sending');
     try {
       const r = await api('/api/portal', {
@@ -163,6 +170,16 @@ export default function Portal() {
     }
   };
 
+  if (state === 'done' && target) {
+    return (
+      <section className="bigdrop done">
+        <div className="bdbox"><div className="bdcheck" aria-hidden="true">✓</div>
+          <h1 className="up">Sent</h1>
+          <p>{result.files} file{result.files > 1 ? 's' : ''} ({fmtBytes(result.bytes)}) went into <b>{target.title}</b>.</p>
+          <button className="btn" onClick={() => setState('idle')}>Send more</button></div>
+      </section>
+    );
+  }
   if (state === 'done') {
     return (
       <>
@@ -187,6 +204,12 @@ export default function Portal() {
 
   const sending = state === 'sending';
   const pct = progress.total ? Math.round((progress.sent / progress.total) * 100) : 0;
+  // a project's send link: just one big drop box, straight into that project
+  if (target || /[?&]to=/.test(typeof window !== 'undefined' ? window.location.search : '')) {
+    return <BigDrop target={target} err={err} sending={sending} pct={pct} progress={progress} me={{ name: f.name, email: f.email }}
+      onSend={(list, who) => { if (!target) return; if (list.reduce((n, s) => n + s.files.reduce((m, x) => m + x.size, 0), 0) > LIMIT_SEND) return setErr('That’s over 2 GB. Send the rest in a second drop.');
+        doSend(list, { ...f, name: who.name.trim(), email: who.email.trim(), artist: target.artist || '', who: 'Artist', message: '', deadline: '' }); }} />;
+  }
   return (
     <>
       <TopBar crumbs={[{ label: 'Portal' }]} />
@@ -269,6 +292,7 @@ export default function Portal() {
             {err && <p className="ferr">{err}</p>}
             <button className="send" type="submit" form="pform" disabled={sending}>{sending ? 'Sending… keep this page open' : 'Send to the CTRL ROOM'}</button>
             <p className="fine">Up to 2 GB per upload.</p>
+            <p className="tosline">By sending, you agree to the <a href="https://art-house.us/tos" target="_blank" rel="noopener noreferrer">Terms of Service</a>.</p>
           </aside>
         </div>
       </section>
@@ -397,4 +421,72 @@ async function putChunked(meta, file, onProgress) {
     onProgress(offset);
   }
   if (first.size >= file.size) await send('finish', new Blob([]), { 'x-session': session, 'x-offset': String(offset) });
+}
+
+/** The page a project's send link opens: one big drop box. Folders become songs; files named after a song join it. */
+function BigDrop({ target, err, sending, pct, progress, me, onSend }) {
+  const [hot, setHot] = useState(false);
+  const [list, setList] = useState([]); // songs: { k, title, files }
+  const [who, setWho] = useState({ name: me.name || '', email: me.email || '' });
+  useEffect(() => { setWho((w) => ({ name: w.name || me.name || '', email: w.email || me.email || '' })); }, [me.name, me.email]);
+  const pick = useRef(null), pickDir = useRef(null);
+  const norm = (t) => String(t || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  const add = ({ files, folders }) => {
+    setList((cur) => {
+      let ss = [...cur];
+      const into = (title, fs) => {
+        const t = title || target?.title || 'Files';
+        const have = ss.find((x) => norm(x.title) === norm(t));
+        if (have) ss = ss.map((x) => (x === have ? { ...x, files: [...x.files, ...fs] } : x));
+        else ss = [...ss, { k: Math.random().toString(36).slice(2), title: t, files: fs }];
+      };
+      const known = (guess) => (target?.songs || []).find((n) => norm(n) === norm(guess));
+      for (const fo of folders) into(known(fo.name) || fo.name, fo.files);
+      const loose = {};
+      for (const file of files) {
+        const guess = parseMixName((titleSource(file.name) || file.name) + '.wav', { artist: target?.artist || '' }).title;
+        const t = known(guess) || (files.length === 1 && guess) || (target?.songs?.length === 1 ? target.songs[0] : '') || 'Files';
+        (loose[t] = loose[t] || []).push(file);
+      }
+      Object.entries(loose).forEach(([t, fs]) => into(t === 'Files' ? `Files ${new Date().toLocaleDateString()}` : t, fs));
+      return ss;
+    });
+  };
+  const fromInput = (fl) => {
+    const arr = Array.from(fl || []);
+    const dirs = {}; const loose = [];
+    arr.forEach((x) => { const top = (x.webkitRelativePath || '').split('/')[0]; if (top && x.webkitRelativePath.includes('/')) (dirs[top] = dirs[top] || []).push(x); else loose.push(x); });
+    add({ files: loose, folders: Object.entries(dirs).map(([name, files]) => ({ name, files })) });
+  };
+  const count = list.reduce((n, s) => n + s.files.length, 0), bytes = list.reduce((n, s) => n + s.files.reduce((m, x) => m + x.size, 0), 0);
+  return (
+    <section className="bigdrop">
+      <div className={`bdbox${hot ? ' hot' : ''}${count ? ' has' : ''}`}
+        onDragOver={(e) => { e.preventDefault(); setHot(true); }} onDragLeave={() => setHot(false)}
+        onDrop={async (e) => { e.preventDefault(); setHot(false); if (sending) return; add(await filesFromDrop(e.dataTransfer)); }}
+        onClick={(e) => { if (!count && !sending && e.target === e.currentTarget) pick.current?.click(); }}>
+        {!target && !err && <p className="bdsub">Loading…</p>}
+        {err && !target && <p className="ferr">{err}</p>}
+        {target && <>
+          <div className="bdicon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" /></svg></div>
+          <h1 className="up">{sending ? `Sending ${pct}%` : count ? `${count} file${count > 1 ? 's' : ''} · ${fmtBytes(bytes)}` : 'Drop files'}</h1>
+          <p className="bdsub">{sending ? (progress.file || 'Keep this page open') : <>for <b>{target.title}</b></>}</p>
+          {sending && <div className="pbar"><i style={{ width: `${pct}%` }} /></div>}
+          {!sending && !count && <div className="dzbtns"><button type="button" className="btn" onClick={() => pick.current?.click()}>Choose files</button><button type="button" className="btn" onClick={() => pickDir.current?.click()}>Choose a folder</button></div>}
+          {!sending && count > 0 && <>
+            <ul className="bdlist">{list.map((s) => <li key={s.k}><span>{s.title}</span><small>{s.files.length} · {fmtBytes(s.files.reduce((m, x) => m + x.size, 0))}</small><button type="button" aria-label={`Remove ${s.title}`} onClick={() => setList((l) => l.filter((x) => x.k !== s.k))}>×</button></li>)}</ul>
+            <div className="bdwho">
+              <input aria-label="Your name (optional)" placeholder="Your name (optional)" value={who.name} onChange={(e) => setWho({ ...who, name: e.target.value })} />
+              <input aria-label="Email for a receipt (optional)" type="email" placeholder="Email for a receipt (optional)" value={who.email} onChange={(e) => setWho({ ...who, email: e.target.value })} />
+            </div>
+            {err && <p className="ferr">{err}</p>}
+            <div className="dzbtns"><button type="button" className="btn primary" onClick={() => onSend(list, who)}>Send</button><button type="button" className="btn" onClick={() => pick.current?.click()}>Add more</button></div>
+            <p className="tosline">By sending, you agree to the <a href="https://art-house.us/tos" target="_blank" rel="noopener noreferrer">Terms of Service</a>.</p>
+          </>}
+        </>}
+        <input ref={pick} className="vh" type="file" multiple onChange={(e) => { fromInput(e.target.files); e.target.value = ''; }} />
+        <input ref={pickDir} className="vh" type="file" multiple webkitdirectory="" directory="" onChange={(e) => { fromInput(e.target.files); e.target.value = ''; }} />
+      </div>
+    </section>
+  );
 }

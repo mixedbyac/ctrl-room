@@ -643,3 +643,24 @@ body.playing .logo{animation:sunspin 12s linear infinite}
   .ucard .acts{grid-column:1/-1;justify-items:start;grid-auto-flow:column;justify-content:start}
 }
 @media (prefers-reduced-motion:reduce){ body.playing .logo{animation:none} .pc-rec,.pc-art img,.day{transition:none!important} body.playing .ambient{animation:none} .drop::before,.dzmark,.record,.sleeve,.hub,.arm{transition:none!important} .eq span,.drop::before,.rows .row,.sleeve,.record,.bigdisc,.bigdisc .art,.sinfo > *{animation:none!important} }
+
+/* a project's send link: one big drop box */
+.bigdrop{min-height:100dvh;display:grid;place-items:center;padding:24px 16px}
+.bigdrop .bdbox{width:min(760px,100%);min-height:min(70dvh,560px);border:2px dashed var(--line,#333);border-radius:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:40px 24px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s,transform .2s}
+.bigdrop .bdbox.has{cursor:default}
+.bigdrop .bdbox.hot{border-color:var(--sig);background:color-mix(in srgb,var(--sig) 7%,transparent);transform:scale(1.01)}
+.bigdrop .bdicon{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--sig) 14%,transparent);color:var(--sig)}
+.bigdrop .bdicon svg{width:34px;height:34px}
+.bigdrop h1{font-size:clamp(32px,6vw,56px);margin:0;line-height:1}
+.bigdrop .bdsub{margin:0;opacity:.7;max-width:46ch;overflow:hidden;text-overflow:ellipsis}
+.bigdrop .pbar{width:min(420px,100%)}
+.bigdrop .bdlist{list-style:none;margin:4px 0 0;padding:0;width:min(460px,100%);display:grid;gap:6px;text-align:left}
+.bigdrop .bdlist li{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:12px;background:color-mix(in srgb,currentColor 6%,transparent)}
+.bigdrop .bdlist span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bigdrop .bdlist small{opacity:.6;white-space:nowrap}
+.bigdrop .bdlist button{background:none;border:0;color:inherit;opacity:.5;font-size:18px;cursor:pointer;padding:0 4px}
+.bigdrop .bdwho{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:min(460px,100%)}
+.bigdrop .bdwho input{min-width:0}
+@media (max-width:520px){.bigdrop .bdwho{grid-template-columns:1fr}}
+.bigdrop .bdcheck{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;background:var(--sig);color:#000;font-size:34px;font-weight:700}
+.tosline{font-size:12px;opacity:.6;margin:6px 0 0}.tosline a{color:inherit;text-decoration:underline}

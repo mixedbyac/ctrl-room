@@ -10,11 +10,13 @@ export async function POST(req) {
   const slow = limit(req, 'portal', 20, 3600000); if (slow) return slow;
   const b = await req.json().catch(() => null);
   if (!b) return fail('Missing form data.');
-  const name = String(b.name || '').trim(), email = String(b.email || '').trim().toLowerCase();
-  const artist = String(b.artist || '').trim(), phone = String(b.phone || '').trim();
+  let name = String(b.name || '').trim(); const email = String(b.email || '').trim().toLowerCase();
+  let artist = String(b.artist || '').trim(); const phone = String(b.phone || '').trim();
   const songs = Array.isArray(b.songs) ? b.songs.filter((s) => String(s.title || '').trim()).slice(0, 40) : [];
-  if (!name || !artist) return fail('Add your name and the artist name.');
-  if (!/^\S+@\S+\.\S+$/.test(email)) return fail('Add a valid email address.');
+  // a project's send link (sendfileshere.com/?to=…) is just a drop box: who sent it is optional (checked against the project below)
+  const linkSend = !!(b.projectId && b.portalToken);
+  if (!linkSend && (!name || !artist)) return fail('Add your name and the artist name.');
+  if ((!linkSend || email) && !/^\S+@\S+\.\S+$/.test(email)) return fail('Add a valid email address.');
   if (!songs.length) return fail('Add at least one song.');
 
   // what the sender does (Artist, Manager…): decides their role once they make an account and confirm their email
@@ -29,10 +31,13 @@ export async function POST(req) {
     const viaLink = p && b.portalToken && p.settings?.portal_token && b.portalToken === p.settings.portal_token;
     const ok = p && (viaLink || (user && (await canSee(user, p.id))));
     if (!ok) return fail('You don’t have access to that project. Ask your engineer to add you to the artist’s team.', 403);
+    if (linkSend && !viaLink && (!name || !artist)) return fail('Add your name and the artist name.');
     project = p;
+    if (!artist) artist = p.artist || '';
+    if (!name) name = 'Send link';
     const patch = {};
     if (phone && !p.phone) patch.phone = phone;
-    if (!p.contact_name) patch.contact_name = name;
+    if (!p.contact_name && name !== 'Send link') patch.contact_name = name;
     if (Object.keys(patch).length) await db.from('projects').update(patch).eq('id', p.id);
   } else {
     const t = b.project || {};

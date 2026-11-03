@@ -283,6 +283,24 @@ export default function SharedListen() {
 
   useEffect(() => { document.body.classList.toggle('playing', playing); return () => document.body.classList.remove('playing'); }, [playing]);
 
+  // a new CTRL ROOM update went live: refresh this link by itself (never mid-song)
+  const staleBuild = useRef(false);
+  useEffect(() => {
+    const mine = process.env.NEXT_PUBLIC_BUILD_ID || 'dev';
+    if (mine === 'dev') return;
+    const check = async () => {
+      try {
+        const { build } = await fetch('/api/version', { cache: 'no-store' }).then((r) => r.json());
+        if (build && build !== 'dev' && build !== mine) staleBuild.current = true;
+      } catch {}
+      if (staleBuild.current && (!audio.current || audio.current.paused) && !document.querySelector('.qsheet, .lquick textarea:focus')) window.location.reload();
+    };
+    const t = setInterval(check, 60_000);
+    const onVis = () => { if (document.visibilityState === 'visible') check(); };
+    document.addEventListener('visibilitychange', onVis);
+    check();
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', onVis); };
+  }, []);
   const [playErr, setPlayErr] = useState('');
   // play / pause; if the browser refuses (an expired or half-loaded file), reload it once and try again, and say why if it still won't
   const toggle = () => {

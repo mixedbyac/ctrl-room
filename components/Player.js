@@ -82,7 +82,7 @@ export function PlayerProvider({ eng, children }) {
       a.preload = 'auto';
       a.volume = 1;
       a.src = u;
-      a.addEventListener('ended', () => { if (curRef.current?.versionId === v.id) { setPlaying(false); nextRef.current?.(true); } });
+      a.addEventListener('ended', () => { if (curRef.current?.versionId === v.id) nextRef.current?.(true); });
       a.addEventListener('loadedmetadata', () => { if (curRef.current?.versionId === v.id) setDuration(a.duration || 0); });
       a.addEventListener('ctrl-room:stopped', () => { if (curRef.current?.versionId === v.id) { stopAll(); setPlaying(false); } }); // something else started playing
       // link expired (left paused a long time): get a fresh one and carry on from the same spot
@@ -255,8 +255,28 @@ export function PlayerProvider({ eng, children }) {
     const i = ids.indexOf(c.song.id);
     const to = ids[i + dir];
     if (!to) { if (auto) setPlaying(false); return; }
-    await play({ songId: to, queue: ids });
+    const pre = nextData.current?.songId === to ? nextData.current : null; // already fetched near the end of the last song
+    await play(pre ? { songId: to, song: pre.song, project: pre.project, versions: pre.versions, queue: ids } : { songId: to, queue: ids });
   }, [queue, play, seek]); // eslint-disable-line
+  // last stretch of a song: fetch and start loading the next one so it starts with no gap
+  const nextData = useRef(null);
+  const prepareNext = useCallback(async () => {
+    const c = curRef.current;
+    if (!c) return;
+    const ids = queue.length ? queue : [c.song.id];
+    const to = ids[ids.indexOf(c.song.id) + 1];
+    if (!to || nextData.current?.songId === to) return;
+    nextData.current = { songId: to };
+    const sb = supabase();
+    const { data: s } = await sb.from('songs').select('*, projects(*)').eq('id', to).single();
+    const { data: vs } = await sb.from('versions').select('*').eq('song_id', to).order('created_at');
+    if (!s || !vs?.length) { nextData.current = null; return; }
+    const list = orderVersions(vs);
+    await signed(list.map((v) => v.storage_path));
+    const v = currentMix(s, list) || list[list.length - 1];
+    const a = audioFor(v); if (a) a.preload = 'auto';
+    nextData.current = { songId: to, song: s, project: s.projects, versions: list };
+  }, [queue, signed, audioFor]);
   const nextRef = useRef(null);
   nextRef.current = (auto) => step(1, auto);
 
@@ -279,6 +299,7 @@ export function PlayerProvider({ eng, children }) {
       r.vel += (target - r.vel) * (target > r.vel ? 2.2 : 1.1) * dt;
       if (Math.abs(r.vel) > 0.001 && !phone.current) { r.angle = (r.angle + r.vel * 200 * dt) % 360; document.body.style.setProperty('--rot', r.angle.toFixed(2) + 'deg'); } // phones don't spin covers: skip the work
       if (!eng && a && playing && a.duration) listen(a);
+      if (a && playing && a.duration && a.duration - a.currentTime < 25) prepareNext();
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);

@@ -2040,5 +2040,5 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 @keyframes lloadpulse { 0%, 100% { opacity: .45; transform: scale(.96); } 50% { opacity: 1; transform: scale(1); } }
 @keyframes lloadout { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .lload img { animation: none; } }
-/* phones: on share links the Lossless tag only shows in the pop-out player, not on the page */
-@media (max-width: 760px) { .lpage .linfo .nptimes .npfmt .qtag { display: none; } }
+/* phones: no Lossless badge on share links (page or pop-out player) */
+@media (max-width: 760px) { .lpage .qtag, .sharenp .qtag { display: none !important; } }

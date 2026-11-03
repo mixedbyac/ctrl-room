@@ -13,6 +13,12 @@ export default function UpdateWatcher({ eng }) {
   const [updateReady, setUpdateReady] = useState(false);
   const [news, setNews] = useState(null);
 
+  // an old tab navigating after an update can't find its page files: reload into the new version
+  useEffect(() => {
+    const on = (e) => { const m = String(e?.reason?.message || e?.message || e?.reason || ''); if (/ChunkLoadError|Loading chunk|dynamically imported module/i.test(m)) window.location.reload(); };
+    window.addEventListener('unhandledrejection', on); window.addEventListener('error', on);
+    return () => { window.removeEventListener('unhandledrejection', on); window.removeEventListener('error', on); };
+  }, []);
   useEffect(() => {
     if (MY_BUILD === 'dev') return;
     let stop = false;

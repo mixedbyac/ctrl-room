@@ -73,7 +73,13 @@ export default function Inbox() {
       say('');
       if (!u.downloaded_at) await markDownloaded(u); // downloaded = done (and archived)
       else setMsg(`Downloaded ${total} file${total > 1 ? 's' : ''}.`);
-    } catch (e) { say(''); setMsg(e.message); }
+    } catch (e) {
+      say('');
+      // couldn't fetch the links: open the send's folder on dropbox.com instead (Download folder is up top there)
+      const folder = (u.songs || []).find((s) => s.files && s.folder)?.folder;
+      setMsg(folder ? `${e.message} Opening the folder in Dropbox instead.` : e.message);
+      if (folder) window.open(`https://www.dropbox.com/home${folder.split('/').map(encodeURIComponent).join('/')}`, '_blank');
+    }
   };
   const archive = async (u, on) => {
     setMsg('');

@@ -27,6 +27,9 @@ import { usePlayer } from '@/components/Player';
 import CoverMenu from '@/components/CoverMenu';
 import SongMenu, { CommentIcon } from '@/components/SongMenu';
 
+// a song that only holds files sent through the Portal (no mix, no demo yet)
+const filesOnly = (s) => !(s.versions || []).length && !!s.received_at;
+
 export default function ProjectPage() {
   const { id } = useParams();
   const { eng, reloadProjects, canEditArtist } = useApp();
@@ -240,6 +243,8 @@ export default function ProjectPage() {
             {selMsg && <span className="toast-inline selmsg">{selMsg}</span>}
           </div>
         )}
+        {(() => { const fr = p.songs.filter(filesOnly); if (!fr.length) return null; return (
+          <Link className="newfiles" href="/portal/inbox"><span className="nfdot" aria-hidden="true" /><span><b>New files received</b> for this project{fr.length > 1 ? ` (${fr.length} sends)` : ''}</span><span className="nfgo">Portal inbox ›</span></Link>); })()}
         <div className={`rows dyn ${selecting ? 'selecting' : ''}`} style={{ '--tpl': tpl }}>
           {p.songs.length > 0 && (
             <div className="rowhead" aria-hidden="true">
@@ -250,6 +255,7 @@ export default function ProjectPage() {
             </div>
           )}
           {p.songs.length ? p.songs.map((s, i) => {
+            if (filesOnly(s)) return null; // just files from the Portal, no mix or demo: shown as a note above instead
             const vs = [...(s.versions || [])].sort((a, b) => a.created_at.localeCompare(b.created_at));
             const last = currentMix(s, vs) || vs.at(-1); // the active (or newest) mix; a demo only shows when there's no mix yet
             const sub = vs.length ? statusText(s, vs) : s.eta ? `First mix ${fmtDate(s.eta)}` : statusText(s, vs);

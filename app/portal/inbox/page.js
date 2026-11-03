@@ -7,6 +7,7 @@ import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
 import SendOut from '@/components/SendOut';
 import { fmtBytes, ago, todayISO } from '@/lib/format';
+import { macCanDownload, macDownload } from '@/lib/native';
 
 export default function Inbox() {
   const { eng, session } = useApp();
@@ -42,6 +43,37 @@ export default function Inbox() {
       await sb.from('updates').insert({ song_id: s.songId, body: 'Downloaded your files. Everything looks good.', texted });
     }
     load();
+  };
+  // Download a whole send to this computer. Mac app: one folder in Downloads. Browser: file by file.
+  const [dl, setDl] = useState({}); // uploadId -> 'label'
+  const download = async (u) => {
+    setMsg('');
+    const say = (t) => setDl((x) => ({ ...x, [u.id]: t }));
+    say('Getting files…');
+    try {
+      const r = await api('/api/portal/files', { uploadId: u.id });
+      const total = r.files.length;
+      if (macCanDownload()) {
+        const res = await macDownload(r, (ev) => say(`Downloading ${ev.done}/${ev.total}`));
+        if (res.error) setMsg(res.error);
+      } else {
+        for (let i = 0; i < total; i++) {
+          const f = r.files[i];
+          say(`Downloading ${i + 1}/${total}`);
+          const name = `${r.folder} - ${f.path.replace(/\//g, ' - ')}`;
+          try {
+            const blob = await (await fetch(f.url)).blob();
+            const href = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = href; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(href), 60000);
+          } catch { window.open(f.url, '_blank'); }
+          await new Promise((res) => setTimeout(res, 400)); // browsers drop downloads fired too close together
+        }
+      }
+      say('');
+      if (!u.downloaded_at) await markDownloaded(u); // downloaded = done (and archived)
+      else setMsg(`Downloaded ${total} file${total > 1 ? 's' : ''}.`);
+    } catch (e) { say(''); setMsg(e.message); }
   };
   const archive = async (u, on) => {
     setMsg('');
@@ -91,7 +123,9 @@ export default function Inbox() {
                 </ul>
               </div>
               <div className="acts">
-                {u.downloaded_at ? <span className="m">Downloaded {ago(u.downloaded_at)}</span> : <button className="btn small primary" onClick={() => markDownloaded(u)}>Mark downloaded</button>}
+                {(u.songs || []).some((s) => s.files) && <button className={`btn small ${u.downloaded_at ? '' : 'primary'}`} onClick={() => download(u)} disabled={!!dl[u.id]}>
+                  {dl[u.id] || <><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ verticalAlign: '-2px', marginRight: 6 }}><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>Download</>}</button>}
+                {u.downloaded_at ? <span className="m">Downloaded {ago(u.downloaded_at)}</span> : <button className="btn small quiet" onClick={() => markDownloaded(u)}>Mark downloaded</button>}
                 {u.projects && <Link className="btn small" href={`/p/${u.projects.id}`}>Open project</Link>}
                 <button className="btn small quiet" onClick={() => archive(u, !u.archived)}>{u.archived ? 'Move to inbox' : 'Archive'}</button>
               </div>

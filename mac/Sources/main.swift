@@ -8,6 +8,13 @@ import WebKit
 import UniformTypeIdentifiers
 import UserNotifications
 
+/// A Swift string as a safe JavaScript string literal.
+func jsString(_ s: String) -> String {
+    let d = (try? JSONSerialization.data(withJSONObject: [s])) ?? Data("[\"\"]".utf8)
+    let arr = String(data: d, encoding: .utf8) ?? "[\"\"]"
+    return String(arr.dropFirst().dropLast())
+}
+
 let HOME = URL(string: Bundle.main.object(forInfoDictionaryKey: "CTRLHomeURL") as? String ?? "https://ctrl-room.app")!
 let AUDIO_EXT: Set<String> = ["wav", "wave", "aif", "aiff", "aifc", "flac", "mp3", "m4a", "aac", "ogg", "opus"]
 let BG = NSColor(red: 0x0b / 255.0, green: 0x0b / 255.0, blue: 0x0c / 255.0, alpha: 1)
@@ -99,7 +106,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         config.applicationNameForUserAgent = "Version/17.0 Safari/605.1.15 CTRLROOM-Mac/" + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1")
         config.setURLSchemeHandler(server, forURLScheme: "ctrlroom-file")
         config.userContentController.add(self, name: "ctrlroom")
-        config.userContentController.addUserScript(WKUserScript(source: "window.ctrlRoomNative = { app: 'mac', version: 1 };", injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        config.userContentController.addUserScript(WKUserScript(source: "window.ctrlRoomNative = { app: 'mac', version: 2 };", injectionTime: .atDocumentStart, forMainFrameOnly: true))
 
         web = WKWebView(frame: .zero, configuration: config)
         web.navigationDelegate = self
@@ -229,10 +236,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             if let u = body["url"] as? String { c.userInfo = ["url": u] }
             let id = body["id"] as? String ?? UUID().uuidString
             UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: id, content: c, trigger: nil), withCompletionHandler: nil)
+        } else if type == "download", let id = body["id"] as? String, let files = body["files"] as? [[String: Any]] {
+            downloadAll(id: id, folder: body["folder"] as? String ?? "CTRL ROOM", files: files)
         } else if type == "badge" {
             let n = body["count"] as? Int ?? 0
             NSApp.dockTile.badgeLabel = n > 0 ? (n > 99 ? "99+" : String(n)) : nil
         }
+    }
+
+    // MARK: downloads
+
+    // Saves every file into ~/Downloads/<folder>/ (keeping sub-folders), one after another, then shows it in Finder.
+    func downloadAll(id: String, folder: String, files: [[String: Any]]) {
+        let fm = FileManager.default
+        let downloads = fm.urls(for: .downloadsDirectory, in: .userDomainMask).first ?? fm.homeDirectoryForCurrentUser
+        let safe = folder.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
+        var base = downloads.appendingPathComponent(safe, isDirectory: true)
+        var n = 2
+        while fm.fileExists(atPath: base.path) { base = downloads.appendingPathComponent("\(safe) \(n)", isDirectory: true); n += 1 }
+        try? fm.createDirectory(at: base, withIntermediateDirectories: true)
+        let total = files.count
+        func report(_ done: Int, finished: Bool = false, error: String? = nil) {
+            var js = "{done:\(done),total:\(total)"
+            if finished { js += ",finished:true,folder:\(jsString(base.path))" }
+            if let e = error { js += ",error:\(jsString(e))" }
+            js += "}"
+            DispatchQueue.main.async { self.web.evaluateJavaScript("window.__ctrlDl && window.__ctrlDl['\(id)'] && window.__ctrlDl['\(id)'](\(js)); void 0", completionHandler: nil) }
+        }
+        func next(_ i: Int, failed: Int) {
+            if i >= total {
+                report(total, finished: true, error: failed > 0 ? "\(failed) of \(total) files didn't download." : nil)
+                DispatchQueue.main.async { NSWorkspace.shared.activateFileViewerSelecting([base]) }
+                return
+            }
+            guard let s = files[i]["url"] as? String, let url = URL(string: s) else { return next(i + 1, failed: failed + 1) }
+            let rel = (files[i]["path"] as? String ?? url.lastPathComponent).split(separator: "/").map { String($0).replacingOccurrences(of: ":", with: "-") }.filter { $0 != ".." && !$0.isEmpty }
+            let dest = rel.reduce(base) { $0.appendingPathComponent($1) }
+            URLSession.shared.downloadTask(with: url) { tmp, resp, err in
+                var bad = err != nil || tmp == nil || ((resp as? HTTPURLResponse)?.statusCode ?? 200) >= 400
+                if !bad, let tmp = tmp {
+                    try? fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    do { try fm.moveItem(at: tmp, to: dest) } catch { bad = true }
+                }
+                report(i + 1)
+                next(i + 1, failed: failed + (bad ? 1 : 0))
+            }.resume()
+        }
+        report(0)
+        next(0, failed: 0)
     }
 
     // MARK: notifications

@@ -156,7 +156,7 @@ function LinkVersions({ list, cur, approvedId, onPick }) {
           {list.map((x, i) => (
             <button key={x.id} role="option" aria-selected={x.id === cur.id} onClick={() => { onPick(x.id); setOpen(false); }}>
               <span className="mono">{x.label}</span>
-              <small>{x.demo ? '' : approvedId === x.id ? 'Approved' : i === 0 ? 'Latest' : x.created_at ? new Date(x.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}</small>
+              <small>{x.demo ? '' : approvedId === x.id ? 'Approved' : i === 0 ? 'Active' : x.created_at ? new Date(x.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}</small>
               {x.id === cur.id && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>}
             </button>
           ))}

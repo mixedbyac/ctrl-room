@@ -6,7 +6,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const isDemo = (v) => /^demo\b/i.test(String(v?.label || ''));
-const pickVersion = (s, vs) => vs.find((v) => v.id === s.approved_version) || vs.find((v) => v.id === s.active_version) || vs.filter((v) => !isDemo(v)).at(-1) || vs[vs.length - 1];
+const pickVersion = (s, vs) => vs.find((v) => v.id === s.active_version) || vs.find((v) => v.id === s.approved_version) || vs.filter((v) => !isDemo(v)).at(-1) || vs[vs.length - 1];
 
 // Public: what a share link plays. Only the shared song/project, only its current mix, no notes.
 export async function GET(req) {
@@ -53,7 +53,10 @@ export async function GET(req) {
       const { data: us } = await db.storage.from('mixes').createSignedUrls(vs.map((x) => x.storage_path), 60 * 60 * 6);
       const shape = (x, url) => ({ id: x.id, label: x.label, duration: x.duration, peaks: x.peaks, url, file_format: x.file_format, bit_depth: x.bit_depth, sample_rate: x.sample_rate, created_at: x.created_at, demo: isDemo(x) });
       const act = v.id;
-      vlist = vs.map((x, i) => (us?.[i]?.signedUrl ? shape(x, us[i].signedUrl) : null)).filter(Boolean)
+      // match links by file path (not position), and sign one-by-one anything the batch missed
+      const byPath = new Map((us || []).filter((u) => u?.signedUrl).map((u) => [u.path, u.signedUrl]));
+      for (const x of vs) if (!byPath.has(x.storage_path) && x.storage_path) { const { data: one } = await db.storage.from('mixes').createSignedUrl(x.storage_path, 60 * 60 * 6); if (one?.signedUrl) byPath.set(x.storage_path, one.signedUrl); }
+      vlist = vs.map((x) => (byPath.get(x.storage_path) ? shape(x, byPath.get(x.storage_path)) : null)).filter(Boolean)
         .sort((a, b) => (a.id === act ? -1 : b.id === act ? 1 : a.demo !== b.demo ? (a.demo ? 1 : -1) : String(b.created_at).localeCompare(String(a.created_at))));
     }
     list.push({ id: s.id, title: s.title, seed: artSeed, cover, approved: s.status === 'approved', approvedVersion: s.approved_version || null, vlist,

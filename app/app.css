@@ -2031,3 +2031,5 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .ldisc .lhub { z-index: 3; cursor: pointer; pointer-events: auto; }
 .ldisc .npart, .ldisc .nphole, .ldisc .npart::before { pointer-events: none; }
 .lplayerr { position: absolute; left: 50%; bottom: -34px; transform: translateX(-50%); white-space: nowrap; font-size: 12.5px; color: #f4f4f5; background: rgba(0,0,0,.6); padding: 5px 10px; border-radius: 999px; z-index: 3; }
+
+.shplays { display: grid; gap: 3px; padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.04); }

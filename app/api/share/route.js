@@ -62,5 +62,18 @@ export async function POST(req) {
   }
   const site = SITE_URL;
   out.url = `${site}/l/${token}`;
+  if (eng) {
+    try {
+      const { data: ss } = b.kind === 'song' ? await db.from('songs').select('id, title, active_version, approved_version, sharing').eq('id', b.id)
+        : await db.from('songs').select('id, title, active_version, approved_version, sharing').eq('project_id', projectId).order('position');
+      const ids = (ss || []).map((s) => s.id);
+      const { data: vs } = ids.length ? await db.from('versions').select('id, song_id, label, created_at').in('song_id', ids).order('created_at') : { data: [] };
+      out.plays = (ss || []).filter((s) => s.sharing !== false).map((s) => {
+        const mine = (vs || []).filter((v) => v.song_id === s.id);
+        const first = mine.find((v) => v.id === s.active_version) || mine.find((v) => v.id === s.approved_version) || mine.filter((v) => !/^demo/i.test(v.label)).at(-1);
+        return { title: s.title, first: first?.label || '—', all: mine.map((v) => v.label) };
+      });
+    } catch {}
+  }
   return json(out);
 }

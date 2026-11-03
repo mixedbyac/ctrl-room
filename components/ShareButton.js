@@ -51,6 +51,7 @@ export default function ShareButton({ kind, id, eng, title, open: openProp, onOp
           {!st && !msg && <p className="muted small">Getting the link…</p>}
           {st?.allowed && <>
             <p className="muted small">Anyone with the link can listen{kind === 'project' ? ' to every song' : ''}. No account needed. They can’t see your private notes.</p>
+            {eng && st.plays?.length > 0 && <div className="shplays small muted">{st.plays.slice(0, 4).map((x) => <div key={x.title}><b style={{ color: 'var(--ink)' }}>{x.title}</b>: plays {x.first} first · {x.all.join(', ') || 'no versions'}</div>)}</div>}
             <div className="shlink"><input readOnly value={st.url} onFocus={(e) => e.target.select()} aria-label="Share link" /></div>
             <div className="row-actions">
               <button className={`btn small primary copybtn ${copied ? 'done' : ''}`} onClick={copy} aria-live="polite">{copied ? '✓ Copied' : 'Copy link'}</button>

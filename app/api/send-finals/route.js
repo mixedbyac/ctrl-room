@@ -1,5 +1,5 @@
 import { admin, engineerFrom, json, fail } from '@/lib/server';
-import { emailFinals } from '@/lib/invite';
+import { emailFinals, alertEngineers } from '@/lib/invite';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -33,5 +33,9 @@ export async function POST(req) {
   const r = await emailFinals(db, { project, files, from: user.email, who: user.user_metadata?.display_name || user.user_metadata?.name || 'Your engineer' });
   if (!r.sent) return fail(r.reason || 'The email didn’t go out.', 502);
   for (const s of songs) await db.from('updates').insert({ song_id: s.id, body: 'Sent the final file to the artist.' }).then(() => {}, () => {});
+  // confirmation for you (email + phone, Settings › Notifications › Files sent)
+  const what = files.length === 1 ? `${files[0].title} (${files[0].label})` : `${files.length} files from ${project.title}`;
+  await alertEngineers(db, { kind: 'sent', subject: `Sent ${what} to ${project.artist || 'the artist'}`,
+    text: `${what} went to ${r.to.join(', ')}. They got a download button for each file (good for 14 days).`, link: `/p/${project.id}`, linkLabel: 'Open the project' }).catch(() => {});
   return json({ ok: true, sent: r.sent, files: files.length });
 }

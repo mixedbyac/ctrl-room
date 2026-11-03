@@ -283,7 +283,19 @@ export default function SharedListen() {
 
   useEffect(() => { document.body.classList.toggle('playing', playing); return () => document.body.classList.remove('playing'); }, [playing]);
 
-  const toggle = () => { const a = audio.current; if (!a) return; if (a.paused) a.play().then(() => setPlaying(true)).catch(() => {}); else { a.pause(); setPlaying(false); } };
+  const [playErr, setPlayErr] = useState('');
+  // play / pause; if the browser refuses (an expired or half-loaded file), reload it once and try again, and say why if it still won't
+  const toggle = () => {
+    const a = audio.current;
+    if (!a) return;
+    if (!a.paused) { a.pause(); setPlaying(false); return; }
+    setPlayErr('');
+    a.muted = false;
+    a.play().then(() => setPlaying(true)).catch(() => {
+      try { const at = a.currentTime || 0; a.load(); a.addEventListener('loadedmetadata', () => { try { a.currentTime = at; } catch {} }, { once: true }); } catch {}
+      a.play().then(() => setPlaying(true)).catch((e) => { setPlaying(false); setPlayErr(e?.name === 'NotAllowedError' ? 'Tap play again to start.' : 'This mix won’t start. Reload the page to try again.'); });
+    });
+  };
   const pick = (i) => {
     if (i === idx) return toggle();
     setIdx(i); setPlaying(false);
@@ -311,7 +323,8 @@ export default function SharedListen() {
         <div className="ltop"><img src="/logo.png" alt="" className="llogo" /><span>CTRL ROOM</span></div>
         <div className="lmain">
           <div className="npdisc ldisc" ref={mainRef}><Art src={artSrc} seed={artSeed} size={640} className="npart spin" /><span className="nphole" />
-            <button className="lhub" onClick={toggle} disabled={!cur} aria-label={playing ? 'Pause' : 'Play'}><svg viewBox="0 0 24 24">{playing ? PAUSE : PLAY}</svg></button>
+            <button type="button" className="lhub" onClick={(e) => { e.stopPropagation(); toggle(); }} disabled={!cur} aria-label={playing ? 'Pause' : 'Play'}><svg viewBox="0 0 24 24">{playing ? PAUSE : PLAY}</svg></button>
+            {playErr && <span className="lplayerr" role="status">{playErr}</span>}
           </div>
           <div className="linfo">
             <p className="leyebrow">{data.kind === 'song' ? p.title : `${songs.length} song${songs.length === 1 ? '' : 's'}${p.release ? ` · ${new Date(p.release + 'T12:00').getFullYear()}` : ''}`}</p>

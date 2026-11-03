@@ -206,6 +206,13 @@ export function PlayerProvider({ eng, children }) {
     });
   }, [signed]);
 
+  // the Mac app's checklist window: play this note here
+  useEffect(() => {
+    const on = (e) => { const d = e.detail || {}; if (d.songId) play({ songId: d.songId, versionId: d.versionId || undefined, at: Number(d.t) || 0 }); };
+    window.addEventListener('ctrl-room:jump', on);
+    return () => window.removeEventListener('ctrl-room:jump', on);
+  }, [play]);
+
   // a version was added or reordered anywhere: every player picks it up right away
   useEffect(() => {
     const on = async (e) => {

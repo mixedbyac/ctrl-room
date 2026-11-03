@@ -1,4 +1,5 @@
 'use client';
+import { exportToLogic } from '@/lib/midimarkers';
 import { emailArtistOn, setEmailArtist, notifyArtist } from '@/lib/notifyartist';
 import { drawWave } from '@/lib/wavedraw';
 import { pingPush } from '@/lib/pushclient';
@@ -380,6 +381,10 @@ function Notes({ notes, reactions, v, versions, time, playing, seek, setVid, eng
           <button aria-pressed={filter === 'this'} onClick={() => setFilter('this')}>This version ({notes.filter((n) => n.version_id === v?.id && !n.parent_id).length})</button>
           <button aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>All ({notes.filter((n) => !n.parent_id).length})</button>
         </div>
+        {eng && <span className="logicacts">
+          {true && <button className="logicbtn" title="Save the open notes as markers: drag the .mid file into your Logic session" onClick={() => { const k = exportToLogic({ song, notes, bpm: song.bpm }); if (!k) setErr('No open timed notes to turn into markers.'); }}>Logic markers</button>}
+          {true && <Link className="logicbtn" href={`/checklist?song=${song.id}`}>Checklist</Link>}
+        </span>}
       </div>
       <div className="composer">
         <textarea rows={2} value={body} placeholder={mode === 'time' ? 'Comment on this moment, like “love the delay on the guitar here.”' : 'Comment on the whole mix, like “overall it could be louder.”'}

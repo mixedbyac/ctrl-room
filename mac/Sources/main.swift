@@ -229,6 +229,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             if let u = body["url"] as? String { c.userInfo = ["url": u] }
             let id = body["id"] as? String ?? UUID().uuidString
             UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: id, content: c, trigger: nil), withCompletionHandler: nil)
+        } else if type == "checklist" {
+            showChecklist(nil)
+        } else if type == "jump" {
+            // a note clicked in the checklist window: play it in the main window
+            var d: [String: Any] = [:]
+            d["songId"] = body["songId"] as? String ?? ""
+            d["versionId"] = body["versionId"] as? String ?? ""
+            d["t"] = body["t"] as? Double ?? 0
+            if let j = try? JSONSerialization.data(withJSONObject: d), let js = String(data: j, encoding: .utf8) {
+                web.evaluateJavaScript("window.dispatchEvent(new CustomEvent('ctrl-room:jump', { detail: \(js) }))", completionHandler: nil)
+            }
         } else if type == "badge" {
             let n = body["count"] as? Int ?? 0
             NSApp.dockTile.badgeLabel = n > 0 ? (n > 99 ? "99+" : String(n)) : nil
@@ -287,18 +298,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        pageReady = true
+        if webView === web { pageReady = true }
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
         let e = error as NSError
-        if e.code == NSURLErrorCancelled { return }
+        if e.code == NSURLErrorCancelled || webView !== web { return }
         showOffline()
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
         let e = error as NSError
-        if e.code == NSURLErrorCancelled || e.code == 102 { return }
+        if e.code == NSURLErrorCancelled || e.code == 102 || webView !== web { return }
         showOffline()
     }
 
@@ -361,6 +372,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     }
     @objc func showMain(_ s: Any?) { window.makeKeyAndOrderFront(nil) }
     @objc func openInBrowser(_ s: Any?) { NSWorkspace.shared.open(web.url ?? HOME) }
+    // MARK: notes checklist: a small window that floats over Logic
+
+    var notesPanel: NSPanel?
+    var notesWeb: WKWebView?
+    @objc func showChecklist(_ s: Any?) {
+        if let p = notesPanel { p.orderFrontRegardless(); notesWeb?.reload(); return }
+        let cfg = WKWebViewConfiguration()
+        cfg.websiteDataStore = .default() // same sign-in as the main window
+        cfg.processPool = web.configuration.processPool
+        cfg.applicationNameForUserAgent = web.configuration.applicationNameForUserAgent
+        cfg.userContentController.add(self, name: "ctrlroom")
+        cfg.userContentController.addUserScript(WKUserScript(source: "window.ctrlRoomNative = { app: 'mac', version: 1, panel: true };", injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        let w = WKWebView(frame: .zero, configuration: cfg)
+        w.navigationDelegate = self
+        w.uiDelegate = self
+        w.setValue(false, forKey: "drawsBackground")
+        let p = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 380, height: 640),
+                        styleMask: [.titled, .closable, .resizable, .utilityWindow, .nonactivatingPanel],
+                        backing: .buffered, defer: false)
+        p.title = "Notes"
+        p.isFloatingPanel = true
+        p.level = .floating               // stays on top of Logic
+        p.hidesOnDeactivate = false       // even when Logic is the active app
+        p.becomesKeyOnlyIfNeeded = true
+        p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        p.isReleasedWhenClosed = false
+        p.backgroundColor = BG
+        p.appearance = NSAppearance(named: .darkAqua)
+        p.minSize = NSSize(width: 300, height: 360)
+        p.contentView = w
+        if !p.setFrameUsingName("CTRLROOMNotes"), let scr = NSScreen.main?.visibleFrame {
+            p.setFrameOrigin(NSPoint(x: scr.maxX - 400, y: scr.maxY - 660))
+        }
+        p.setFrameAutosaveName("CTRLROOMNotes")
+        w.load(URLRequest(url: URL(string: "/checklist/panel", relativeTo: HOME)!.absoluteURL))
+        p.orderFrontRegardless()
+        notesPanel = p; notesWeb = w
+    }
+
     @objc func copyLink(_ s: Any?) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString((web.url ?? HOME).absoluteString, forType: .string)
@@ -433,6 +483,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         win.addItem(item("Zoom", #selector(NSWindow.performZoom(_:)), ""))
         win.addItem(.separator())
         win.addItem(item("CTRL ROOM", #selector(showMain(_:)), "0", [.command, .option], target: self))
+        win.addItem(item("Notes Checklist", #selector(showChecklist(_:)), "n", [.command, .option], target: self))
         let winTop = NSMenuItem(); winTop.submenu = win
         main.addItem(winTop)
         NSApp.windowsMenu = win

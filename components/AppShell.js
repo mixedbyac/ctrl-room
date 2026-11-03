@@ -111,7 +111,7 @@ export default function AppShell({ children }) {
     return <Ctx.Provider value={value}><MfaGate onDone={() => setMfaTick((t) => t + 1)} onSignOut={signOut} /></Ctx.Provider>;
   }
   if (portalHost && session !== undefined) return <Ctx.Provider value={value}><div className="portalhost">{children}<PoweredBy /></div></Ctx.Provider>;
-  if (pathname === '/about' || pathname === '/login' || pathname === '/signup' || pathname === '/welcome' || pathname === '/protect' || pathname === '/portal/prep' || pathname.startsWith('/l/')) return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  if (pathname === '/checklist/panel' || pathname === '/about' || pathname === '/login' || pathname === '/signup' || pathname === '/welcome' || pathname === '/protect' || pathname === '/portal/prep' || pathname.startsWith('/l/')) return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
   if (session === undefined || (session === null && !isPublic) || (session && needMfa === null && !isPublic)) {
     return <LogoLoader />;
   }
@@ -146,6 +146,11 @@ export default function AppShell({ children }) {
               {eng && (
                 <Link className="navitem" href="/people" aria-current={pathname.startsWith('/people')}>
                   <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c1-3.5 3.5-5.5 6.5-5.5s5.5 2 6.5 5.5" /><circle cx="17" cy="9" r="2.8" /><path d="M16 14.6c2.6.2 4.6 2 5.5 5.4" /></svg></span>People
+                </Link>
+              )}
+              {eng && (
+                <Link className="navitem" href="/checklist" aria-current={pathname.startsWith('/checklist')}>
+                  <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6h11M9 12h11M9 18h11" /><path d="M3.5 6l1.2 1.2L7 5M3.5 12l1.2 1.2L7 11M3.5 18l1.2 1.2L7 17" /></svg></span>Notes checklist
                 </Link>
               )}
             </div>

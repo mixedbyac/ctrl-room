@@ -2016,3 +2016,13 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .dlnudgetext { display: grid; gap: 2px; flex: 1 1 240px; min-width: 0; }
 .dlnudgetext small { color: var(--muted); font-size: 13px; }
 .dlnudgeacts { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Send to artist (approved files) */
+.sendfin { position: relative; display: inline-flex; }
+.sendfinbtn { display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 18px; border-radius: 999px; border: 0; background: var(--sig); color: #0f0f10; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.sendfinbtn svg { width: 18px; height: 18px; }
+.sendfinbtn:disabled { opacity: .7; }
+.sendfinpop { position: absolute; z-index: 60; top: calc(100% + 8px); left: 0; width: 270px; display: grid; gap: 6px; padding: 14px; border-radius: 14px; background: #1b1b1e; border: 1px solid var(--line); box-shadow: 0 24px 60px -15px rgba(0,0,0,.8); animation: npfade .12s; }
+.sendfinpop small { color: var(--muted); font-size: 12.5px; line-height: 1.4; }
+.sendfinmsg { position: absolute; top: calc(100% + 8px); left: 0; white-space: nowrap; font-size: 12.5px; padding: 6px 10px; border-radius: 10px; background: #1b1b1e; border: 1px solid var(--line); z-index: 60; }
+@media (max-width: 760px) { .sendfinbtn span { display: none; } .sendfinbtn { width: 46px; padding: 0; justify-content: center; } .sendfinpop { left: 50%; transform: translateX(-50%); } }

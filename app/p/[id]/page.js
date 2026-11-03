@@ -191,6 +191,7 @@ export default function ProjectPage() {
               <ShareButton kind="project" id={p.id} eng={eng} title={p.title} />
               <DownloadAll p={p} eng={eng} />
               {!eng && <span className="chipnote">{ready ? `${ready} mix${ready > 1 ? 'es' : ''} waiting on you` : "You're all caught up"}</span>}
+              {eng && approved > 0 && <SendFinals p={p} approved={approved} />}
               {eng && <AddPlus p={p} onSaved={load} unpaid={(inv.list || []).some((i) => i.status === 'unpaid')} onPick={(k) => setPanel(panel === k ? null : k)} />}
             </div>
           </div>
@@ -353,6 +354,33 @@ function PanelShell({ onClose, children }) {
       </button>
       {children}
     </div>
+  );
+}
+
+const PLANE = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 3L10 14" /><path d="M21 3l-7 18-4-7-7-4z" /></svg>;
+/** Engineer: email the approved files to the artist (direct download buttons). */
+function SendFinals({ p, approved }) {
+  const [state, setState] = useState(''); // '' | 'ask' | 'sending' | message
+  const go = async () => {
+    setState('sending');
+    try { const r = await api('/api/send-finals', { projectId: p.id }); setState(`Sent ${r.files} file${r.files > 1 ? 's' : ''} to ${r.sent} ${r.sent === 1 ? 'person' : 'people'}.`); }
+    catch (e) { setState(e.message); }
+    setTimeout(() => setState(''), 6000);
+  };
+  return (
+    <span className="sendfin">
+      <button className="sendfinbtn" onClick={() => (state === 'ask' ? setState('') : setState('ask'))} disabled={state === 'sending'} title="Email the approved files to the artist">
+        {PLANE}<span>{state === 'sending' ? 'Sending…' : 'Send to artist'}</span>
+      </button>
+      {state === 'ask' && (
+        <span className="sendfinpop" role="dialog" aria-label="Send to artist">
+          <b>Email the {approved === 1 ? 'approved file' : `${approved} approved files`}?</b>
+          <small>The artist’s team gets a download button for each one (works for 14 days).</small>
+          <span className="row-actions"><button className="btn small primary" onClick={go}>Send</button><button className="btn small quiet" onClick={() => setState('')}>Cancel</button></span>
+        </span>
+      )}
+      {state && state !== 'ask' && state !== 'sending' && <span className="sendfinmsg" role="status">{state}</span>}
+    </span>
   );
 }
 

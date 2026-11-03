@@ -7,7 +7,7 @@ import ShareButton from '@/components/ShareButton';
 import { usePlayer } from '@/components/Player';
 import { deliverFile } from '@/lib/deliver';
 import { uploadDemo } from '@/lib/demo';
-import { supabase } from '@/lib/supabase';
+import { supabase, api } from '@/lib/supabase';
 import { demoOf, currentMix, mmss, shortDate, statusText } from '@/lib/format';
 
 const AUDIO = /\.(wav|aiff?|mp3|m4a|flac)$/i;
@@ -110,6 +110,7 @@ export default function SongMenu({ song, versions = [], project, eng, canEdit, q
               {has && <button role="menuitem" onClick={() => { shut(); setSharing(true); }}>Share song</button>}
               <button role="menuitem" onClick={() => setView('info')}>More info</button>
               {canDownload && <button role="menuitem" onClick={download}>Download {last.label}</button>}
+              {eng && song.status === 'approved' && project?.id && <button role="menuitem" onClick={async () => { shut(); say('Sending the final file…'); try { const r = await api('/api/send-finals', { projectId: project.id, songIds: [song.id] }); say(`Sent ${song.title} to ${r.sent} ${r.sent === 1 ? 'person' : 'people'}.`); } catch (e) { say(e.message); } }}>Send file to artist</button>}
               {eng && <button role="menuitem" onClick={() => { shut(); mixIn.current?.click(); }}>Deliver new versions</button>}
               {(eng || canEdit) && !demo && <button role="menuitem" onClick={() => { shut(); demoIn.current?.click(); }}>Add a demo</button>}
               {canEdit && onRename && <button role="menuitem" onClick={() => { shut(); onRename(); }}>Rename</button>}

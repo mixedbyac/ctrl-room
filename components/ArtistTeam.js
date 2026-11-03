@@ -5,24 +5,23 @@ import { supabase, api } from '@/lib/supabase';
 import { BlueCheck } from '@/components/Credit';
 
 const ROLES = ['Artist', 'Admin', 'Manager', 'Producer', 'Writer', 'Label', 'A&R', 'Other'];
+const ABOUT = { Artist: 'An artist on this team (there can be more than one). A verified Artist verifies the page.', Admin: 'Can manage the team, cover art, titles and track order' };
 
-/** Engineer only: who's on an artist's team. Team members can open all of the artist's projects and add to them in the Portal. */
-export default function ArtistTeam({ artist, projects }) {
+/** Who's on an artist's team. The engineer and the team's Artists / Admins can manage it; everyone added gets an email. */
+export default function ArtistTeam({ artist, projects, eng = true }) {
   const [rows, setRows] = useState(null);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('Artist');
   const [msg, setMsg] = useState('');
   const [acct, setAcct] = useState({});
-  const load = () => supabase().from('artist_members').select('*').ilike('artist', artist).order('added_at').then(({ data, error }) => {
-    if (error) { setRows([]); setMsg(/artist_members/.test(error.message) ? 'Teams need a quick database update: run supabase/006_artist_team.sql in Supabase.' : error.message); return; }
-    setRows((data || []).filter((r) => r.artist.toLowerCase() === artist.toLowerCase()));
-  });
+  const [myRole, setMyRole] = useState(null);
+  const load = () => api('/api/team', { action: 'list', artist }).then((r) => { setRows(r.list || []); setMyRole(r.myRole || null); }).catch((e) => { setRows([]); setMsg(e.message); });
   useEffect(() => { load(); }, [artist]); // eslint-disable-line
 
   const contacts = [...new Set(projects.map((p) => (p.client_email || '').toLowerCase()).filter(Boolean))];
   const everyone = [...new Set([...contacts, ...(rows || []).map((r) => r.email.toLowerCase())])];
   useEffect(() => {
-    if (!everyone.length) return;
+    if (!everyone.length || !eng) return; // account status is for the engineer
     api('/api/verify', { action: 'status', emails: everyone }).then((r) => setAcct(r.status || {})).catch(() => {});
   }, [everyone.join(',')]); // eslint-disable-line
   const confirmAcct = async (em) => {
@@ -44,15 +43,16 @@ export default function ArtistTeam({ artist, projects }) {
     const em = email.trim().toLowerCase();
     if (!/^\S+@\S+\.\S+$/.test(em)) return setMsg('Enter a valid email.');
     if (rows?.some((r) => r.email.toLowerCase() === em)) return setMsg('They’re already on the team.');
-    const { error } = await supabase().from('artist_members').insert({ artist, email: em, role });
-    if (error) return setMsg(/artist_members/.test(error.message) ? 'Run supabase/006_artist_team.sql in Supabase first.' : error.message);
-    setEmail(''); setMsg(`Added. ${em} can now open ${artist}’s projects and add to them in the Portal.`);
-    load();
+    try {
+      const r = await api('/api/team', { action: 'add', artist, email: em, role });
+      setRows(r.list || []); setEmail('');
+      setMsg(`Added. ${em} can now open ${artist}’s projects${r.notified ? ' and got an email letting them know' : r.link ? '. Email didn’t go out, so share this sign-up link with them' : ''}.`);
+      if (!r.notified && r.link) { try { await navigator.clipboard.writeText(r.link); } catch {} }
+    } catch (e2) { setMsg(e2.message); }
   };
   const remove = async (r) => {
     if (!confirm(`Remove ${r.email} from ${artist}’s team? They’ll lose access to these projects.`)) return;
-    await supabase().from('artist_members').delete().eq('id', r.id);
-    load();
+    try { const x = await api('/api/team', { action: 'remove', artist, id: r.id }); setRows(x.list || []); } catch (e) { setMsg(e.message); }
   };
   const invite = (em) => `${SITE_URL}/signup?email=${encodeURIComponent(em)}`;
   const sendInvite = async (em) => {
@@ -76,8 +76,8 @@ export default function ArtistTeam({ artist, projects }) {
         ))}
         {(rows || []).filter((r) => !contacts.includes(r.email.toLowerCase())).map((r) => (
           <li key={r.id}><span className="tav">{r.email[0].toUpperCase()}</span><span className="tmain"><b>{r.email}</b><small>{/^artist$/i.test(r.role || '') ? 'The artist · their verified account verifies the artist page' : /^admin$/i.test(r.role || '') ? 'Admin · can edit cover art, track order, titles and the active version' : r.role || 'Team'}</small></span>
-            <span className="tctl"><Badge em={r.email.toLowerCase()} /><select className="trole" value={r.role || 'Other'} aria-label="Role" onChange={async (e) => { await supabase().from('artist_members').update({ role: e.target.value }).eq('id', r.id); load(); }}>{ROLES.map((x) => <option key={x}>{x}</option>)}</select><Badge em={r.email.toLowerCase()} />
-            <span className="row-actions"><button className="btn small quiet" onClick={() => sendInvite(r.email)}>Send invite</button><button className="btn small quiet" onClick={() => remove(r)}>Remove</button></span></span></li>
+            <span className="tctl"><Badge em={r.email.toLowerCase()} /><select className="trole" value={r.role || 'Other'} aria-label="Role" onChange={async (e) => { try { const x = await api('/api/team', { action: 'role', artist, id: r.id, role: e.target.value }); setRows(x.list || []); } catch (er) { setMsg(er.message); } }}>{ROLES.map((x) => <option key={x}>{x}</option>)}</select>
+            <span className="row-actions">{eng && <button className="btn small quiet" onClick={() => sendInvite(r.email)}>Send invite</button>}<button className="btn small quiet" onClick={() => remove(r)}>Remove</button></span></span></li>
         ))}
         {rows && !rows.length && !contacts.length && <li className="muted small">No one yet.</li>}
       </ul>

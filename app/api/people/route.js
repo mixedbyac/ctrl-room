@@ -1,6 +1,6 @@
 import { admin, engineerFrom, json, fail } from '@/lib/server';
 import { SITE_URL } from '@/lib/site';
-import { accountEmails, invitePerson, signupNudge } from '@/lib/invite';
+import { accountEmails, invitePerson, signupNudge, teamAdded } from '@/lib/invite';
 
 export const maxDuration = 60;
 
@@ -18,6 +18,7 @@ export async function POST(req) {
     if (!email || !artist) return fail('Pick an artist.');
     const { error } = await db.from('artist_members').insert({ artist, email, role: b.role || 'Admin' });
     if (error && !/duplicate|unique/i.test(error.message)) return fail(error.message, 500);
+    if (!error) await teamAdded(db, { email, artist, role: b.role || 'Admin', by: user.email }).catch(() => {});
     return json({ ok: true });
   }
   // everyone CTRL ROOM has an email for (artist teams, project contacts, Portal senders) who has no account yet

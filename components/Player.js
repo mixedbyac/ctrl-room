@@ -84,7 +84,7 @@ export function PlayerProvider({ eng, children }) {
       a.src = u;
       a.addEventListener('ended', () => { if (curRef.current?.versionId === v.id) { setPlaying(false); nextRef.current?.(true); } });
       a.addEventListener('loadedmetadata', () => { if (curRef.current?.versionId === v.id) setDuration(a.duration || 0); });
-      a.addEventListener('ctrl-room:stopped', () => { if (curRef.current?.versionId === v.id) setPlaying(false); }); // something else started playing
+      a.addEventListener('ctrl-room:stopped', () => { if (curRef.current?.versionId === v.id) { stopAll(); setPlaying(false); } }); // something else started playing
       // link expired (left paused a long time): get a fresh one and carry on from the same spot
       a.addEventListener('error', async () => {
         if (a._renewing) return;
@@ -106,6 +106,9 @@ export function PlayerProvider({ eng, children }) {
   };
 
   const stopAll = () => Object.values(audios.current).forEach((a) => a.pause());
+  const siblings = () => { const c = curRef.current; if (!c) return []; return c.versions.filter((x) => x.id !== c.versionId).map((x) => audios.current[x.id]).filter(Boolean); };
+  // the other versions play along silently, in sync, so switching is instant (started from the same tap)
+  const playSiblings = (a) => siblings().forEach((x) => { x.muted = true; x.preload = 'auto'; try { x.currentTime = a.currentTime; } catch {} x.play().catch(() => {}); });
 
   /** Load a song (by id or object) and play it. */
   const play = useCallback(async ({ songId, song, project, versions, versionId, at = 0, queue: q, autoplay = true }) => {
@@ -135,14 +138,14 @@ export function PlayerProvider({ eng, children }) {
     // the other versions get ready too (just the start; they buffer around the playhead as the song plays)
     vs.forEach((x) => { if (x.id !== v.id) { const o = audioFor(x); if (o && o.paused && o.readyState < 2) o.preload = 'metadata'; } });
     setDuration(a.duration || v.duration || 0);
-    const go = () => { try { a.currentTime = at || 0; } catch {} setTime(at || 0); if (autoplay) a.play().then(() => setPlaying(true)).catch(() => setPlaying(false)); };
+    const go = () => { try { a.currentTime = at || 0; } catch {} setTime(at || 0); a.muted = false; if (autoplay) { a.play().then(() => setPlaying(true)).catch(() => setPlaying(false)); playSiblings(a); } };
     if (a.readyState >= 1) go(); else a.addEventListener('loadedmetadata', go, { once: true });
   }, [audioFor, signed]);
 
-  const pause = useCallback(() => { const a = curAudio(); if (a) a.pause(); setPlaying(false); }, []); // eslint-disable-line
-  const resume = useCallback(() => { const a = curAudio(); if (a) a.play().then(() => setPlaying(true)).catch(() => {}); }, []); // eslint-disable-line
+  const pause = useCallback(() => { const a = curAudio(); if (a) a.pause(); siblings().forEach((x) => x.pause()); setPlaying(false); }, []); // eslint-disable-line
+  const resume = useCallback(() => { const a = curAudio(); if (a) { a.muted = false; a.play().then(() => setPlaying(true)).catch(() => {}); playSiblings(a); } }, []); // eslint-disable-line
   const toggle = useCallback(() => (playing ? pause() : resume()), [playing, pause, resume]);
-  const seek = useCallback((t) => { const a = curAudio(); if (a) { a.currentTime = Math.max(0, Math.min(t, a.duration || t)); setTime(a.currentTime); } }, []); // eslint-disable-line
+  const seek = useCallback((t) => { const a = curAudio(); if (a) { a.currentTime = Math.max(0, Math.min(t, a.duration || t)); setTime(a.currentTime); siblings().forEach((x) => { try { x.currentTime = a.currentTime; } catch {} }); } }, []); // eslint-disable-line
 
   /** Same song, different version, same spot in the song. Seamless: the old one keeps playing until the new one is ready right there. */
   const switching = useRef(0);
@@ -153,6 +156,15 @@ export function PlayerProvider({ eng, children }) {
     if (!v) return;
     const old = curAudio(), was = playing;
     const token = ++switching.current;
+    const hot = audios.current[v.id];
+    if (hot && old && hot !== old && (!was || (!hot.paused && Math.abs(hot.currentTime - old.currentTime) < 0.2))) {
+      try { if (Math.abs(hot.currentTime - old.currentTime) > 0.04) hot.currentTime = old.currentTime; } catch {}
+      old.muted = true; hot.muted = false; // quiet the old one first; it keeps running for flipping back
+      if (!was) { hot.pause(); old.pause(); }
+      const next = { ...c, versionId };
+      curRef.current = next; setCurrent(next); setDuration(hot.duration || v.duration || 0);
+      return;
+    }
     if (!urls.current[v.storage_path]) await signed([v.storage_path]);
     const b = audioFor(v);
     if (!b) return;
@@ -259,7 +271,10 @@ export function PlayerProvider({ eng, children }) {
       const r = rot.current, dt = Math.min(0.05, (ts - (r.last || ts)) / 1000); r.last = ts;
       const a = curAudio();
       if (a && playing && ts - r.lastSet > 200) { r.lastSet = ts; setTime(a.currentTime); }
-      if (a && playing && ts - warm.current > 3000) { warm.current = ts; warmSiblings(a.currentTime); }
+      if (a && playing && !a.paused && ts - warm.current > 1000) {
+        warm.current = ts;
+        siblings().forEach((x) => { if (x.paused) { x.muted = true; x.play().catch(() => {}); } if (Math.abs(x.currentTime - a.currentTime) > 0.06) { try { x.currentTime = a.currentTime; } catch {} } });
+      }
       const target = playing ? 1 : 0;
       r.vel += (target - r.vel) * (target > r.vel ? 2.2 : 1.1) * dt;
       if (Math.abs(r.vel) > 0.001 && !phone.current) { r.angle = (r.angle + r.vel * 200 * dt) % 360; document.body.style.setProperty('--rot', r.angle.toFixed(2) + 'deg'); } // phones don't spin covers: skip the work

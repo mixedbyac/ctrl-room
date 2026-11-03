@@ -2033,3 +2033,12 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .lplayerr { position: absolute; left: 50%; bottom: -34px; transform: translateX(-50%); white-space: nowrap; font-size: 12.5px; color: #f4f4f5; background: rgba(0,0,0,.6); padding: 5px 10px; border-radius: 999px; z-index: 3; }
 
 .shplays { display: grid; gap: 3px; padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.04); }
+
+/* share link: the logo while every version loads (so play and switching are instant) */
+.lload { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; background: #0f0f10; animation: lloadout .25s ease reverse; }
+.lload img { width: 84px; height: 84px; animation: lloadpulse 1.1s ease-in-out infinite; }
+@keyframes lloadpulse { 0%, 100% { opacity: .45; transform: scale(.96); } 50% { opacity: 1; transform: scale(1); } }
+@keyframes lloadout { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .lload img { animation: none; } }
+/* phones: on share links the Lossless tag only shows in the pop-out player, not on the page */
+@media (max-width: 760px) { .lpage .linfo .nptimes .npfmt .qtag { display: none; } }

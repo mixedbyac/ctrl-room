@@ -211,56 +211,91 @@ export default function SharedListen() {
       .then((r) => r.json()).then((j) => { if (j.id) t.id = j.id; }).catch(() => {}).finally(() => { t.creating = false; });
   }, [token]);
 
-  // switching versions: keep the spot (and keep playing if it was)
-  const resume = useRef(null);
+  // Every version of the song loads up front and plays together (muted except the one you hear), so flipping
+  // between them is instant and stays in sync. Costs a little loading time, which the logo covers.
+  const bank = useRef({}); // versionId -> Audio, for the current song
+  const [ready, setReady] = useState(false);
+  const [booted, setBooted] = useState(false); // the logo shows only on the first load
   const switchVersion = (vid) => {
     const nv = cur?.vlist?.find((x) => x.id === vid);
     if (!nv || nv.id === cur.version.id) return;
-    const a = audio.current;
-    const play = !!(a && !a.paused);
-    // phones only let audio start from the tap itself: start the new version right now (silent), then line it up
-    let el = null;
-    if (play) { el = onlyOne(new Audio()); el.preload = 'auto'; el.src = nv.url; el.muted = true; el.play().catch(() => {}); }
-    resume.current = { t: a ? a.currentTime : 0, play, el };
-    setData((d) => ({ ...d, songs: d.songs.map((s, i) => (i === idx ? { ...s, version: nv } : s)) }));
+    const a = audio.current, b = bank.current[nv.id];
+    if (!b) return;
+    const on = !!(a && !a.paused), t = a ? a.currentTime : 0;
+    try { if (Math.abs(b.currentTime - t) > 0.04) b.currentTime = t; } catch {}
+    if (on && b.paused) { b.muted = true; b.play().catch(() => {}); }
+    if (a) a.muted = true; // the old one goes quiet first (it keeps running silently, ready to flip back)
+    b.muted = false;
+    if (!on) b.pause();
+    audio.current = b;
+    if (track.current) track.current.vid = nv.id;
+    setDur(b.duration || nv.duration || 0);
+    setData((d) => ({ ...d, songs: d.songs.map((s, k) => (k === idx ? { ...s, version: nv } : s)) }));
   };
   useEffect(() => {
     if (!cur) return;
-    const res = resume.current; resume.current = null;
-    if (res?.el && res.el.src !== cur.version.url) { res.el.pause(); res.el.src = ''; } // never leave a second copy running
-    const a = res?.el && res.el.src === cur.version.url ? res.el : onlyOne(new Audio());
-    if (a !== res?.el) { a.preload = 'auto'; a.src = cur.version.url; }
-    a.volume = 1;
-    if (res) {
-      const go = () => { try { a.currentTime = Math.min(res.t, (a.duration || res.t + 1) - 0.05); } catch {} setTime(res.t); a.muted = false; if (res.play) a.play().then(() => setPlaying(true)).catch(() => setPlaying(false)); };
-      if (a.readyState >= 1) go(); else a.addEventListener('loadedmetadata', go, { once: true });
-    }
-    audio.current = a;
+    setReady(false);
+    const list = cur.vlist?.length ? cur.vlist : [cur.version];
+    const els = {};
+    list.forEach((v) => {
+      const x = onlyOne(new Audio());
+      x.preload = 'auto'; x.src = v.url; x.volume = 1; x.muted = v.id !== cur.version.id;
+      els[v.id] = x;
+    });
+    bank.current = els;
+    const first = els[cur.version.id] || Object.values(els)[0];
+    audio.current = first;
     track.current = { songId: cur.id, vid: cur.version.id, id: null, listened: 0, duration: cur.version.duration, bins: new Set(), last: 0, saved: 0 };
-    const onMeta = () => setDur(a.duration || cur.version.duration || 0);
-    const onEnd = () => { setPlaying(false); report(); if (idx < songs.length - 1) { setIdx(idx + 1); setTimeout(() => audio.current?.play().then(() => setPlaying(true)).catch(() => {}), 50); } };
-    const onStopped = () => setPlaying(false); // another player or tab started
-    a.addEventListener('loadedmetadata', onMeta); a.addEventListener('ended', onEnd); a.addEventListener('ctrl-room:stopped', onStopped);
+    let done = false;
+    const isReady = () => { if (done) return; done = true; setReady(true); setBooted(true); };
+    const cap = setTimeout(isReady, 6000); // never hold the page longer than this
+    first.addEventListener('canplay', isReady, { once: true });
+    if (first.readyState >= 3) isReady();
+    const all = Object.values(els);
+    const onMeta = (e) => { if (e.target === audio.current) setDur(e.target.duration || cur.version.duration || 0); };
+    const onEnd = (e) => { if (e.target !== audio.current) return; all.forEach((x) => x.pause()); setPlaying(false); report(); if (idx < songs.length - 1) { setIdx(idx + 1); setTimeout(() => playAll(), 50); } };
+    const onStopped = (e) => { if (e.target === audio.current) { all.forEach((x) => x.pause()); setPlaying(false); } }; // another player or tab started
+    all.forEach((x) => { x.addEventListener('loadedmetadata', onMeta); x.addEventListener('ended', onEnd); x.addEventListener('ctrl-room:stopped', onStopped); });
     let raf;
-    let lastSet = 0;
+    let lastSet = 0, lastSync = 0;
     const tick = () => {
-      const t = track.current, now = performance.now();
-      // update the screen ~5 times a second (every frame made phones too busy to respond to taps)
-      if (now - lastSet > 200 || a.paused) { lastSet = now; setTime((prev) => (Math.abs(prev - a.currentTime) > 0.05 ? a.currentTime : prev)); }
-      if (!a.paused && t) {
-        const d = a.duration || t.duration || 0; t.duration = d;
-        if (t.last) t.listened += Math.min(1, (now - t.last) / 1000);
-        if (d) t.bins.add(Math.min(BINS - 1, Math.floor((a.currentTime / d) * BINS)));
-        if ((!t.id && t.listened > 1) || now - t.saved > 5000) { t.saved = now; report(); }
+      const a = audio.current, t = track.current, now = performance.now();
+      if (a) {
+        // update the screen ~5 times a second (every frame made phones too busy to respond to taps)
+        if (now - lastSet > 200 || a.paused) { lastSet = now; setTime((prev) => (Math.abs(prev - a.currentTime) > 0.05 ? a.currentTime : prev)); }
+        // keep the silent versions lined up with the one you hear
+        if (!a.paused && now - lastSync > 1000) {
+          lastSync = now;
+          all.forEach((x) => { if (x === a) return; if (x.paused) { x.muted = true; x.play().catch(() => {}); } if (Math.abs(x.currentTime - a.currentTime) > 0.06) { try { x.currentTime = a.currentTime; } catch {} } });
+        }
+        if (!a.paused && t) {
+          const d = a.duration || t.duration || 0; t.duration = d;
+          if (t.last) t.listened += Math.min(1, (now - t.last) / 1000);
+          if (d) t.bins.add(Math.min(BINS - 1, Math.floor((a.currentTime / d) * BINS)));
+          if ((!t.id && t.listened > 1) || now - t.saved > 5000) { t.saved = now; report(); }
+        }
+        if (t) t.last = a.paused ? 0 : now;
       }
-      if (t) t.last = a.paused ? 0 : now;
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    if (!res) setTime(0);
+    setTime(0);
     setDur(cur.version.duration || 0);
-    return () => { cancelAnimationFrame(raf); a.pause(); a.removeEventListener('loadedmetadata', onMeta); a.removeEventListener('ended', onEnd); report(); audio.current = null; };
-  }, [cur?.id, cur?.version?.id]); // eslint-disable-line
+    return () => {
+      clearTimeout(cap); cancelAnimationFrame(raf);
+      all.forEach((x) => { x.pause(); x.removeEventListener('loadedmetadata', onMeta); x.removeEventListener('ended', onEnd); x.removeEventListener('ctrl-room:stopped', onStopped); x.src = ''; });
+      report(); audio.current = null; bank.current = {};
+    };
+  }, [cur?.id]); // eslint-disable-line
+  // play the one you hear, and the others silently alongside it (started from the tap, which phones need)
+  const playAll = () => {
+    const a = audio.current; if (!a) return Promise.reject();
+    a.muted = false;
+    const p = a.play();
+    Object.values(bank.current).forEach((x) => { if (x === a) return; x.muted = true; try { x.currentTime = a.currentTime; } catch {} x.play().catch(() => {}); });
+    return p.then(() => setPlaying(true));
+  };
+  const pauseAll = () => { Object.values(bank.current).forEach((x) => x.pause()); setPlaying(false); };
 
   // lock screen / Control Center: cover art, title, artist and controls
   useEffect(() => {
@@ -270,11 +305,11 @@ export default function SharedListen() {
     ms.metadata = new MediaMetadata({ title: cur.title, artist: data.artist?.display_name || data.project?.artist || '', album: data.project?.title || 'CTRL ROOM',
       artwork: [{ src, sizes: '512x512', type: 'image/jpeg' }, { src: '/logo.png', sizes: '512x512', type: 'image/png' }] });
     const set = (k, fn) => { try { ms.setActionHandler(k, fn); } catch {} };
-    set('play', () => audio.current?.play().then(() => setPlaying(true)).catch(() => {}));
-    set('pause', () => { audio.current?.pause(); setPlaying(false); });
+    set('play', () => playAll().catch(() => {}));
+    set('pause', () => pauseAll());
     set('nexttrack', idx < songs.length - 1 ? () => setIdx(idx + 1) : null);
     set('previoustrack', idx > 0 ? () => setIdx(idx - 1) : null);
-    set('seekto', (d) => { if (audio.current && d?.seekTime != null) audio.current.currentTime = d.seekTime; });
+    set('seekto', (d) => { if (d?.seekTime != null) seek(d.seekTime); });
   }, [cur?.id, data]); // eslint-disable-line
   useEffect(() => { try { navigator.mediaSession.playbackState = playing ? 'playing' : 'paused'; } catch {} }, [playing]);
 
@@ -305,24 +340,23 @@ export default function SharedListen() {
     return () => { clearInterval(t); document.removeEventListener('visibilitychange', onVis); };
   }, []);
   const [playErr, setPlayErr] = useState('');
-  // play / pause; if the browser refuses (an expired or half-loaded file), reload it once and try again, and say why if it still won't
   const toggle = () => {
     const a = audio.current;
     if (!a) return;
-    if (!a.paused) { a.pause(); setPlaying(false); return; }
+    if (!a.paused) { pauseAll(); return; }
     setPlayErr('');
-    a.muted = false;
-    a.play().then(() => setPlaying(true)).catch(() => {
+    setPlaying(true); // feels instant; flips back if it can't start
+    playAll().catch(() => {
       try { const at = a.currentTime || 0; a.load(); a.addEventListener('loadedmetadata', () => { try { a.currentTime = at; } catch {} }, { once: true }); } catch {}
-      a.play().then(() => setPlaying(true)).catch((e) => { setPlaying(false); setPlayErr(e?.name === 'NotAllowedError' ? 'Tap play again to start.' : 'This mix won’t start. Reload the page to try again.'); });
+      playAll().catch((e) => { setPlaying(false); setPlayErr(e?.name === 'NotAllowedError' ? 'Tap play again to start.' : 'This mix won’t start. Reload the page to try again.'); });
     });
   };
   const pick = (i) => {
     if (i === idx) return toggle();
     setIdx(i); setPlaying(false);
-    setTimeout(() => audio.current?.play().then(() => setPlaying(true)).catch(() => {}), 50);
+    setTimeout(() => playAll().catch(() => {}), 50);
   };
-  const seek = (t) => { const a = audio.current; if (a) { a.currentTime = t; setTime(t); } };
+  const seek = (t) => { Object.values(bank.current).forEach((x) => { try { x.currentTime = t; } catch {} }); setTime(t); };
   useEffect(() => {
     const k = (e) => { if (e.code === 'Space' && !e.target.closest('input,textarea,button')) { e.preventDefault(); toggle(); } };
     document.addEventListener('keydown', k); return () => document.removeEventListener('keydown', k);
@@ -338,6 +372,7 @@ export default function SharedListen() {
   const name = ar?.display_name || p.artist;
   return (
     <main className="lpage">
+      {cur && !ready && !booted && <div className="lload" aria-label="Loading"><img src="/logo.png" alt="" /></div>}
       <Art src={artSrc} seed={artSeed} size={200} className="lbg" />
       {ar?.header_url && <div className="lheader" style={{ backgroundImage: `url(${ar.header_url})` }} />}
       <div className="lwrap">

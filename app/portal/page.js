@@ -18,7 +18,7 @@ import { analyseSong, describeFiles, hintsFromName, pickListenFile, titleSource,
 import { uploadDemo } from '@/lib/demo';
 import { parseMixName } from '@/lib/filename';
 
-const LIMIT_SEND = 2 * 1024 * 1024 * 1024; // 2 GB per upload
+const LIMIT_SEND = 5 * 1024 * 1024 * 1024; // 5 GB per upload
 const DIRECT_MAX = 150 * 1024 * 1024; // bigger files go up in pieces
 const blank = () => ({ k: Math.random().toString(36).slice(2), title: '', bpm: '', key: '', ref: '', notes: '', files: [] });
 
@@ -110,7 +110,7 @@ export default function Portal() {
     if (!/^\S+@\S+\.\S+$/.test(f.email.trim())) return setErr('Add an email address. You sign in with it to follow along.');
     // songs without a detectable name still go through, as "Song 2" and so on
     songs.forEach((s, i) => { if (!s.title.trim()) s.title = `Song ${i + 1}`; });
-    if (bytes > LIMIT_SEND) return setErr(`That’s ${fmtBytes(bytes)}. Each upload can be up to 2 GB, so send the rest in a second upload.`);
+    if (bytes > LIMIT_SEND) return setErr(`That’s ${fmtBytes(bytes)}. Each upload can be up to 5 GB, so send the rest in a second upload.`);
     if (!fileCount) return setErr('Add files for at least one song. Drop them on the song they belong to.');
     return doSend(songs, f);
   };
@@ -207,7 +207,7 @@ export default function Portal() {
   // a project's send link: just one big drop box, straight into that project
   if (target || /[?&]to=/.test(typeof window !== 'undefined' ? window.location.search : '')) {
     return <BigDrop target={target} err={err} sending={sending} pct={pct} progress={progress} me={{ name: f.name, email: f.email }}
-      onSend={(list, who) => { if (!target) return; if (list.reduce((n, s) => n + s.files.reduce((m, x) => m + x.size, 0), 0) > LIMIT_SEND) return setErr('That’s over 2 GB. Send the rest in a second drop.');
+      onSend={(list, who) => { if (!target) return; if (list.reduce((n, s) => n + s.files.reduce((m, x) => m + x.size, 0), 0) > LIMIT_SEND) return setErr('That’s over 5 GB. Send the rest in a second drop.');
         doSend(list, { ...f, name: who.name.trim(), email: who.email.trim(), artist: target.artist || '', who: 'Artist', message: '', deadline: '' }); }} />;
   }
   return (
@@ -291,7 +291,7 @@ export default function Portal() {
             </div>
             {err && <p className="ferr">{err}</p>}
             <button className="send" type="submit" form="pform" disabled={sending}>{sending ? 'Sending… keep this page open' : 'Send to the CTRL ROOM'}</button>
-            <p className="fine">Up to 2 GB per upload.</p>
+            <p className="fine">Up to 5 GB per upload.</p>
             <p className="tosline">By sending, you agree to the <a href="https://art-house.us/tos" target="_blank" rel="noopener noreferrer">Terms of Service</a>.</p>
           </aside>
         </div>

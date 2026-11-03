@@ -4,7 +4,7 @@ import { admin, json, fail, dropboxFolder, dropboxPath, dropboxChunk } from '@/l
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 const PIECE = 4 * 1024 * 1024; // must stay under Vercel's 4.5 MB request limit
-const MAX = 2 * 1024 * 1024 * 1024;
+const MAX = 5 * 1024 * 1024 * 1024;
 
 // Files over 150 MB: the browser sends 4 MB pieces here and we pass them to a Dropbox upload session.
 // Headers: x-upload-id, x-song-id, x-name (URI-encoded), x-step (start|append|finish), x-session, x-offset, x-size
@@ -15,7 +15,7 @@ export async function POST(req) {
   const name = decodeURIComponent(h('x-name') || 'file');
   const offset = Number(h('x-offset') || 0), size = Number(h('x-size') || 0);
   if (!uploadId || !songId || !['start', 'append', 'finish'].includes(step)) return fail('Missing file details.');
-  if (size > MAX) return fail(`${name} is over 2 GB.`);
+  if (size > MAX) return fail(`${name} is over 5 GB.`);
 
   const db = admin();
   const { data: up } = await db.from('uploads').select('id,artist,project_id,songs,created_at').eq('id', uploadId).single();

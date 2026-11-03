@@ -25,7 +25,9 @@ export async function POST(req) {
   if (b.projectId) {
     const user = await userFrom(req);
     const { data: p } = await db.from('projects').select('*').eq('id', b.projectId).single();
-    const ok = p && user && (await canSee(user, p.id));
+    // a project's own Portal link lets anyone with it send straight in; otherwise you need to be on the team
+    const viaLink = p && b.portalToken && p.settings?.portal_token && b.portalToken === p.settings.portal_token;
+    const ok = p && (viaLink || (user && (await canSee(user, p.id))));
     if (!ok) return fail('You don’t have access to that project. Ask your engineer to add you to the artist’s team.', 403);
     project = p;
     const patch = {};

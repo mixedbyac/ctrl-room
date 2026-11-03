@@ -2052,3 +2052,17 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .spop button.danger { color: #ff7a7a; }
 .smore svg { width: 16px !important; height: 16px !important; opacity: .7; }
 .smore:hover svg, .smore[aria-expanded="true"] svg { opacity: 1; }
+
+.portaltarget { margin: 0 0 10px; padding: 10px 12px; border-radius: 12px; background: rgba(245,213,71,.08); border: 1px solid rgba(245,213,71,.3); font-size: 14px; }
+/* engineer → artist file send */
+.sendout { display: grid; gap: 12px; }
+.sendout.hot { outline: 2px dashed var(--sig); outline-offset: -6px; }
+.sendoutdrop { padding: 22px; border-radius: 14px; border: 1.5px dashed var(--line); background: rgba(255,255,255,.03); color: var(--muted); font: inherit; font-size: 14px; cursor: pointer; }
+.sendoutdrop:hover { border-color: rgba(245,213,71,.5); color: var(--ink); }
+.sendoutlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.sendoutlist li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; font-size: 13.5px; }
+.sendoutlist li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sendoutlist small { color: var(--muted); }
+
+.portalmode { max-width: 360px; margin-bottom: 18px; grid-template-columns: 1fr 1fr; }
+.portalmode button { height: 36px; }

@@ -21,6 +21,7 @@ import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
 import { fmtDate, shortDate, statusText, mmss, latestMix, mixesOf, currentMix, fmtBytes, todayISO, demoOf } from '@/lib/format';
 import { uploadDemo } from '@/lib/demo';
+import SendOut from '@/components/SendOut';
 import { parseMixName, matchSong } from '@/lib/filename';
 import { deliverFile } from '@/lib/deliver';
 import { usePlayer } from '@/components/Player';
@@ -204,6 +205,8 @@ export default function ProjectPage() {
         {eng && <AddMixes p={p} onSaved={load} />}
         {eng && panel === 'add' && <PanelShell onClose={() => setPanel(null)}><AddSong p={p} onSaved={() => { load(); setPanel(null); }} /></PanelShell>}
         {eng && panel === 'demo' && <PanelShell onClose={() => setPanel(null)}><DemoPanel p={p} onSaved={load} /></PanelShell>}
+        {eng && panel === 'portal' && <PanelShell onClose={() => setPanel(null)}><PortalLinkPanel p={p} /></PanelShell>}
+        {eng && panel === 'outgoing' && <PanelShell onClose={() => setPanel(null)}><SendOut projectId={p.id} title={p.title} /></PanelShell>}
         {eng && panel === 'edit' && <PanelShell onClose={() => setPanel(null)}><EditProject p={p} onSaved={() => { load(); reloadProjects(); setPanel(null); }} /></PanelShell>}
 
         {p.songs.length > 0 && <TrackStats songs={p.songs} eng={eng} onMeasured={load} />}
@@ -449,6 +452,8 @@ function AddPlus({ p, onSaved, onPick, unpaid }) {
         <div className="plusmenu" role="menu">
           <Row k="mixes" icon="↑" title="Add files / mixes" sub="Pick files, they go straight in (or drag them onto the page)" />
           <Row k="demo" icon="◐" title="Add demos" sub="The artist’s rough version, for before/after" />
+          <Row k="portal" icon="⇪" title="Send-files link" sub="A sendfileshere link that drops files right into this project" />
+          <Row k="outgoing" icon="➚" title="Send files to the artist" sub="Stems, instrumentals, anything: they get download buttons" />
           <Row k="share" icon="@" title="Client access" sub="Who can open it, downloads" />
           <button role="menuitemcheckbox" aria-checked={dl} className="pmdl" onClick={toggleDl}><span className="pmi">↓</span><span><b>Allow downloads</b><small>{dlMsg || (dl ? 'On: the artist’s team can download mixes' : 'Off: they can listen, not download')}</small></span><span className={`switch sm ${dl ? 'on' : ''}`} aria-hidden="true"><i /></span></button>
           <Row k="invoice" icon="$" title="Invoices" sub="Attach, show, lock until paid" dot={unpaid} />
@@ -500,6 +505,25 @@ function DemoPanel({ p, onSaved }) {
       <div className="row-actions"><button className="btn small primary" disabled={!!busy} onClick={() => open(null)}>+ New songs from demos</button>{busy && <span className="small muted">{busy}</span>}</div>
       {msg && <p className="toast-inline">{msg}</p>}
       <input ref={input} className="vh" type="file" multiple accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.flac" onChange={(e) => { const l = Array.from(e.target.files || []); e.target.value = ''; go(target.current ? l.slice(0, 1) : l); }} />
+    </div>
+  );
+}
+
+/** + › Send-files link: sendfileshere.com/?to=… drops whatever they send straight into this project. */
+function PortalLinkPanel({ p }) {
+  const [url, setUrl] = useState('');
+  const [msg, setMsg] = useState('');
+  const [copied, setCopied] = useState(false);
+  const get = (reset = false) => api('/api/portal/linkfor', { projectId: p.id, reset }).then((r) => setUrl(r.url)).catch((e) => setMsg(e.message));
+  useEffect(() => { get(); }, []); // eslint-disable-line
+  const copy = async () => { try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2200); } catch { setMsg('Select the link and copy it.'); } };
+  return (
+    <div className="panel" style={{ marginBottom: 24 }}>
+      <h3>Send-files link</h3>
+      <p className="muted small" style={{ margin: 0 }}>Anyone with this link can send files straight into <b>{p.title}</b>: no account, no picking a project. Songs with the same name get the files; new names become new songs.</p>
+      <div className="share-link"><code>{url || 'Making the link…'}</code><button className={`btn small copybtn ${copied ? 'done' : ''}`} onClick={copy} disabled={!url}>{copied ? '✓ Copied' : 'Copy link'}</button>
+        <button className="btn small quiet" onClick={() => { if (window.confirm('Make a new link? The old one stops working.')) get(true); }}>Reset</button></div>
+      {msg && <p className="toast-inline">{msg}</p>}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 'use client';
+import SendOut from '@/components/SendOut';
 import { TITLES } from '@/lib/titles';
 import InlineText from '@/components/InlineText';
 import { useEffect, useRef, useState } from 'react';
@@ -22,9 +23,20 @@ const DIRECT_MAX = 150 * 1024 * 1024; // bigger files go up in pieces
 const blank = () => ({ k: Math.random().toString(36).slice(2), title: '', bpm: '', key: '', ref: '', notes: '', files: [] });
 
 export default function Portal() {
-  const { session, email: myEmail, projects } = useApp();
+  const { session, email: myEmail, projects, eng } = useApp();
+  const [outbound, setOutbound] = useState(false); // engineer: send files to an artist instead
   const [f, setF] = useState({ name: '', artist: '', email: '', phone: '', spotify: '', message: '', title: '', who: 'Artist', type: 'EP', release: '', deadline: '' });
   const [mode, setMode] = useState('new');
+  // sendfileshere.com/?to=… : this send goes straight into one project
+  const [target, setTarget] = useState(null);
+  useEffect(() => {
+    const to = new URLSearchParams(window.location.search).get('to');
+    if (!to) return;
+    fetch(`/api/portal/target?to=${encodeURIComponent(to)}`).then((r) => r.json().then((j) => (r.ok ? j : Promise.reject(new Error(j.error))))).then((t) => {
+      setTarget({ ...t, token: to }); setMode(t.projectId);
+      setF((x) => ({ ...x, artist: t.artist || x.artist }));
+    }).catch((e) => setErr(e.message));
+  }, []);
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 1e9));
   const [songs, setSongs] = useState([blank()]);
   // a different nudge in the message box each time (and every few seconds while it's empty)
@@ -82,7 +94,7 @@ export default function Portal() {
     setF((x) => ({ ...x, email: x.email || myEmail, name: x.name || md.name || '', artist: x.artist || md.artist || '', phone: x.phone || md.phone || '', spotify: x.spotify || md.spotify || '' }));
   }, [myEmail]); // eslint-disable-line
 
-  const project = mode === 'new' ? null : projects.find((p) => p.id === mode);
+  const project = mode === 'new' ? null : projects.find((p) => p.id === mode) || (target && target.projectId === mode ? { id: target.projectId, title: target.title, artist: target.artist } : null);
   // no project questions: name and type come from the songs (the engineer can rename later)
   const named = songs.filter((s) => s.title.trim());
   const autoType = songs.length <= 1 ? 'Single' : songs.length <= 6 ? 'EP' : 'Album';
@@ -105,7 +117,7 @@ export default function Portal() {
     try {
       const r = await api('/api/portal', {
         name: f.name, email: f.email, phone: f.phone, artist: f.artist, who: f.who, spotify: f.spotify, message: f.message, deadline: f.deadline || null,
-        projectId: mode === 'new' ? null : mode,
+        projectId: mode === 'new' ? null : mode, portalToken: target?.token || undefined,
         project: { title: autoTitle || 'Untitled', type: autoType, release: null, seed },
         songs: songs.map((s) => ({ title: s.title, bpm: s.bpm, key: s.key, ref: s.ref, notes: s.notes })),
       });
@@ -178,8 +190,18 @@ export default function Portal() {
   return (
     <>
       <TopBar crumbs={[{ label: 'Portal' }]} />
-      {!sending && <DropAnywhere onFiles={dropAnywhere} />}
+      {eng && !target && (
+        <div className="page" style={{ paddingBottom: 0 }}>
+          <div className="seg3 portalmode" role="tablist" aria-label="Portal">
+            <button role="tab" aria-checked={!outbound} onClick={() => setOutbound(false)}>Receive files</button>
+            <button role="tab" aria-checked={outbound} onClick={() => setOutbound(true)}>Send to an artist</button>
+          </div>
+          {outbound && <SendOut />}
+        </div>
+      )}
+      {!(eng && outbound) && !sending && <DropAnywhere onFiles={dropAnywhere} />}
       {dropNote && <div className="dropnote" role="status">{dropNote}</div>}
+      {!(eng && outbound) && <>
       <section className="page portal">
         <div>
           <h1 className="up">Send your files</h1>
@@ -193,7 +215,7 @@ export default function Portal() {
             <fieldset className="sec" disabled={sending}>
               <legend><span className="n">1</span>You</legend>
               <div className="two">
-                <div className="fld"><label htmlFor="fArtist">Artist name</label><input id="fArtist" value={f.artist} onChange={set('artist')} /></div>
+                <div className="fld"><label htmlFor="fArtist">Artist name</label><input id="fArtist" value={f.artist} onChange={set('artist')} readOnly={!!target} /></div>
                 <div className="fld"><label htmlFor="fName">Your name</label><input id="fName" autoComplete="name" value={f.name} onChange={set('name')} /></div>
                 <div className="fld"><label htmlFor="fWho">I’m the…</label><select id="fWho" value={f.who} onChange={set('who')}>{TITLES.map((t) => <option key={t} value={t}>{t}</option>)}</select></div>
                 <div className="fld"><label htmlFor="fEmail">Email <span className="opt">you'll sign in with this</span></label><input id="fEmail" type="email" autoComplete="email" value={f.email} onChange={set('email')} /></div>
@@ -208,7 +230,8 @@ export default function Portal() {
                 <label htmlFor="fDue">Need it by <span className="opt">optional</span></label>
                 <input id="fDue" type="date" min={todayISO()} value={f.deadline} onChange={set('deadline')} />
               </div>
-              {session && projects.filter((p) => !p.archived).length > 0 && (
+              {target && <p className="portaltarget">Sending to <b>{target.title}</b>{target.artist ? <> · {target.artist}</> : null}. Your files go straight into this project.{target.songs?.length ? <> Songs here: {target.songs.slice(0, 8).join(', ')}{target.songs.length > 8 ? '…' : ''}. Use the same name to add to one.</> : null}</p>}
+              {!target && session && projects.filter((p) => !p.archived).length > 0 && (
                 <div className="fld addto">
                   <label htmlFor="fAddTo">Add to</label>
                   <select id="fAddTo" value={mode} onChange={(e) => setMode(e.target.value)}>
@@ -249,6 +272,7 @@ export default function Portal() {
           </aside>
         </div>
       </section>
+      </>}
     </>
   );
 }

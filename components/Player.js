@@ -8,6 +8,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { drawWave } from '@/lib/wavedraw';
+import { onlyOne } from '@/lib/onlyone';
 import { pingPush, pingDownload } from '@/lib/pushclient';
 import { emailArtistOn, notifyArtist } from '@/lib/notifyartist';
 import Cover from '@/components/Cover';
@@ -77,12 +78,13 @@ export function PlayerProvider({ eng, children }) {
     if (!a) {
       const u = urls.current[v.storage_path]?.url;
       if (!u) return null;
-      a = new Audio();
+      a = onlyOne(new Audio());
       a.preload = 'auto';
       a.volume = 1;
       a.src = u;
       a.addEventListener('ended', () => { if (curRef.current?.versionId === v.id) { setPlaying(false); nextRef.current?.(true); } });
       a.addEventListener('loadedmetadata', () => { if (curRef.current?.versionId === v.id) setDuration(a.duration || 0); });
+      a.addEventListener('ctrl-room:stopped', () => { if (curRef.current?.versionId === v.id) setPlaying(false); }); // something else started playing
       // link expired (left paused a long time): get a fresh one and carry on from the same spot
       a.addEventListener('error', async () => {
         if (a._renewing) return;

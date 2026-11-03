@@ -1,5 +1,6 @@
 'use client';
 import { drawWave } from '@/lib/wavedraw';
+import { onlyOne } from '@/lib/onlyone';
 import { makeArt } from '@/lib/art';
 import Credit, { BlueCheck } from '@/components/Credit';
 import QualityBadge from '@/components/QualityBadge';
@@ -219,14 +220,15 @@ export default function SharedListen() {
     const play = !!(a && !a.paused);
     // phones only let audio start from the tap itself: start the new version right now (silent), then line it up
     let el = null;
-    if (play) { el = new Audio(); el.preload = 'auto'; el.src = nv.url; el.muted = true; el.play().catch(() => {}); }
+    if (play) { el = onlyOne(new Audio()); el.preload = 'auto'; el.src = nv.url; el.muted = true; el.play().catch(() => {}); }
     resume.current = { t: a ? a.currentTime : 0, play, el };
     setData((d) => ({ ...d, songs: d.songs.map((s, i) => (i === idx ? { ...s, version: nv } : s)) }));
   };
   useEffect(() => {
     if (!cur) return;
     const res = resume.current; resume.current = null;
-    const a = res?.el && res.el.src === cur.version.url ? res.el : new Audio();
+    if (res?.el && res.el.src !== cur.version.url) { res.el.pause(); res.el.src = ''; } // never leave a second copy running
+    const a = res?.el && res.el.src === cur.version.url ? res.el : onlyOne(new Audio());
     if (a !== res?.el) { a.preload = 'auto'; a.src = cur.version.url; }
     a.volume = 1;
     if (res) {
@@ -237,7 +239,8 @@ export default function SharedListen() {
     track.current = { songId: cur.id, vid: cur.version.id, id: null, listened: 0, duration: cur.version.duration, bins: new Set(), last: 0, saved: 0 };
     const onMeta = () => setDur(a.duration || cur.version.duration || 0);
     const onEnd = () => { setPlaying(false); report(); if (idx < songs.length - 1) { setIdx(idx + 1); setTimeout(() => audio.current?.play().then(() => setPlaying(true)).catch(() => {}), 50); } };
-    a.addEventListener('loadedmetadata', onMeta); a.addEventListener('ended', onEnd);
+    const onStopped = () => setPlaying(false); // another player or tab started
+    a.addEventListener('loadedmetadata', onMeta); a.addEventListener('ended', onEnd); a.addEventListener('ctrl-room:stopped', onStopped);
     let raf;
     let lastSet = 0;
     const tick = () => {

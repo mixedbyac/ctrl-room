@@ -169,7 +169,7 @@ export default function ProjectPage() {
     <>
       <TopBar crumbs={crumbs} />
       <section className={`page ${pageOver ? 'filedrop' : ''}`}
-        onDragOver={(e) => { if (eng && !dragSong.current && [...(e.dataTransfer?.types || [])].includes('Files')) { e.preventDefault(); setPageOver(true); } }}
+        onDragOver={(e) => { const its = [...(e.dataTransfer?.items || [])]; if (its.length && its.every((x) => /^image\//.test(x.type))) return; if (eng && !dragSong.current && [...(e.dataTransfer?.types || [])].includes('Files')) { e.preventDefault(); setPageOver(true); } }}
         onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setPageOver(false); }}
         onDrop={(e) => { if (eng && e.dataTransfer?.files?.length) { e.preventDefault(); setPageOver(false); window.dispatchEvent(new CustomEvent('ctrl-room:add-mixes', { detail: { files: [...e.dataTransfer.files] } })); } }}>
         {pageOver && <div className="pagedrop" aria-hidden="true"><b>Drop mixes</b><span>They go to the matching songs. Drop on a song to stack it as that song’s next version.</span></div>}

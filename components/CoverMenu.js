@@ -39,8 +39,11 @@ export default function CoverMenu({ table, row, onChange, className = '', viaAdm
     // a project's new cover flows to all its songs; a song shuffle gives just that song its own cover
     await update(table === 'songs' ? { cover_path: `gen:${seed}` } : { seed, ...(row.cover_path ? { cover_path: null } : {}) });
   };
-  const upload = async (e) => {
-    const f = e.target.files?.[0]; e.target.value = '';
+  const upload = async (e) => { const f = e.target.files?.[0]; e.target.value = ''; return uploadFile(f); };
+  // drag an image straight onto the cover
+  const [hot, setHot] = useState(false);
+  const isImageDrag = (e) => { const it = [...(e.dataTransfer?.items || [])]; return it.length > 0 && it.some((x) => x.kind === 'file' && /^image\//.test(x.type)); };
+  const uploadFile = async (f) => {
     if (!f) return;
     if (!/^image\//.test(f.type)) return setErr('Pick an image file (JPG, PNG or WebP).');
     if (f.size > 15 * 1024 * 1024) return setErr('That image is over 15 MB. Try a smaller one.');
@@ -62,7 +65,12 @@ export default function CoverMenu({ table, row, onChange, className = '', viaAdm
   const remove = async (e) => { e.preventDefault(); e.stopPropagation(); setErr(''); setOpen(false); await update({ cover_path: null }); };
 
   return (
-    <div ref={box} className={`covermenu ${open ? 'open' : ''} ${className}`} onClick={(e) => e.stopPropagation()}>
+    <div ref={box} className={`covermenu ${open ? 'open' : ''} ${hot ? 'cmhot' : ''} ${className}`} onClick={(e) => e.stopPropagation()}
+      onDragEnter={(e) => { if (isImageDrag(e)) { e.preventDefault(); e.stopPropagation(); setHot(true); } }}
+      onDragOver={(e) => { if (isImageDrag(e)) { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'copy'; if (!hot) setHot(true); } }}
+      onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setHot(false); }}
+      onDrop={(e) => { const f = [...(e.dataTransfer?.files || [])].find((x) => /^image\//.test(x.type)); if (!f) return; e.preventDefault(); e.stopPropagation(); setHot(false); setOpen(false); uploadFile(f); }}>
+      {hot && <span className="cmdrop" aria-hidden="true">Drop to set cover</span>}
       <button type="button" className="cmhit" aria-label="Change cover art" aria-expanded={open} title="Change cover art"
         onClick={(e) => { e.preventDefault(); setErr(''); setOpen(!open); }} />
       {(open || busy || err) && (

@@ -2042,3 +2042,7 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 @media (prefers-reduced-motion: reduce) { .lload img { animation: none; } }
 /* phones: no Lossless badge on share links (page or pop-out player) */
 @media (max-width: 760px) { .lpage .qtag, .sharenp .qtag { display: none !important; } }
+
+/* drop an image on the cover */
+.covermenu.cmhot { outline: 3px dashed var(--sig); outline-offset: -10px; border-radius: inherit; background: rgba(15,15,16,.45); }
+.cmdrop { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 750; font-size: 15px; color: #fff; pointer-events: none; text-shadow: 0 2px 12px rgba(0,0,0,.6); }

@@ -199,6 +199,7 @@ export default function ProjectPage() {
         {eng && panel === 'share' && <PanelShell onClose={() => setPanel(null)}><SharePanel p={p} onSaved={load} /></PanelShell>}
         {eng && panel === 'invoice' && <PanelShell onClose={() => setPanel(null)}><InvoicePanel project={p} firstSongId={p.songs[0]?.id} onChange={inv.load} /></PanelShell>}
         {!eng && <InvoiceNotice list={inv.list} />}
+        {eng && approved > 0 && !p.allow_download && <DownloadNudge p={p} approved={approved} onSaved={load} />}
         {eng && <AddMixes p={p} onSaved={load} />}
         {eng && panel === 'add' && <PanelShell onClose={() => setPanel(null)}><AddSong p={p} onSaved={() => { load(); setPanel(null); }} /></PanelShell>}
         {eng && panel === 'demo' && <PanelShell onClose={() => setPanel(null)}><DemoPanel p={p} onSaved={load} /></PanelShell>}
@@ -351,6 +352,37 @@ function PanelShell({ onClose, children }) {
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
       </button>
       {children}
+    </div>
+  );
+}
+
+/** Engineer: something got approved but downloads are off. Offer to turn them on and tell the client. */
+function DownloadNudge({ p, approved, onSaved }) {
+  const key = `cr_dlnudge_${p.id}`;
+  const [hidden, setHidden] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  useEffect(() => { try { if (localStorage.getItem(key) === String(approved)) setHidden(true); } catch {} }, [key, approved]);
+  if (hidden) return null;
+  const go = async (email) => {
+    setBusy(true); setMsg('');
+    try {
+      const r = await api('/api/downloads', { projectId: p.id, email });
+      setMsg(email ? (r.mail?.sent ? `Downloads are on, and ${r.mail.sent} ${r.mail.sent === 1 ? 'person was' : 'people were'} emailed.` : `Downloads are on. The email didn’t go out: ${r.mail?.reason || 'unknown'}.`) : 'Downloads are on.');
+      setTimeout(() => onSaved(), 1800);
+    } catch (e) { setMsg(e.message); }
+    setBusy(false);
+  };
+  return (
+    <div className="dlnudge" role="status">
+      <span className="dlnudgeicon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg></span>
+      <span className="dlnudgetext"><b>{approved === p.songs.length ? 'Everything’s approved.' : `${approved} song${approved > 1 ? 's' : ''} approved.`} Make it downloadable?</b>
+        <small>{msg || 'Turn on downloads for the artist’s team, and let them know by email.'}</small></span>
+      {!msg && <span className="dlnudgeacts">
+        <button className="btn small primary" disabled={busy} onClick={() => go(true)}>{busy ? 'Turning on…' : 'Turn on & email client'}</button>
+        <button className="btn small" disabled={busy} onClick={() => go(false)}>Just turn on</button>
+        <button className="btn small quiet" disabled={busy} onClick={() => { setHidden(true); try { localStorage.setItem(key, String(approved)); } catch {} }}>Not now</button>
+      </span>}
     </div>
   );
 }

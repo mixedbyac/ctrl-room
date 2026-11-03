@@ -216,15 +216,21 @@ export default function SharedListen() {
     const nv = cur?.vlist?.find((x) => x.id === vid);
     if (!nv || nv.id === cur.version.id) return;
     const a = audio.current;
-    resume.current = { t: a ? a.currentTime : 0, play: !!(a && !a.paused) };
+    const play = !!(a && !a.paused);
+    // phones only let audio start from the tap itself: start the new version right now (silent), then line it up
+    let el = null;
+    if (play) { el = new Audio(); el.preload = 'auto'; el.src = nv.url; el.muted = true; el.play().catch(() => {}); }
+    resume.current = { t: a ? a.currentTime : 0, play, el };
     setData((d) => ({ ...d, songs: d.songs.map((s, i) => (i === idx ? { ...s, version: nv } : s)) }));
   };
   useEffect(() => {
     if (!cur) return;
-    const a = new Audio(); a.preload = 'auto'; a.src = cur.version.url; a.volume = 1;
     const res = resume.current; resume.current = null;
+    const a = res?.el && res.el.src === cur.version.url ? res.el : new Audio();
+    if (a !== res?.el) { a.preload = 'auto'; a.src = cur.version.url; }
+    a.volume = 1;
     if (res) {
-      const go = () => { try { a.currentTime = Math.min(res.t, (a.duration || res.t + 1) - 0.05); } catch {} setTime(res.t); if (res.play) a.play().then(() => setPlaying(true)).catch(() => setPlaying(false)); };
+      const go = () => { try { a.currentTime = Math.min(res.t, (a.duration || res.t + 1) - 0.05); } catch {} setTime(res.t); a.muted = false; if (res.play) a.play().then(() => setPlaying(true)).catch(() => setPlaying(false)); };
       if (a.readyState >= 1) go(); else a.addEventListener('loadedmetadata', go, { once: true });
     }
     audio.current = a;

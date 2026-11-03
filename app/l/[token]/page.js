@@ -214,6 +214,7 @@ export default function SharedListen() {
   // Every version of the song loads up front and plays together (muted except the one you hear), so flipping
   // between them is instant and stays in sync. Costs a little loading time, which the logo covers.
   const bank = useRef({}); // versionId -> Audio, for the current song
+  const preloaded = useRef({}); // url -> Audio, the next song getting ready
   const [ready, setReady] = useState(false);
   const [booted, setBooted] = useState(false); // the logo shows only on the first load
   const switchVersion = (vid) => {
@@ -238,8 +239,10 @@ export default function SharedListen() {
     const list = cur.vlist?.length ? cur.vlist : [cur.version];
     const els = {};
     list.forEach((v) => {
-      const x = onlyOne(new Audio());
-      x.preload = 'auto'; x.src = v.url; x.volume = 1; x.muted = v.id !== cur.version.id;
+      const x = preloaded.current[v.url] || onlyOne(new Audio()); // the next song may already be loaded
+      delete preloaded.current[v.url];
+      if (!x.src) { x.preload = 'auto'; x.src = v.url; }
+      x.volume = 1; x.muted = v.id !== cur.version.id;
       els[v.id] = x;
     });
     bank.current = els;
@@ -253,7 +256,7 @@ export default function SharedListen() {
     if (first.readyState >= 3) isReady();
     const all = Object.values(els);
     const onMeta = (e) => { if (e.target === audio.current) setDur(e.target.duration || cur.version.duration || 0); };
-    const onEnd = (e) => { if (e.target !== audio.current) return; all.forEach((x) => x.pause()); setPlaying(false); report(); if (idx < songs.length - 1) { setIdx(idx + 1); setTimeout(() => playAll(), 50); } };
+    const onEnd = (e) => { if (e.target !== audio.current) return; all.forEach((x) => x.pause()); report(); if (idx < songs.length - 1) { setIdx(idx + 1); setTimeout(() => playAll().catch(() => setPlaying(false)), 0); } else setPlaying(false); };
     const onStopped = (e) => { if (e.target === audio.current) { all.forEach((x) => x.pause()); setPlaying(false); } }; // another player or tab started
     all.forEach((x) => { x.addEventListener('loadedmetadata', onMeta); x.addEventListener('ended', onEnd); x.addEventListener('ctrl-room:stopped', onStopped); });
     let raf;
@@ -263,6 +266,11 @@ export default function SharedListen() {
       if (a) {
         // update the screen ~5 times a second (every frame made phones too busy to respond to taps)
         if (now - lastSet > 200 || a.paused) { lastSet = now; setTime((prev) => (Math.abs(prev - a.currentTime) > 0.05 ? a.currentTime : prev)); }
+        // last stretch of the song: start loading the next one so it begins with no gap
+        if (!a.paused && a.duration && a.duration - a.currentTime < 25 && idx < songs.length - 1) {
+          const nx = songs[idx + 1]; const urls = (nx.vlist?.length ? nx.vlist : [nx.version]).map((v) => v.url);
+          urls.forEach((u) => { if (!preloaded.current[u]) { const x = onlyOne(new Audio()); x.preload = 'auto'; x.muted = true; x.src = u; preloaded.current[u] = x; } });
+        }
         // keep the silent versions lined up with the one you hear
         if (!a.paused && now - lastSync > 1000) {
           lastSync = now;

@@ -2004,36 +2004,6 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .vpicklist svg { width: 16px; height: 16px; color: var(--sig); }
 .minibar .vpick { align-self: center; margin-right: 6px; }
 
-/* notes checklist (and the Mac app's floating window) */
-.ckl { display: grid; gap: 18px; max-width: 860px; }
-.cklhead { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.cklhead h1 { margin: 0; }
-.cklhead p { margin: 4px 0 0; }
-.cklctl { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.cklsong { border: 1px solid var(--line); border-radius: 16px; background: var(--s1, #151518); overflow: hidden; }
-.cklsonghead { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
-.cklsonghead > span:first-child { display: grid; min-width: 0; }
-.cklsonghead b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cklsonghead small { color: var(--muted); font-size: 12.5px; }
-.cklacts { display: flex; gap: 6px; flex: none; }
-.ckllist { list-style: none; margin: 0; padding: 4px 0; }
-.ckllist li { display: grid; grid-template-columns: 28px 52px minmax(0, 1fr); align-items: start; gap: 10px; padding: 9px 14px; }
-.ckllist li + li { border-top: 1px solid rgba(255,255,255,.04); }
-.cklbox { width: 22px; height: 22px; margin-top: 1px; border-radius: 7px; border: 2px solid rgba(255,255,255,.3); background: none; display: grid; place-items: center; cursor: pointer; padding: 0; color: #0f0f10; }
-.cklbox:hover { border-color: var(--sig); }
-.cklbox.on { background: var(--sig); border-color: var(--sig); }
-.cklbox svg { width: 14px; height: 14px; }
-.ckltime { border: 0; background: rgba(245,213,71,.12); color: var(--sig); border-radius: 7px; height: 24px; font-size: 12.5px; cursor: pointer; }
-.ckltime:hover { background: rgba(245,213,71,.22); }
-.ckltext { display: grid; gap: 2px; font-size: 14.5px; line-height: 1.4; }
-.ckltext small { color: var(--muted); font-size: 12px; }
-.ckllist li.done .ckltext > span { text-decoration: line-through; color: var(--muted); }
-.cklpanel { min-height: 100vh; background: #0f0f10; padding: 14px 12px 24px; }
-.ckl.panel { gap: 12px; }
-.ckl.panel .cklhead h1 { font-size: 20px; }
-.ckl.panel .cklsonghead { padding: 10px 12px; }
-.ckl.panel .cklacts .btn { padding: 4px 8px; font-size: 12px; }
-.ckl.panel .ckllist li { padding: 8px 12px; grid-template-columns: 24px 46px minmax(0, 1fr); gap: 8px; }
 .logicbtn { border: 1px solid var(--line); background: none; color: var(--muted); border-radius: 999px; padding: 5px 11px; font: inherit; font-size: 12.5px; cursor: pointer; text-decoration: none; }
 .logicbtn:hover { color: var(--ink); border-color: rgba(255,255,255,.25); }
 .logicacts { display: inline-flex; gap: 6px; margin-left: auto; }

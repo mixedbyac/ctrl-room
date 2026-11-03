@@ -52,7 +52,6 @@ export default function TabBar({ eng, projects, email, signOut, unseen, verified
               {eng && <Link href="/insights">Insights</Link>}
               {eng && <Link href="/dropbox">Dropbox</Link>}
               {eng && <Link href="/people">People</Link>}
-              {eng && <Link href="/checklist">Notes checklist</Link>}
               <Link href="/whats-new">What’s new{unseen && <i className="tabdot" />}</Link>
               <Link href="/settings">Settings</Link>
               <Link href="/protect">How your music is protected</Link>

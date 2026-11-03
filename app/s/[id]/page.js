@@ -383,7 +383,6 @@ function Notes({ notes, reactions, v, versions, time, playing, seek, setVid, eng
         </div>
         {eng && <span className="logicacts">
           {true && <button className="logicbtn" title="Save the open notes as markers: drag the .mid file into your Logic session" onClick={() => { const k = exportToLogic({ song, notes, bpm: song.bpm }); if (!k) setErr('No open timed notes to turn into markers.'); }}>Logic markers</button>}
-          {true && <Link className="logicbtn" href={`/checklist?song=${song.id}`}>Checklist</Link>}
         </span>}
       </div>
       <div className="composer">

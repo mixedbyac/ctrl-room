@@ -120,7 +120,13 @@ export default function Portal() {
         const rel = file.webkitRelativePath || file.name;
         const onP = (n) => { loaded.set(file, n); report(file); };
         if (file.size > DIRECT_MAX) await putChunked({ uploadId: r.uploadId, songId, name: rel }, file, onP);
-        else { const { link } = await api('/api/portal/link', { uploadId: r.uploadId, songId, name: rel, size: file.size }); await putFile(link, file, onP); }
+        else {
+          // Dropbox sometimes says “too many at once” (429/503): wait a moment and try again with a fresh link
+          for (let attempt = 0; ; attempt++) {
+            try { const { link } = await api('/api/portal/link', { uploadId: r.uploadId, songId, name: rel, size: file.size }); await putFile(link, file, onP); break; }
+            catch (e) { if (attempt >= 3 || !/\((429|503|500)\)|connection/i.test(e.message)) throw e; await new Promise((res) => setTimeout(res, 1500 * (attempt + 1))); }
+          }
+        }
         loaded.set(file, file.size); report(file);
       };
       await Promise.all(Array.from({ length: Math.min(3, tasks.length) }, async () => { while (ti < tasks.length) await sendOne(tasks[ti++]); }));

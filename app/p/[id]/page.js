@@ -550,7 +550,11 @@ function AddMixes({ p, onSaved }) {
     setBusy(true);
     const sb = supabase();
     if (pos.current == null) pos.current = p.songs.reduce((m, s) => Math.max(m, s.position), -1);
-    for (const r of batch) {
+    // a few at a time: files for different songs go in parallel, files for the same song in order (so v2 comes after v1)
+    const groups = {};
+    batch.forEach((r) => { const k = (r.songId || r.title || '').toLowerCase(); (groups[k] ||= []).push(r); });
+    const lanes = Object.values(groups);
+    const one = async (r) => {
       try {
         setRow(r.id, { state: 'working', status: 'Starting…' });
         let song = r.songId ? p.songs.find((s) => s.id === r.songId) : created.current[r.title.toLowerCase()] || matchSong(p.songs, r.title);
@@ -565,7 +569,10 @@ function AddMixes({ p, onSaved }) {
         setRow(r.id, { state: 'done', status: `${song.title} · ${res.label}` });
         setDone((d) => [...d, { songId: song.id, songTitle: song.title, label: res.label }]);
       } catch (e) { setRow(r.id, { state: 'error', status: e.message }); }
-    }
+    };
+    let next = 0;
+    const worker = async () => { while (next < lanes.length) { const lane = lanes[next++]; for (const r of lane) await one(r); } };
+    await Promise.all(Array.from({ length: Math.min(3, lanes.length) }, worker));
     setBusy(false);
     onSaved();
   };

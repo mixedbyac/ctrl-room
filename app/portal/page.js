@@ -110,22 +110,23 @@ export default function Portal() {
         songs: songs.map((s) => ({ title: s.title, bpm: s.bpm, key: s.key, ref: s.ref, notes: s.notes })),
       });
       const results = [];
-      let sent = 0;
       setProgress({ sent: 0, total: bytes, file: '' });
+      // send up to 3 files at once (much faster for a folder of stems); big ones still go in pieces
+      const loaded = new Map();
+      const report = (file) => setProgress({ sent: [...loaded.values()].reduce((a, b) => a + b, 0), total: bytes, file: file.name });
+      const tasks = songs.flatMap((s, i) => s.files.map((file) => ({ file, songId: r.songs[i].songId })));
+      let ti = 0;
+      const sendOne = async ({ file, songId }) => {
+        const rel = file.webkitRelativePath || file.name;
+        const onP = (n) => { loaded.set(file, n); report(file); };
+        if (file.size > DIRECT_MAX) await putChunked({ uploadId: r.uploadId, songId, name: rel }, file, onP);
+        else { const { link } = await api('/api/portal/link', { uploadId: r.uploadId, songId, name: rel, size: file.size }); await putFile(link, file, onP); }
+        loaded.set(file, file.size); report(file);
+      };
+      await Promise.all(Array.from({ length: Math.min(3, tasks.length) }, async () => { while (ti < tasks.length) await sendOne(tasks[ti++]); }));
       for (let i = 0; i < songs.length; i++) {
         const s = songs[i], match = r.songs[i];
-        let nb = 0;
-        for (const file of s.files) {
-          const rel = file.webkitRelativePath || file.name;
-          const onP = (loaded) => setProgress({ sent: sent + loaded, total: bytes, file: file.name });
-          if (file.size > DIRECT_MAX) {
-            await putChunked({ uploadId: r.uploadId, songId: match.songId, name: rel }, file, onP);
-          } else {
-            const { link } = await api('/api/portal/link', { uploadId: r.uploadId, songId: match.songId, name: rel, size: file.size });
-            await putFile(link, file, onP);
-          }
-          sent += file.size; nb += file.size;
-        }
+        const nb = s.files.reduce((n, f) => n + f.size, 0);
         results.push({ songId: match.songId, files: s.files.length, bytes: nb });
         // a rough mix (or a lone audio file) also becomes the song's Demo in the app, so every mix can be compared to it
         const audio = s.files.filter((x) => isAudio(x.name));

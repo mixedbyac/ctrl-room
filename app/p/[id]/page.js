@@ -78,6 +78,18 @@ export default function ProjectPage() {
     }
   }, [id]);
   useEffect(() => { load(); }, [load]);
+  const keys = useRef({});
+  useEffect(() => {
+    const on = (e) => {
+      const k = keys.current, t = e.target;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return; // typing somewhere
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'a' && k.songs.length) { e.preventDefault(); setSelecting(true); setSelMsg(''); setSel(new Set(k.songs.map((x) => x.id))); }
+      else if ((e.key === 'Delete' || e.key === 'Backspace') && k.eng && k.selecting && k.sel.size && !k.selBusy) { e.preventDefault(); k.deleteSelected(); }
+      else if (e.key === 'Escape' && k.selecting) { setSelecting(false); setSel(new Set()); }
+    };
+    window.addEventListener('keydown', on);
+    return () => window.removeEventListener('keydown', on);
+  }, []);
 
   if (p === undefined) return <><TopBar crumbs={[{ label: 'Loading…' }]} /><section className="page" /></>;
   if (p === null) return (
@@ -162,6 +174,8 @@ export default function ProjectPage() {
     setSelMsg(error ? error.message : `Deleted ${pickedSongs.length} song${pickedSongs.length > 1 ? 's' : ''}.`);
     load();
   };
+  // keyboard: ⌘A selects every song, Delete / Backspace deletes the selected ones (engineers), Esc cancels
+  keys.current = { eng, songs: p?.songs || [], sel, selecting, deleteSelected, selBusy };
   const projectPlaying = pl.playing && pl.current?.project?.id === p.id;
   const crumbs = eng ? [{ label: 'Home', href: '/' }, { label: p.title }] : [{ label: 'Projects', href: '/' }, { label: p.title }];
 
@@ -254,7 +268,8 @@ export default function ProjectPage() {
               <div key={s.id} className={`rowwrap ${dragOver === s.id ? 'dragover' : ''} ${fileOver === s.id ? 'fileover' : ''}`} data-stack={`Drop to add as the next version of ${s.title}`} draggable={canEdit && renaming !== s.id}
                 onDragStart={(e) => { if (!canEdit) return; dragSong.current = s.id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', s.id); }}
                 onDragOver={(e) => { if (dragSong.current) { e.preventDefault(); setDragOver(s.id); } else if (eng && [...(e.dataTransfer?.types || [])].includes('Files')) { e.preventDefault(); e.stopPropagation(); setFileOver(s.id); setPageOver(false); } }} onDragLeave={() => { setDragOver((x) => (x === s.id ? null : x)); setFileOver((x) => (x === s.id ? null : x)); }}
-                onDrop={(e) => { if (dragSong.current) { e.preventDefault(); onDropRow(s.id); } else if (eng && e.dataTransfer?.files?.length) { e.preventDefault(); e.stopPropagation(); setFileOver(null); setPageOver(false); window.dispatchEvent(new CustomEvent('ctrl-room:add-mixes', { detail: { files: [...e.dataTransfer.files], songId: s.id } })); } }} onDragEnd={() => { dragSong.current = null; setDragOver(null); }}><div className={`row ${vs.length ? '' : 'nomix'} ${stacks[s.id] ? 'stackopen' : ''} ${pl.current?.song?.id === s.id ? 'cur' : ''} ${pl.current?.song?.id === s.id && pl.playing ? 'live' : ''}`} style={{ '--i': i }}>
+                onDrop={(e) => { if (dragSong.current) { e.preventDefault(); onDropRow(s.id); } else if (eng && e.dataTransfer?.files?.length) { e.preventDefault(); e.stopPropagation(); setFileOver(null); setPageOver(false); window.dispatchEvent(new CustomEvent('ctrl-room:add-mixes', { detail: { files: [...e.dataTransfer.files], songId: s.id } })); } }} onDragEnd={() => { dragSong.current = null; setDragOver(null); }}
+                onContextMenu={(e) => { if (selecting || renaming === s.id) return; e.preventDefault(); window.dispatchEvent(new CustomEvent('ctrl-room:songmenu', { detail: { songId: s.id, x: e.clientX, y: e.clientY } })); }}><div className={`row ${vs.length ? '' : 'nomix'} ${stacks[s.id] ? 'stackopen' : ''} ${pl.current?.song?.id === s.id ? 'cur' : ''} ${pl.current?.song?.id === s.id && pl.playing ? 'live' : ''}`} style={{ '--i': i }}>
                 {selecting ? (
                   <label className="rcheck"><input type="checkbox" checked={sel.has(s.id)} onChange={() => toggleSel(s.id)} aria-label={`Select ${s.title}`} /></label>
                 ) : <button className="rplay" onClick={() => vs.length && playSong({ ...s, versions: vs })} disabled={!vs.length} aria-label={vs.length ? `Play ${s.title}` : 'No mix yet'}>

@@ -29,12 +29,19 @@ export default function SongMenu({ song, versions = [], project, eng, canEdit, q
   const say = (m) => { setNote(m); setMsg?.(m); if (m) setTimeout(() => setNote((x) => (x === m ? '' : x)), 6000); };
   useEffect(() => {
     if (!open) return;
-    const off = (e) => { if (box.current && !box.current.contains(e.target)) { setOpen(false); setView('menu'); } };
-    const esc = (e) => { if (e.key === 'Escape') { setOpen(false); setView('menu'); } };
+    const off = (e) => { if (e.button === 2) return; if (box.current && !box.current.contains(e.target)) { setOpen(false); setView('menu'); setAt(null); } };
+    const esc = (e) => { if (e.key === 'Escape') { setOpen(false); setView('menu'); setAt(null); } };
     document.addEventListener('pointerdown', off); document.addEventListener('keydown', esc);
     return () => { document.removeEventListener('pointerdown', off); document.removeEventListener('keydown', esc); };
   }, [open]);
-  const shut = () => { setOpen(false); setView('menu'); };
+  const shut = () => { setOpen(false); setView('menu'); setAt(null); };
+  // right-click a song row: this menu opens right where you clicked
+  const [at, setAt] = useState(null);
+  useEffect(() => {
+    const on = (e) => { const d = e.detail || {}; if (d.songId !== song.id) { setOpen(false); return; } setAt({ x: Math.min(d.x, window.innerWidth - 250), y: Math.min(d.y, window.innerHeight - 360) }); setView('menu'); setOpen(true); };
+    window.addEventListener('ctrl-room:songmenu', on);
+    return () => window.removeEventListener('ctrl-room:songmenu', on);
+  }, [song.id]);
   const has = versions.length > 0;
   const isCur = pl.current?.song?.id === song.id;
   const last = currentMix(song, versions) || versions.at(-1);
@@ -98,13 +105,13 @@ export default function SongMenu({ song, versions = [], project, eng, canEdit, q
 
   return (
     <span className="smenu" ref={box} onClick={(e) => e.stopPropagation()}>
-      <button className="smore" onClick={() => { setOpen(!open); setView('menu'); }} aria-label={`More for ${song.title}`} aria-expanded={open} title="More">
+      <button className="smore" onClick={() => { setOpen(!open); setView('menu'); setAt(null); }} aria-label={`More for ${song.title}`} aria-expanded={open} title="More">
         {busy ? <span className="sbusy" /> : <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.9" /><circle cx="12" cy="12" r="1.9" /><circle cx="19" cy="12" r="1.9" /></svg>}
       </button>
       {sharing && <ShareButton kind="song" id={song.id} eng={eng} title={song.title} open onOpenChange={(o) => { if (!o) setSharing(false); }} hideButton />}
       {(note || busy || just.length > 0) && !open && <span className="snote" role="status">{busy || note}{!busy && just.length > 0 && <span className="snote-act"><NotifyClient deliveries={just} /><button type="button" className="link small" onClick={() => setJust([])}>Not now</button></span>}</span>}
       {open && (
-        <div className="spop" role="menu" aria-label={song.title}>
+        <div className={`spop${at ? ' atcursor' : ''}`} role="menu" aria-label={song.title} style={at ? { left: Math.max(8, at.x), top: Math.max(8, at.y) } : undefined}>
           {view === 'info' ? (
             <>
               <button className="sback" onClick={() => setView('menu')}>‹ {song.title}</button>

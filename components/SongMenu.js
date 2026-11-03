@@ -1,4 +1,5 @@
 'use client';
+import { pingDownload } from '@/lib/pushclient';
 import NotifyClient from '@/components/NotifyClient';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -72,6 +73,7 @@ export default function SongMenu({ song, versions = [], project, eng, canEdit, q
     const { data, error } = await supabase().storage.from('mixes').createSignedUrl(last.storage_path, 300, { download: name });
     if (error) return say(error.message);
     const a = document.createElement('a'); a.href = data.signedUrl; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    pingDownload([last.id]);
   };
   const info = [
     ['Status', statusText(song, versions)],

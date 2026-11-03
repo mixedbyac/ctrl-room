@@ -1,4 +1,5 @@
 'use client';
+import { pingDownload } from '@/lib/pushclient';
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { currentMix, orderVersions } from '@/lib/format';
@@ -37,7 +38,7 @@ export default function DownloadAll({ p, eng }) {
     if (error) throw new Error(error.message);
     return data.signedUrl;
   };
-  const one = async (r) => { setOpen(false); try { save(await url(r, r.name), r.name); } catch (e) { setBusy(e.message); setTimeout(() => setBusy(''), 5000); } };
+  const one = async (r) => { setOpen(false); try { save(await url(r, r.name), r.name); pingDownload([r.v.id]); } catch (e) { setBusy(e.message); setTimeout(() => setBusy(''), 5000); } };
   const all = async () => {
     setOpen(false);
     try {
@@ -52,6 +53,7 @@ export default function DownloadAll({ p, eng }) {
       const blob = await makeZip(files);
       const href = URL.createObjectURL(blob);
       save(href, `${safe(p.artist ? `${p.artist} - ${p.title}` : p.title)}.zip`);
+      pingDownload(rows.map((x) => x.v.id));
       setTimeout(() => URL.revokeObjectURL(href), 60000);
       setBusy('');
     } catch (e) { setBusy(e.message); setTimeout(() => setBusy(''), 6000); }

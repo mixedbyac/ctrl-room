@@ -1,5 +1,6 @@
 import { limit } from '@/lib/ratelimit';
-import { admin, userFrom, canSee, json, fail } from '@/lib/server';
+import { admin, userFrom, canSee, isEngineer, json, fail } from '@/lib/server';
+import { recordDownload } from '@/lib/dlserver';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -56,5 +57,13 @@ export async function POST(req) {
     if (u?.signedUrl) files.push({ name, url: u.signedUrl, download: d?.signedUrl || u.signedUrl });
   }
   if (!files.length) return fail('Nothing to download yet.', 404);
+  try { // tell the engineer (not for the engineer's own downloads)
+    const user = await userFrom(req).catch(() => null);
+    if (!user || !(await isEngineer(user))) {
+      const who = user ? (user.user_metadata?.display_name || user.user_metadata?.name || user.email) : null;
+      const items = pick.filter((s) => (allV || []).some((v) => v.song_id === s.id)).map((s) => ({ song: s, label: pickVersion(s, (allV || []).filter((v) => v.song_id === s.id)).label }));
+      await recordDownload(db, { items, who, project, via: 'link' });
+    }
+  } catch {}
   return json({ files, zipName: `${safe(project.artist ? `${project.artist} - ${project.title}` : project.title)}.zip` });
 }

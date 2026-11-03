@@ -8,7 +8,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { drawWave } from '@/lib/wavedraw';
-import { pingPush } from '@/lib/pushclient';
+import { pingPush, pingDownload } from '@/lib/pushclient';
 import { emailArtistOn, notifyArtist } from '@/lib/notifyartist';
 import Cover from '@/components/Cover';
 import { mmss, deviceName, orderVersions, latestMix, currentMix, stackOrder, shortDate } from '@/lib/format';
@@ -20,6 +20,7 @@ export async function downloadVersion(song, v) {
   const { data, error } = await supabase().storage.from('mixes').createSignedUrl(v.storage_path, 300, { download: name });
   if (error) return window.alert?.(error.message);
   const a = document.createElement('a'); a.href = data.signedUrl; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  pingDownload([v.id]);
 }
 
 /*

@@ -43,11 +43,19 @@ export async function GET(req, { params }) {
   return new ImageResponse(
     (
       <div style={{ width: 1200, height: 1200, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: 90, color: '#fff', fontFamily: 'sans-serif',
-        background: `linear-gradient(135deg, hsl(${h},70%,55%), hsl(${(h + 70) % 360},65%,32%) 60%, hsl(${(h + 150) % 360},60%,14%))` }}>
+        background: `linear-gradient(135deg, ${hex(h, 70, 55)}, ${hex((h + 70) % 360, 65, 32)} 60%, ${hex((h + 150) % 360, 60, 14)})` }}>
         <div style={{ display: 'flex', fontSize: 44, fontWeight: 700, opacity: 0.85, marginBottom: 16 }}>{info?.artist || 'CTRL ROOM'}</div>
         <div style={{ display: 'flex', fontSize: (info?.title || '').length > 18 ? 96 : 130, fontWeight: 800, lineHeight: 1, letterSpacing: -3 }}>{info?.title || 'Listen'}</div>
       </div>
     ),
     { width: 1200, height: 1200, headers: { 'Cache-Control': CACHE } },
   );
+}
+
+// the preview renderer can't read hsl() inside a gradient: hand it plain hex colours
+function hex(h, s, l) {
+  s /= 100; l /= 100;
+  const k = (n) => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
+  const f = (n) => Math.round(255 * (l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))))).toString(16).padStart(2, '0');
+  return `#${f(0)}${f(8)}${f(4)}`;
 }

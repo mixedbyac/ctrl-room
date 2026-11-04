@@ -38,8 +38,9 @@ export default function Bell() {
       (no.data || []).forEach((x) => out.push({ id: `n${x.id}`, at: x.created_at, icon: '✎', text: <><b>{x.author_name || 'Client'}</b> left a note on <b>{x.songs?.title}</b>{x.t != null ? ` at ${mmss(x.t)}` : ''}</>, sub: `“${x.body}”`, href: `/s/${x.song_id}#notes` }));
       (up.data || []).filter((x) => /downloaded/i.test(x.body) && prefOf(notify, 'downloads', 'app')).forEach((x) => out.push({ id: `d${x.id}`, at: x.created_at, icon: '↓', text: <>{x.body.replace(/\.$/, '')}</>, sub: x.songs?.title || '', href: `/s/${x.song_id}` }));
       (up.data || []).filter((x) => /approv|change/i.test(x.body) && !/downloaded/i.test(x.body) && prefOf(notify, 'approvals', 'app')).forEach((x) => out.push({ id: `u${x.id}`, at: x.created_at, icon: /approv/i.test(x.body) ? '✓' : '↺', text: <><b>{x.songs?.title}</b>: {x.body}</>, sub: x.songs?.projects?.artist || '', href: `/s/${x.song_id}` }));
+      // a send you've downloaded, or seen in the Portal inbox, isn't new anymore
       let seenUps = new Set(); try { seenUps = new Set(JSON.parse(localStorage.getItem('ctrl-uploads-seen') || '[]')); } catch {}
-      (sends.data || []).forEach((x) => out.push({ id: `s${x.id}`, at: x.created_at, read: !!x.downloaded_at || seenUps.has(x.id), // opened the inbox or downloaded it: not new icon: '↑', text: <><b>{x.name}</b> sent files{x.artist ? ` for ${x.artist}` : ''}</>, sub: 'Portal', href: '/portal/inbox' }));
+      (sends.data || []).forEach((x) => out.push({ id: `s${x.id}`, at: x.created_at, read: !!x.downloaded_at || seenUps.has(x.id), icon: '↑', text: <><b>{x.name}</b> sent files{x.artist ? ` for ${x.artist}` : ''}</>, sub: 'Portal', href: '/portal/inbox' }));
     } else {
       const [up, no] = await Promise.all([
         prefOf(notify, 'mixes', 'app') ? sb.from('updates').select(`id, created_at, body, song_id, ${song}`).eq('from_client', false).gte('created_at', since).order('created_at', { ascending: false }).limit(30) : { data: [] },

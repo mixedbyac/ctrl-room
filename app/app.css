@@ -2088,3 +2088,4 @@ img.npart { width: 100% !important; height: 100% !important; object-fit: cover; 
 img.npsquare { height: auto; aspect-ratio: 1; object-fit: cover; }
 /* no cover-art backgrounds: plain page */
 .lbg, .npbg, .ambient { display: none !important; }
+.lwavebox { width: 100%; min-width: 0; justify-self: stretch; } .lwavebox .lwave { width: 100%; }

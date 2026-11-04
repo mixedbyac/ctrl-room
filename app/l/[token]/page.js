@@ -410,7 +410,7 @@ export default function SharedListen() {
               : <p className="credit lcredit">{data.credit.photo && <img src={data.credit.photo} alt="" />}<span>{data.credit.text}</span>{data.credit.verified && <BlueCheck kind="engineer" />}</p>)}
             {cur ? <>
               {data.kind === 'project' && <p className="lnow">{playing ? 'Playing' : 'Up'}: <b>{cur.title}</b></p>}
-              <div><Wave peaks={cur.version.peaks} time={time} duration={dur} onSeek={seek} />
+              <div className="lwavebox"><Wave peaks={cur.version.peaks} time={time} duration={dur} onSeek={seek} />
                 <div className="nptimes mono"><span>{mmss(time)}</span><span className="npfmt">{quality(cur.version) ? <QualityBadge v={cur.version} info /> : cur.approved ? 'Final mix' : 'Mix in progress'}</span><span>{mmss(dur)}</span></div></div>
               <div className="lacts">
               {cur.vlist?.length > 1 && <LinkVersions list={cur.vlist} cur={cur.version} approvedId={cur.approvedVersion} onPick={switchVersion} />}

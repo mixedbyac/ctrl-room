@@ -32,13 +32,14 @@ export default function Bell() {
         prefOf(notify, 'plays', 'app') ? sb.from('plays').select(`id, updated_at, started_at, listener_email, device, source, listened, duration, song_id, ${song}, versions(label)`).gte('started_at', since).order('started_at', { ascending: false }).limit(25) : { data: [] },
         prefOf(notify, 'notes', 'app') ? sb.from('notes').select(`id, created_at, body, t, author_name, from_client, song_id, ${song}`).eq('from_client', true).gte('created_at', since).order('created_at', { ascending: false }).limit(25) : { data: [] },
         prefOf(notify, 'approvals', 'app') || prefOf(notify, 'downloads', 'app') ? sb.from('updates').select(`id, created_at, body, song_id, ${song}`).eq('from_client', true).gte('created_at', since).order('created_at', { ascending: false }).limit(25) : { data: [] },
-        prefOf(notify, 'uploads', 'app') ? sb.from('uploads').select('id, created_at, name, artist, project_id').gte('created_at', since).order('created_at', { ascending: false }).limit(15) : { data: [] },
+        prefOf(notify, 'uploads', 'app') ? sb.from('uploads').select('id, created_at, name, artist, project_id, downloaded_at').gte('created_at', since).order('created_at', { ascending: false }).limit(15) : { data: [] },
       ]);
       (pl.data || []).filter((x) => (x.listener_email || '').toLowerCase() !== me).forEach((x) => out.push({ id: `p${x.id}`, at: x.started_at, icon: '▶', text: <><b>{x.listener_email ? nameFor(names, x.listener_email) : /share/i.test(x.source || '') ? 'Someone on a share link' : 'Someone'}</b> played <b>{x.songs?.title} {x.versions?.label || ''}</b></>, sub: [x.device, x.source].filter(Boolean).join(' · '), href: `/s/${x.song_id}` }));
       (no.data || []).forEach((x) => out.push({ id: `n${x.id}`, at: x.created_at, icon: '✎', text: <><b>{x.author_name || 'Client'}</b> left a note on <b>{x.songs?.title}</b>{x.t != null ? ` at ${mmss(x.t)}` : ''}</>, sub: `“${x.body}”`, href: `/s/${x.song_id}#notes` }));
       (up.data || []).filter((x) => /downloaded/i.test(x.body) && prefOf(notify, 'downloads', 'app')).forEach((x) => out.push({ id: `d${x.id}`, at: x.created_at, icon: '↓', text: <>{x.body.replace(/\.$/, '')}</>, sub: x.songs?.title || '', href: `/s/${x.song_id}` }));
       (up.data || []).filter((x) => /approv|change/i.test(x.body) && !/downloaded/i.test(x.body) && prefOf(notify, 'approvals', 'app')).forEach((x) => out.push({ id: `u${x.id}`, at: x.created_at, icon: /approv/i.test(x.body) ? '✓' : '↺', text: <><b>{x.songs?.title}</b>: {x.body}</>, sub: x.songs?.projects?.artist || '', href: `/s/${x.song_id}` }));
-      (sends.data || []).forEach((x) => out.push({ id: `s${x.id}`, at: x.created_at, icon: '↑', text: <><b>{x.name}</b> sent files{x.artist ? ` for ${x.artist}` : ''}</>, sub: 'Portal', href: '/portal/inbox' }));
+      let seenUps = new Set(); try { seenUps = new Set(JSON.parse(localStorage.getItem('ctrl-uploads-seen') || '[]')); } catch {}
+      (sends.data || []).forEach((x) => out.push({ id: `s${x.id}`, at: x.created_at, read: !!x.downloaded_at || seenUps.has(x.id), // opened the inbox or downloaded it: not new icon: '↑', text: <><b>{x.name}</b> sent files{x.artist ? ` for ${x.artist}` : ''}</>, sub: 'Portal', href: '/portal/inbox' }));
     } else {
       const [up, no] = await Promise.all([
         prefOf(notify, 'mixes', 'app') ? sb.from('updates').select(`id, created_at, body, song_id, ${song}`).eq('from_client', false).gte('created_at', since).order('created_at', { ascending: false }).limit(30) : { data: [] },
@@ -50,13 +51,13 @@ export default function Bell() {
     loadedOnce.current = true;
     setItems(out.filter((x) => x.at).sort((a, b) => b.at.localeCompare(a.at)).slice(0, 40));
   }, [session, eng, names]); // eslint-disable-line
-  useEffect(() => { load(); const t = setInterval(load, 60000); return () => clearInterval(t); }, [load]);
+  useEffect(() => { load(); const t = setInterval(load, 60000); window.addEventListener('ctrl-room:bell-refresh', load); return () => { clearInterval(t); window.removeEventListener('ctrl-room:bell-refresh', load); }; }, [load]);
   // Mac app: a banner for anything new since the app opened, and the unread count on the Dock icon
   useEffect(() => {
     if (!isMacApp() || !session) return;
     if (!banner.primed) { items.forEach((x) => banner.ids.add(x.id)); if (items.length || loadedOnce.current) banner.primed = true; return; }
     items.filter((x) => !banner.ids.has(x.id)).slice(0, 3).forEach((x) => { banner.ids.add(x.id); macNotify({ id: x.id, title: plain(x.text), body: plain(x.sub), url: x.href }); });
-    macBadge(items.filter((x) => !seen || x.at > seen).length);
+    macBadge(items.filter((x) => !x.read && (!seen || x.at > seen)).length);
   }, [items, seen]); // eslint-disable-line
   useEffect(() => {
     if (!open) return;
@@ -65,7 +66,7 @@ export default function Bell() {
     return () => document.removeEventListener('pointerdown', off);
   }, [open]);
   if (!session) return null;
-  const unread = items.filter((x) => !seen || x.at > seen).length;
+  const unread = items.filter((x) => !x.read && (!seen || x.at > seen)).length;
   const toggle = () => {
     const next = !open; setOpen(next);
     if (next && items.length) { const at = items[0].at; setSeen(at); supabase().auth.updateUser({ data: { notif_seen: at } }).catch(() => {}); }

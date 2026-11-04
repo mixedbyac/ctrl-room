@@ -243,7 +243,10 @@ export default function ProjectPage() {
             {selMsg && <span className="toast-inline selmsg">{selMsg}</span>}
           </div>
         )}
-        {(() => { const fr = p.songs.filter(filesOnly); if (!fr.length) return null; return (
+        {(() => {
+          // gone once the files are downloaded, or once you've opened the Portal inbox
+          let seen = new Set(); try { seen = new Set(JSON.parse(localStorage.getItem('ctrl-files-seen') || '[]')); } catch {}
+          const fr = p.songs.filter((s) => filesOnly(s) && !s.downloaded_at && !seen.has(s.id)); if (!eng || !fr.length) return null; return (
           <Link className="newfiles" href="/portal/inbox"><span className="nfdot" aria-hidden="true" /><span><b>New files received</b> for this project{fr.length > 1 ? ` (${fr.length} sends)` : ''}</span><span className="nfgo">Portal inbox ›</span></Link>); })()}
         <div className={`rows dyn ${selecting ? 'selecting' : ''}`} style={{ '--tpl': tpl }}>
           {p.songs.length > 0 && (

@@ -26,6 +26,16 @@ export default function Inbox() {
     try { localStorage.setItem('ctrl-inbox-autoarchived', '1'); } catch {}
     if (stale.length) { const { error } = await sb.from('uploads').update({ archived: true }).in('id', stale.map((u) => u.id)); if (!error) stale.forEach((u) => { u.archived = true; }); }
     setRows(data || []);
+    // you've seen these: the "New files received" note on their projects goes away
+    try {
+      const seen = new Set(JSON.parse(localStorage.getItem('ctrl-files-seen') || '[]'));
+      (data || []).forEach((u) => (u.songs || []).forEach((s) => s.songId && seen.add(s.songId)));
+      localStorage.setItem('ctrl-files-seen', JSON.stringify([...seen].slice(-2000)));
+      const ups = new Set(JSON.parse(localStorage.getItem('ctrl-uploads-seen') || '[]'));
+      (data || []).forEach((u) => ups.add(u.id));
+      localStorage.setItem('ctrl-uploads-seen', JSON.stringify([...ups].slice(-500)));
+      window.dispatchEvent(new Event('ctrl-room:bell-refresh'));
+    } catch {}
   }, []);
   useEffect(() => { if (eng) load(); }, [eng, load]);
 

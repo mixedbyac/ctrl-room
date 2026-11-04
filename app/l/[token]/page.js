@@ -283,7 +283,7 @@ export default function SharedListen() {
       const a = audio.current, t = track.current, now = performance.now();
       if (a) {
         // update the screen ~5 times a second (every frame made phones too busy to respond to taps)
-        if (now - lastSet > 200 || a.paused) { lastSet = now; setTime((prev) => (Math.abs(prev - a.currentTime) > 0.05 ? a.currentTime : prev)); }
+        if (now - lastSet > (a.paused ? 120 : 200)) { lastSet = now; setTime((prev) => (Math.abs(prev - a.currentTime) > 0.05 ? a.currentTime : prev)); }
         // last stretch of the song: start loading the next one so it begins with no gap
         if (!a.paused && a.duration && a.duration - a.currentTime < 25 && idx < songs.length - 1) {
           const nx = songs[idx + 1]; const urls = (nx.vlist?.length ? nx.vlist : [nx.version]).map((v) => v.url);

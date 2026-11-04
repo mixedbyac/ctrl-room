@@ -300,6 +300,7 @@ export function PlayerProvider({ eng, children }) {
       if (Math.abs(r.vel) > 0.001 && !phone.current) { r.angle = (r.angle + r.vel * 200 * dt) % 360; document.body.style.setProperty('--rot', r.angle.toFixed(2) + 'deg'); } // phones don't spin covers: skip the work
       if (!eng && a && playing && a.duration) listen(a);
       if (a && playing && a.duration && a.duration - a.currentTime < 25) prepareNext();
+      if (!playing && Math.abs(r.vel) < 0.001) { r.last = 0; return; } // nothing moving: stop until play starts again (saves battery)
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);

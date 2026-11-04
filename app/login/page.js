@@ -28,10 +28,14 @@ function Login() {
     setErr('');
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return setErr('Enter the email address your engineer has for you.');
     setBusy(true);
-    const { error } = await supabase().auth.signInWithOtp({
-      email: email.trim(),
-      options: { emailRedirectTo: `${window.location.origin}${next}`, shouldCreateUser: true },
-    });
+    // our own email first (no hourly cap); Supabase's mailer only if that isn't set up
+    let error = null;
+    try {
+      const r = await fetch('/api/signin-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim() }) });
+      if (!r.ok) { const j = await r.json().catch(() => ({})); error = { message: j.error || 'Couldn’t send the code.' }; if (r.status >= 500) throw new Error(); }
+    } catch {
+      ({ error } = await supabase().auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: `${window.location.origin}${next}`, shouldCreateUser: true } }));
+    }
     setBusy(false);
     if (error) return setErr(/rate limit/i.test(error.message) ? 'Too many sign-in emails were sent in the last hour. Wait a bit and try once, or sign in with a password.' : error.message);
     setStep('code');

@@ -21,7 +21,11 @@ export default function VerifyBanner({ email, onDone }) {
   };
   const send = async () => {
     setBusy(true); setMsg('');
-    const { error } = await supabase().auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
+    let error = null;
+    try {
+      const r = await fetch('/api/signin-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+      if (!r.ok) { const j = await r.json().catch(() => ({})); error = { message: j.error || 'Couldn’t send the code.' }; if (r.status >= 500) throw new Error(); }
+    } catch { ({ error } = await supabase().auth.signInWithOtp({ email, options: { shouldCreateUser: false } })); }
     setBusy(false);
     if (error) return setMsg(/rate limit/i.test(error.message) ? 'Too many emails right now. Try again in a bit, or ask your engineer to confirm you.' : error.message);
     setStep('code');

@@ -7,7 +7,8 @@ import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
 import SendOut from '@/components/SendOut';
 import { fmtBytes, ago, todayISO } from '@/lib/format';
-import { macCanDownload, macDownload } from '@/lib/native';
+import { macCanDownload, macDownload, isMacApp } from '@/lib/native';
+import { zipFromUrls } from '@/lib/streamzip';
 
 export default function Inbox() {
   const { eng, session } = useApp();
@@ -61,24 +62,19 @@ export default function Inbox() {
     const say = (t) => setDl((x) => ({ ...x, [u.id]: t }));
     say('Getting files…');
     try {
+      // an older Mac app can't save a zip itself: point to the update
+      if (isMacApp() && !macCanDownload()) throw new Error('Download the new Mac app to get sends as one zip (github.com/mixedbyac/ctrl-room/releases).');
       const r = await api('/api/portal/files', { uploadId: u.id });
       const total = r.files.length;
       if (macCanDownload()) {
-        const res = await macDownload(r, (ev) => say(`Downloading ${ev.done}/${ev.total}`));
+        const res = await macDownload(r, (ev) => say(ev.zipping ? 'Zipping…' : `Downloading ${ev.done}/${ev.total}`));
         if (res.error) setMsg(res.error);
       } else {
-        for (let i = 0; i < total; i++) {
-          const f = r.files[i];
-          say(`Downloading ${i + 1}/${total}`);
-          const name = `${r.folder} - ${f.path.replace(/\//g, ' - ')}`;
-          try {
-            const blob = await (await fetch(f.url)).blob();
-            const href = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = href; a.download = name; document.body.appendChild(a); a.click(); a.remove();
-            setTimeout(() => URL.revokeObjectURL(href), 60000);
-          } catch { window.open(f.url, '_blank'); }
-          await new Promise((res) => setTimeout(res, 400)); // browsers drop downloads fired too close together
-        }
+        // one zip, built here as the files arrive, saved as a single download
+        const blob = await zipFromUrls(r.files, (ev) => say(`Zipping ${ev.done}/${ev.total}`));
+        const href = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = href; a.download = `${r.folder}.zip`; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(href), 120000);
       }
       say('');
       if (!u.downloaded_at) await markDownloaded(u); // downloaded = done (and archived)

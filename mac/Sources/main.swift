@@ -246,44 +246,69 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
 
     // MARK: downloads
 
-    // Saves every file into ~/Downloads/<folder>/ (keeping sub-folders), one after another, then shows it in Finder.
+    // Downloads every file (keeping sub-folders), zips them into ~/Downloads/<folder>.zip, then shows the zip in Finder.
     func downloadAll(id: String, folder: String, files: [[String: Any]]) {
         let fm = FileManager.default
         let downloads = fm.urls(for: .downloadsDirectory, in: .userDomainMask).first ?? fm.homeDirectoryForCurrentUser
         let safe = folder.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
-        var base = downloads.appendingPathComponent(safe, isDirectory: true)
+        var zip = downloads.appendingPathComponent("\(safe).zip")
         var n = 2
-        while fm.fileExists(atPath: base.path) { base = downloads.appendingPathComponent("\(safe) \(n)", isDirectory: true); n += 1 }
+        while fm.fileExists(atPath: zip.path) { zip = downloads.appendingPathComponent("\(safe) \(n).zip"); n += 1 }
+        let work = fm.temporaryDirectory.appendingPathComponent("ctrlroom-\(id)", isDirectory: true)
+        let base = work.appendingPathComponent(safe, isDirectory: true)
         try? fm.createDirectory(at: base, withIntermediateDirectories: true)
         let total = files.count
-        func report(_ done: Int, finished: Bool = false, error: String? = nil) {
+        func report(_ done: Int, zipping: Bool = false, finished: Bool = false, error: String? = nil) {
             var js = "{done:\(done),total:\(total)"
-            if finished { js += ",finished:true,folder:\(jsString(base.path))" }
+            if zipping { js += ",zipping:true" }
+            if finished { js += ",finished:true,folder:\(jsString(zip.path))" }
             if let e = error { js += ",error:\(jsString(e))" }
             js += "}"
             DispatchQueue.main.async { self.web.evaluateJavaScript("window.__ctrlDl && window.__ctrlDl['\(id)'] && window.__ctrlDl['\(id)'](\(js)); void 0", completionHandler: nil) }
         }
-        func next(_ i: Int, failed: Int) {
-            if i >= total {
-                report(total, finished: true, error: failed > 0 ? "\(failed) of \(total) files didn't download." : nil)
-                DispatchQueue.main.async { NSWorkspace.shared.activateFileViewerSelecting([base]) }
-                return
+        func finish(failed: Int) {
+            report(total, zipping: true)
+            DispatchQueue.global(qos: .userInitiated).async {
+                let p = Process()
+                p.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
+                p.arguments = ["-c", "-k", "--sequesterRsrc", "--keepParent", base.path, zip.path]
+                var zipErr: String? = nil
+                do { try p.run(); p.waitUntilExit(); if p.terminationStatus != 0 { zipErr = "Couldn't make the zip." } } catch { zipErr = "Couldn't make the zip." }
+                try? fm.removeItem(at: work)
+                let err = zipErr ?? (failed > 0 ? "\(failed) of \(total) files didn't download." : nil)
+                report(total, finished: true, error: err)
+                if zipErr == nil { DispatchQueue.main.async { NSWorkspace.shared.activateFileViewerSelecting([zip]) } }
             }
-            guard let s = files[i]["url"] as? String, let url = URL(string: s) else { return next(i + 1, failed: failed + 1) }
-            let rel = (files[i]["path"] as? String ?? url.lastPathComponent).split(separator: "/").map { String($0).replacingOccurrences(of: ":", with: "-") }.filter { $0 != ".." && !$0.isEmpty }
+        }
+        // 4 at a time
+        let lock = NSLock()
+        var nextIndex = 0, doneCount = 0, failed = 0
+        func worker() {
+            lock.lock()
+            if nextIndex >= total { lock.unlock(); return }
+            let i = nextIndex; nextIndex += 1
+            lock.unlock()
+            let s = files[i]["url"] as? String ?? ""
+            let rel = (files[i]["path"] as? String ?? "file").split(separator: "/").map { String($0).replacingOccurrences(of: ":", with: "-") }.filter { $0 != ".." && !$0.isEmpty }
             let dest = rel.reduce(base) { $0.appendingPathComponent($1) }
+            func done(_ bad: Bool) {
+                lock.lock(); doneCount += 1; if bad { failed += 1 }; let d = doneCount, f = failed; lock.unlock()
+                report(d)
+                if d == total { finish(failed: f) } else { worker() }
+            }
+            guard let url = URL(string: s) else { return done(true) }
             URLSession.shared.downloadTask(with: url) { tmp, resp, err in
                 var bad = err != nil || tmp == nil || ((resp as? HTTPURLResponse)?.statusCode ?? 200) >= 400
                 if !bad, let tmp = tmp {
                     try? fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
                     do { try fm.moveItem(at: tmp, to: dest) } catch { bad = true }
                 }
-                report(i + 1)
-                next(i + 1, failed: failed + (bad ? 1 : 0))
+                done(bad)
             }.resume()
         }
         report(0)
-        next(0, failed: 0)
+        if total == 0 { finish(failed: 0); return }
+        for _ in 0..<min(4, total) { worker() }
     }
 
     // MARK: notifications

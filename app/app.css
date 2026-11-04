@@ -2089,3 +2089,4 @@ img.npsquare { height: auto; aspect-ratio: 1; object-fit: cover; }
 /* no cover-art backgrounds: plain page */
 .lbg, .npbg, .ambient { display: none !important; }
 .lwavebox { width: 100%; min-width: 0; justify-self: stretch; } .lwavebox .lwave { width: 100%; }
+.lwavebox .nptimes { width: 100%; } .lwavebox .nptimes > span:first-child { text-align: left; justify-self: start; } .lwavebox .nptimes > span:last-child { text-align: right; justify-self: end; }

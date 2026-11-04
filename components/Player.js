@@ -575,7 +575,7 @@ function NowPlaying() {
         <Cover as="div" {...artOf(c.song, c.project)} size={900} className="npsquare" />
         <div className="nphead">
           <div className="nphead-t">
-            <h2 className="ttl">{c.song.title}</h2>
+            <h2 className="ttl">{c.song.title}{v && /^demo\b/i.test(v.label || '') && <em className="rdemo">Demo</em>}</h2>
             <p className="npsub"><ArtistName name={c.project.artist} />{c.project.title && c.project.title.toLowerCase() !== c.song.title.toLowerCase() ? <> · {c.project.title}</> : null}</p>
           </div>
         </div>

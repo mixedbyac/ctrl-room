@@ -28,6 +28,8 @@ function Art({ src, full, seed, size, className }) {
 }
 
 /** The soft glow behind the page: the cover drawn tiny and stretched (no CSS blur, which Safari mishandles on big layers). */
+const isDemoV = (v) => !!v && (v.demo || /^demo\b/i.test(String(v.label || '')));
+
 function BgArt({ src, full, seed }) {
   const cv = useRef(null);
   useEffect(() => {
@@ -210,10 +212,14 @@ export default function SharedListen() {
 
   const songs = data?.songs || [];
   const cur = songs[idx];
+  // the mini player slides up once you scroll down a little, and goes away when you're back near the top (~10% of the screen)
   useEffect(() => {
-    const el = mainRef.current; if (!el || typeof IntersectionObserver === 'undefined') return;
-    const io = new IntersectionObserver(([e]) => setMainGone(!e.isIntersecting && e.boundingClientRect.top < 0), { threshold: 0 });
-    io.observe(el); return () => io.disconnect();
+    let on = false, raf = 0;
+    const check = () => { raf = 0; const y = window.scrollY, h = window.innerHeight || 800; const want = on ? y > h * 0.08 : y > h * 0.12; if (want !== on) { on = want; setMainGone(want); } };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(check); };
+    check();
+    window.addEventListener('scroll', onScroll, { passive: true }); window.addEventListener('resize', onScroll);
+    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); if (raf) cancelAnimationFrame(raf); };
   }, [data]); // eslint-disable-line
 
   const report = useCallback((final) => {
@@ -410,16 +416,17 @@ export default function SharedListen() {
           <div className="linfo">
             <p className="leyebrow">{data.kind === 'song' ? p.title : `${songs.length} song${songs.length === 1 ? '' : 's'}${p.release ? ` · ${new Date(p.release + 'T12:00').getFullYear()}` : ''}`}</p>
             <h1 className="ttl">{data.kind === 'song' ? cur?.title || 'Nothing to play yet' : p.title}</h1>
+            {data.kind === 'song' && cur && isDemoV(cur.version) && <p className="ldemonote"><em className="ldemo">Demo</em> The rough version. The mix isn’t here yet.</p>}
             <div className="lartist">{ar?.image_url && <img src={ar.image_url} alt="" />}<span>{name}</span></div>
             {data.credit && (data.credit.profile ? <p className="lcredit"><Credit profile={data.credit.profile} /></p>
               : <p className="credit lcredit">{data.credit.photo && <img src={data.credit.photo} alt="" />}<span>{data.credit.text}</span>{data.credit.verified && <BlueCheck kind="engineer" />}</p>)}
             {cur ? <>
-              {data.kind === 'project' && <p className="lnow">{playing ? 'Playing' : 'Up'}: <b>{cur.title}</b></p>}
+              {data.kind === 'project' && <p className="lnow">{playing ? 'Playing' : 'Up'}: <b>{cur.title}</b>{isDemoV(cur.version) && <em className="ldemo">Demo</em>}</p>}
               <div className="lwavebox"><Wave peaks={cur.version.peaks} time={time} duration={dur} onSeek={seek} />
                 <div className="nptimes mono"><span>{mmss(time)}</span><span className="npfmt">{quality(cur.version) ? <QualityBadge v={cur.version} info /> : cur.approved ? 'Final mix' : 'Mix in progress'}</span><span>{mmss(dur)}</span></div></div>
               <div className="lacts">
               {cur.vlist?.length > 1 && <LinkVersions list={cur.vlist} cur={cur.version} approvedId={cur.approvedVersion} onPick={switchVersion} />}
-              {data.approve !== false && <ApproveButton songId={cur.id} versionId={cur.version.id} label={cur.version.label} title={cur.title} approved={cur.approved && (!cur.approvedVersion || cur.approvedVersion === cur.version.id)} signInHref={`/login?next=${encodeURIComponent(`/l/${token}`)}`} tipKey="cr_tip_approve_link" />}
+              {data.approve !== false && !isDemoV(cur.version) && <ApproveButton songId={cur.id} versionId={cur.version.id} label={cur.version.label} title={cur.title} approved={cur.approved && (!cur.approvedVersion || cur.approvedVersion === cur.version.id)} signInHref={`/login?next=${encodeURIComponent(`/l/${token}`)}`} tipKey="cr_tip_approve_link" />}
               {canComment && <button className="lcommentbtn" title="Comment at this moment" onClick={() => { if (big) { setBig(null); return; } if (!playing) toggle(); setBig({ compose: true }); }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-7l-4 3v-3H5a1 1 0 01-1-1V6a1 1 0 011-1z" /></svg>Comment at {mmss(time)}</button>}
               {data.downloads && data.downloads !== 'off' && <LinkDownload token={token} mode={data.downloads} song={cur} many={data.kind === 'project' && songs.length > 1} />}
@@ -430,7 +437,7 @@ export default function SharedListen() {
                   {songs.map((s, i) => (allSongs || songs.length <= 7 || i < 6 || i === idx) && (
                     <li key={s.id}><button className={`${i === idx ? 'on' : ''} ${i === idx && playing ? 'live' : ''}`} onClick={() => pick(i)} aria-label={i === idx && playing ? `Pause ${s.title}` : `Play ${s.title}`}>
                       <span className="mono ln"><span className="lnum">{i + 1}</span><svg viewBox="0 0 24 24" aria-hidden="true">{i === idx && playing ? PAUSE : PLAY}</svg></span>
-                      <span className="lt">{s.title}{s.approved && <em className="lfinal">Final</em>}</span>
+                      <span className="lt">{s.title}{s.approved ? <em className="lfinal">Final</em> : isDemoV(s.version) ? <em className="ldemo">Demo</em> : null}</span>
                       {canComment && <span className="lrowc" role="button" tabIndex={0} aria-label={`Comment on ${s.title}`} title="Comment on this song"
                         onClick={(e) => { e.stopPropagation(); if (big && i === idx) { setBig(null); return; } if (i !== idx) pick(i); else if (!playing) toggle(); setBig({ compose: true }); }}
                         onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); e.currentTarget.click(); } }}>

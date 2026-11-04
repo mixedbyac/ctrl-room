@@ -11,7 +11,7 @@ import { InvoicePanel, InvoiceNotice, useInvoices, lockingInvoice } from '@/comp
 import ShareButton from '@/components/ShareButton';
 import DownloadAll from '@/components/DownloadAll';
 import EditableTitle from '@/components/EditableTitle';
-import { measureVersion, needsMeasure } from '@/lib/measure';
+import { measureVersion, needsMeasure, flatPeaks } from '@/lib/measure';
 import { selectWithVersions } from '@/lib/embed';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
@@ -19,7 +19,7 @@ import { useParams } from 'next/navigation';
 import { supabase, api } from '@/lib/supabase';
 import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
-import { fmtDate, shortDate, statusText, mmss, latestMix, mixesOf, currentMix, fmtBytes, todayISO, demoOf } from '@/lib/format';
+import { fmtDate, shortDate, statusText, mmss, latestMix, mixesOf, currentMix, fmtBytes, todayISO, demoOf, isDemo } from '@/lib/format';
 import { uploadDemo } from '@/lib/demo';
 import { parseMixName, matchSong } from '@/lib/filename';
 import { deliverFile } from '@/lib/deliver';
@@ -286,7 +286,7 @@ export default function ProjectPage() {
                   <span className="eq"><span /><span /><span /></span></button>}
                 <Link className="ropen" href={`/s/${s.id}`} onClick={(e) => { if (selecting) { e.preventDefault(); toggleSel(s.id); return; } if (renaming === s.id) return e.preventDefault(); if (vs.length) { e.preventDefault(); playSong({ ...s, versions: vs }); } }}>{canEdit && renaming === s.id
                   ? <RowRename song={s} onDone={(t) => renameSong(s, t)} />
-                  : <span className="t ttl">{s.title}</span>}<span className="rsub"><span className={`dot ${s.status}`}>{sub}</span>{last ? <span>· {shortDate(last.created_at)}</span> : null}</span></Link>
+                  : <span className="t ttl">{s.title}{last && isDemo(last) && <em className="rdemo">Demo</em>}</span>}<span className="rsub"><span className={`dot ${s.status}`}>{sub}</span>{last ? <span>· {shortDate(last.created_at)}</span> : null}</span></Link>
                 {cols.map((c) => cell[c.k])}
                 {canEdit && (
                   <span className="rtools">
@@ -724,8 +724,12 @@ function TrackStats({ songs, eng, onMeasured }) {
   const lu = latest.map((v) => v.lufs).filter((x) => x != null);
   const pk = latest.map((v) => v.peak_db).filter((x) => x != null);
   const tried = (() => { try { return JSON.parse(localStorage.getItem('ctrl-room:measured') || '[]'); } catch { return []; } })();
-  const todo = songs.map((s) => ({ s, v: latestMix(s.versions || []) }))
-    .filter((x) => x.v && !tried.includes(x.v.id) && (needsMeasure(x.v) || !x.s.bpm || !x.s.musical_key));
+  const triedW = (() => { try { return JSON.parse(localStorage.getItem('ctrl-room:rewaved') || '[]'); } catch { return []; } })();
+  const todo = [
+    ...songs.map((s) => ({ s, v: latestMix(s.versions || []) })).filter((x) => x.v && !tried.includes(x.v.id) && (needsMeasure(x.v) || !x.s.bpm || !x.s.musical_key)),
+    // every version with an old block-looking waveform gets redrawn once (in the background)
+    ...songs.flatMap((s) => (s.versions || []).map((v) => ({ s, v, wave: true }))).filter((x) => flatPeaks(x.v) && !triedW.includes(x.v.id)),
+  ].filter((x, i, arr) => arr.findIndex((y) => y.v.id === x.v.id) === i);
   const started = useRef(false);
   // older mixes get measured in the background the first time you open the project (engineer only)
   useEffect(() => {
@@ -733,9 +737,12 @@ function TrackStats({ songs, eng, onMeasured }) {
     started.current = true;
     (async () => {
       for (let i = 0; i < todo.length; i++) {
-        setBusy(`Measuring ${i + 1} of ${todo.length}…`);
+        setBusy(`${todo[i].wave ? 'Sharpening waveforms' : 'Measuring'} ${i + 1} of ${todo.length}…`);
         try { await measureVersion(todo[i].v, todo[i].s); } catch { /* skip files that can't be read */ }
-        try { localStorage.setItem('ctrl-room:measured', JSON.stringify([...tried, todo[i].v.id].slice(-500))); tried.push(todo[i].v.id); } catch {}
+        try {
+          localStorage.setItem('ctrl-room:measured', JSON.stringify([...tried, todo[i].v.id].slice(-500))); tried.push(todo[i].v.id);
+          localStorage.setItem('ctrl-room:rewaved', JSON.stringify([...triedW, todo[i].v.id].slice(-2000))); triedW.push(todo[i].v.id);
+        } catch {}
       }
       setBusy('');
       onMeasured();

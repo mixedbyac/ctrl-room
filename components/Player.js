@@ -11,7 +11,7 @@ import { drawWave } from '@/lib/wavedraw';
 import { onlyOne } from '@/lib/onlyone';
 import { pingPush, pingDownload } from '@/lib/pushclient';
 import { emailArtistOn, notifyArtist } from '@/lib/notifyartist';
-import Cover from '@/components/Cover';
+import Cover, { CoverTint } from '@/components/Cover';
 import { mmss, deviceName, orderVersions, latestMix, currentMix, stackOrder, shortDate } from '@/lib/format';
 import { makeArt, artOf } from '@/lib/art';
 
@@ -564,7 +564,7 @@ function NowPlaying() {
         if (d.dy > 110) { el.style.transform = 'translateY(100%)'; setTimeout(close, 220); } else el.style.transform = '';
       }}>
       <span className="npgrab" aria-hidden="true" />
-      <Cover as="div" {...artOf(c.song, c.project)} size={240} className="npbg" />
+      <CoverTint {...artOf(c.song, c.project)} className="covertint np-tint" />
       <div className="npinner">
         <div className="nptop">
           <span className="npfrom">Playing from <b>{c.project.title}</b></span>

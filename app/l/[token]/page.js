@@ -7,7 +7,7 @@ import QualityBadge from '@/components/QualityBadge';
 import { quality } from '@/lib/quality';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
-import Cover from '@/components/Cover';
+import Cover, { CoverTint } from '@/components/Cover';
 import { mmss, deviceName } from '@/lib/format';
 import SpotifyMark from '@/components/SpotifyMark';
 import LinkComments from '@/components/LinkComments';
@@ -395,6 +395,7 @@ export default function SharedListen() {
   return (
     <main className="lpage">
       {cur && !ready && !booted && <div className="lload" aria-label="Loading"><img src="/logo.png" alt="" /></div>}
+      <CoverTint src={artSrc || undefined} seed={artSeed} />
       <div className="lwrap">
         <div className="ltop"><img src="/logo.png" alt="" className="llogo" /><span>CTRL ROOM</span></div>
         <div className="lmain">

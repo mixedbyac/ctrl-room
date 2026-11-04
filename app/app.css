@@ -2090,3 +2090,10 @@ img.npsquare { height: auto; aspect-ratio: 1; object-fit: cover; }
 .lbg, .npbg, .ambient { display: none !important; }
 .lwavebox { width: 100%; min-width: 0; justify-self: stretch; } .lwavebox .lwave { width: 100%; }
 .lwavebox .nptimes { width: 100%; } .lwavebox .nptimes > span:first-child { text-align: left; justify-self: start; } .lwavebox .nptimes > span:last-child { text-align: right; justify-self: end; }
+/* the cover's light colour, very faint, behind share links and the player */
+.covertint { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0; transition: opacity .8s ease;
+  background: radial-gradient(120% 90% at 25% 15%, rgba(var(--tint, 0,0,0), .9) 0%, rgba(var(--tint, 0,0,0), .35) 45%, transparent 80%); }
+.covertint[style] { opacity: .14; }
+.np-tint { position: absolute; }
+.lpage > .lwrap { position: relative; z-index: 1; }
+.npinner { position: relative; z-index: 1; }

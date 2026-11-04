@@ -395,8 +395,6 @@ export default function SharedListen() {
   return (
     <main className="lpage">
       {cur && !ready && !booted && <div className="lload" aria-label="Loading"><img src="/logo.png" alt="" /></div>}
-      <BgArt src={artSrc} full={artFull} seed={artSeed} />
-      {ar?.header_url && <div className="lheader" style={{ backgroundImage: `url(${ar.header_url})` }} />}
       <div className="lwrap">
         <div className="ltop"><img src="/logo.png" alt="" className="llogo" /><span>CTRL ROOM</span></div>
         <div className="lmain">

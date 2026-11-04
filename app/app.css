@@ -2083,3 +2083,8 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 @media (hover: none) { .pplx { width: 16px; opacity: .7; margin-left: 0; } }
 .pplrm { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--line); background: none; color: var(--muted); cursor: pointer; }
 .pplrm:hover { color: var(--warn, #e5484d); border-color: currentColor; }
+/* cover images always fill their frame (an <img> with only inset:0 kept its full photo size in Safari) */
+img.npart { width: 100% !important; height: 100% !important; object-fit: cover; display: block; }
+img.npsquare { height: auto; aspect-ratio: 1; object-fit: cover; }
+/* no cover-art backgrounds: plain page */
+.lbg, .npbg, .ambient { display: none !important; }

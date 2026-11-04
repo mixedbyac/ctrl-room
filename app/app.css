@@ -2072,3 +2072,10 @@ a.artistname:hover span { text-decoration: underline; text-underline-offset: 3px
 .ptools button[aria-selected="true"] { background: var(--sig); color: #0f0f10; border-color: var(--sig); }
 .spop.atcursor { position: fixed; right: auto; z-index: 60; max-height: calc(100dvh - 16px); overflow-y: auto; }
 @media (max-width: 900px) { .spop.atcursor { left: 0 !important; top: auto !important; } }
+/* People: hover a team to take someone off it; trash deletes the account */
+.pplx { width: 0; overflow: hidden; opacity: 0; margin-left: -6px; padding: 0; border: 0; background: rgba(255,255,255,.14); color: var(--ink); border-radius: 50%; height: 16px; font-size: 13px; line-height: 16px; cursor: pointer; transition: width .15s, opacity .15s, margin .15s; }
+.pplchip:hover .pplx, .pplx:focus-visible { width: 16px; opacity: 1; margin-left: 0; }
+.pplx:hover { background: var(--warn, #e5484d); color: #fff; }
+@media (hover: none) { .pplx { width: 16px; opacity: .7; margin-left: 0; } }
+.pplrm { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--line); background: none; color: var(--muted); cursor: pointer; }
+.pplrm:hover { color: var(--warn, #e5484d); border-color: currentColor; }

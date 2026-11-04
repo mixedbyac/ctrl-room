@@ -47,6 +47,14 @@ export default function PeoplePage() {
     const role = roleForTitle(p.title);
     try { await api('/api/people', { action: 'add', email: p.email, artist, role }); setMsg(`${p.name || p.email} is now on ${artist}’s team as ${role}.`); load(); } catch (e) { setMsg(e.message); }
   };
+  const removeFrom = async (p, a) => {
+    if (!window.confirm(`Take ${p.name || p.email} off ${a.artist}’s team?`)) return;
+    try { await api('/api/people', { action: 'remove', email: p.email, artist: a.artist }); setMsg(`${p.name || p.email} is off ${a.artist}’s team.`); load(); } catch (e) { setMsg(e.message); }
+  };
+  const del = async (p) => {
+    if (!window.confirm(`Delete ${p.name || p.email}’s account for good? They’re taken off every team and can’t sign in. Projects and files stay.`)) return;
+    try { await api('/api/people', { action: 'delete', email: p.email }); setMsg(`Deleted ${p.name || p.email}’s account.`); load(); } catch (e) { setMsg(e.message); }
+  };
   const verify = async (p) => { try { await api('/api/verify', { action: 'confirm', email: p.email }); setMsg(`${p.name || p.email} is verified.`); load(); } catch (e) { setMsg(e.message); } };
   return (
     <>
@@ -80,7 +88,7 @@ export default function PeoplePage() {
                   <b>{p.name || p.email.replace(/@.*/, '')}{p.state === 'verified' && <BlueCheck kind={p.engineer ? 'engineer' : p.artists.some((a) => /^artist$/i.test(a.role)) ? 'artist' : 'user'} />}{p.engineer ? <em className="pplrole">Engineer</em> : p.title ? <em className="pplrole">{p.title}</em> : null}</b>
                   <small>{p.email}</small>
                   <span className="pplmeta">
-                    {p.artists.length ? p.artists.map((a) => <span key={a.artist} className="pplchip">{a.artist}<i>{a.role}</i></span>) : <span className="pplnone">{p.artistHint ? `Signed up as “${p.artistHint}”` : 'Not on an artist yet'}</span>}
+                    {p.artists.length ? p.artists.map((a) => <span key={a.artist} className="pplchip">{a.artist}<i>{a.role}</i>{!p.engineer && <button type="button" className="pplx" onClick={() => removeFrom(p, a)} aria-label={`Remove ${p.name || p.email} from ${a.artist}`} title={`Remove from ${a.artist}`}>×</button>}</span>) : <span className="pplnone">{p.artistHint ? `Signed up as “${p.artistHint}”` : 'Not on an artist yet'}</span>}
                     <span className="pplwhen">Joined {ago(p.joined)}{p.last ? ` · last in ${ago(p.last)}` : ''}</span>
                   </span>
                 </span>
@@ -93,6 +101,7 @@ export default function PeoplePage() {
                       <option value="" disabled>Add to artist…</option>
                       {artists.filter((a) => !p.artists.some((x) => x.artist.toLowerCase() === a.toLowerCase())).map((a) => <option key={a} value={a}>{a}</option>)}
                     </select>
+                    <button className="pplrm" onClick={() => del(p)} aria-label={`Delete ${p.email}’s account`} title="Delete account"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></svg></button>
                   </span>
                 )}
               </li>

@@ -21,6 +21,35 @@ export async function POST(req) {
     if (!error) await teamAdded(db, { email, artist, role: b.role || 'Admin', by: user.email }).catch(() => {});
     return json({ ok: true });
   }
+  // take someone off one artist's team (and off that artist's projects as the contact)
+  if (b.action === 'remove') {
+    const email = String(b.email || '').trim().toLowerCase(), artist = String(b.artist || '').trim();
+    if (!email || !artist) return fail('Missing person or artist.');
+    const { error } = await db.from('artist_members').delete().ilike('email', email).ilike('artist', artist);
+    if (error) return fail(error.message, 500);
+    await db.from('projects').update({ client_email: null }).ilike('artist', artist).ilike('client_email', email);
+    return json({ ok: true });
+  }
+  // delete someone's account for good (engineers can't be deleted here). Their teams go too; projects and files stay.
+  if (b.action === 'delete') {
+    const email = String(b.email || '').trim().toLowerCase();
+    if (!email) return fail('Missing person.');
+    const { data: engs } = await db.from('app_config').select('value').like('key', 'engineer_email%');
+    if ([(process.env.ENGINEER_EMAIL || '').toLowerCase(), ...(engs || []).map((r) => String(r.value).toLowerCase())].includes(email)) return fail('Engineers can’t be deleted here.', 403);
+    let found = null;
+    for (let page = 1; page <= 25 && !found; page++) {
+      const { data, error } = await db.auth.admin.listUsers({ page, perPage: 200 });
+      if (error) return fail(error.message, 500);
+      found = (data.users || []).find((u) => (u.email || '').toLowerCase() === email);
+      if ((data.users || []).length < 200) break;
+    }
+    if (!found) return fail('No account with that email.', 404);
+    const { error } = await db.auth.admin.deleteUser(found.id);
+    if (error) return fail(error.message, 500);
+    await db.from('artist_members').delete().ilike('email', email);
+    await db.from('projects').update({ client_email: null }).ilike('client_email', email);
+    return json({ ok: true });
+  }
   // everyone CTRL ROOM has an email for (artist teams, project contacts, Portal senders) who has no account yet
   if (b.action === 'reach') {
     const accts = await accountEmails(db);

@@ -17,6 +17,7 @@ export default function Inbox() {
   const [copied, setCopied] = useState(false);
   const [view, setView] = useState('inbox');
   const [msg, setMsg] = useState('');
+  const [dl, setDl] = useState({}); // uploadId -> 'label'
   const load = useCallback(async () => {
     const sb = supabase();
     const { data } = await sb.from('uploads').select('*, projects(id,title,seed,artist,cover_path)').order('created_at', { ascending: false }).limit(100);
@@ -56,7 +57,6 @@ export default function Inbox() {
     load();
   };
   // Download a whole send to this computer. Mac app: one folder in Downloads. Browser: file by file.
-  const [dl, setDl] = useState({}); // uploadId -> 'label'
   const download = async (u) => {
     setMsg('');
     const say = (t) => setDl((x) => ({ ...x, [u.id]: t }));

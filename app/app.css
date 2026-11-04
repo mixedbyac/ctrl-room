@@ -133,7 +133,7 @@ a { color: inherit; text-decoration: none; }
 /* shared listen page */
 .lpage { position: relative; min-height: 100vh; min-height: 100dvh; overflow: hidden; background: #0b0b0c; color: #fff; }
 /* a small blurred copy of the cover, scaled up to fill the screen (Safari drops the blur on huge elements, which showed the cover as a giant hard-edged shape) */
-.lbg { position: fixed; left: 50%; top: 50%; inset: auto; width: 16vmax; height: 16vmax; translate: -50% -50%; scale: 10; filter: blur(9px) saturate(1.4) brightness(.45); pointer-events: none; z-index: 0; overflow: hidden; border-radius: 0 !important; }
+.lbg { position: fixed; inset: auto; left: 50%; top: 50%; width: 16vmax; height: 16vmax; translate: -50% -50%; scale: 10; filter: blur(9px) saturate(1.4) brightness(.45); pointer-events: none; z-index: 0; overflow: hidden; border-radius: 0 !important; }
 .lbg img, .lbg canvas { width: 100%; height: 100%; object-fit: cover; }
 body.playing .lbg { animation: breathe 9s ease-in-out infinite; }
 .lheader { position: absolute; inset: 0 0 auto; height: 340px; background-size: cover; background-position: center 30%; opacity: .55; -webkit-mask-image: linear-gradient(#000 30%, transparent); mask-image: linear-gradient(#000 30%, transparent); }

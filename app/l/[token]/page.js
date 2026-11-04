@@ -21,9 +21,23 @@ const PLAY = <path d="M7 4.5v15l13-7.5z" />;
 const PAUSE = <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" />;
 const BINS = 100;
 
-function Art({ src, seed, size, className }) {
-  if (src) return <img src={src} alt="" className={className} style={{ objectFit: 'cover' }} />;
+function Art({ src, full, seed, size, className }) {
+  // the small copy didn't load (image resizing off): use the original
+  if (src) return <img src={src} alt="" className={className} style={{ objectFit: 'cover' }} onError={(e) => { const f = e.currentTarget.dataset.full; if (f && e.currentTarget.src !== f) e.currentTarget.src = f; }} data-full={full || undefined} />;
   return <Cover as="div" seed={seed} size={size} className={className} />;
+}
+
+/** The soft glow behind the page: the cover drawn tiny and stretched (no CSS blur, which Safari mishandles on big layers). */
+function BgArt({ src, full, seed }) {
+  const cv = useRef(null);
+  useEffect(() => {
+    if (!src || !cv.current) return;
+    const img = new Image();
+    img.onerror = () => { if (full && img.src !== full) img.src = full; };
+    img.onload = () => { const c = cv.current; if (!c) return; const x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height); };
+    img.src = src;
+  }, [src, full]);
+  return <div className="lbg" aria-hidden="true">{src ? <canvas ref={cv} width={12} height={12} /> : <Cover as="div" seed={seed} size={200} className="lbgart" />}<i /></div>;
 }
 
 function Wave({ peaks, time, duration, onSeek }) {
@@ -41,7 +55,7 @@ const guestId = () => { try { let g = localStorage.getItem('ctrl-room:guest'); i
 const initials2 = (n) => String(n || '?').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 
 /** The share link's full player that pops out of the mini player (like in the app): cover, waveform with comments, controls, a note box. */
-function SharePlayer({ cur, p, name, artSrc, artSeed, playing, toggle, time, dur, seek, songs, idx, pick, token, canComment, startComposing, onClose }) {
+function SharePlayer({ cur, p, name, artSrc, artFull, artSeed, playing, toggle, time, dur, seek, songs, idx, pick, token, canComment, startComposing, onClose }) {
   const [notes, setNotes] = useState([]);
   const [composing, setComposing] = useState(!!startComposing);
   const [pinAt, setPinAt] = useState(startComposing ? time : 0);
@@ -91,7 +105,7 @@ function SharePlayer({ cur, p, name, artSrc, artSeed, playing, toggle, time, dur
             <span className="npfrom">Playing from <b>{p.title}</b></span>
             <button className="npclose" onClick={onClose} aria-label="Close the player"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg></button>
           </div>
-          <Art src={artSrc} seed={artSeed} size={900} className="npsquare sharesquare" />
+          <Art src={artSrc} full={artFull} seed={artSeed} size={900} className="npsquare sharesquare" />
           <div className="nphead">
             <div className="nphead-t"><h2 className="ttl">{cur.title}</h2><p className="npsub">{name} · {p.title}</p></div>
             {canComment && <button className={`npcomment ${composing ? 'on' : ''}`} onClick={() => { if (composing) { setComposing(false); return; } setPinAt(time); setComposing(true); }} aria-pressed={composing} aria-label={composing ? 'Close the comment box' : 'Add a comment at this moment'}>
@@ -376,17 +390,17 @@ export default function SharedListen() {
   );
 
   const p = data.project, ar = data.artist;
-  const artSrc = cur?.cover || p.cover, artSeed = cur?.seed ?? p.seed;
+  const artSrc = cur?.cover || p.cover, artFull = cur?.cover ? cur.coverFull : p.coverFull, artSeed = cur?.seed ?? p.seed;
   const name = ar?.display_name || p.artist;
   return (
     <main className="lpage">
       {cur && !ready && !booted && <div className="lload" aria-label="Loading"><img src="/logo.png" alt="" /></div>}
-      <Art src={artSrc} seed={artSeed} size={200} className="lbg" />
+      <BgArt src={artSrc} full={artFull} seed={artSeed} />
       {ar?.header_url && <div className="lheader" style={{ backgroundImage: `url(${ar.header_url})` }} />}
       <div className="lwrap">
         <div className="ltop"><img src="/logo.png" alt="" className="llogo" /><span>CTRL ROOM</span></div>
         <div className="lmain">
-          <div className="npdisc ldisc" ref={mainRef}><Art src={artSrc} seed={artSeed} size={640} className="npart spin" /><span className="nphole" />
+          <div className="npdisc ldisc" ref={mainRef}><Art src={artSrc} full={artFull} seed={artSeed} size={640} className="npart spin" /><span className="nphole" />
             <button type="button" className="lhub" onClick={(e) => { e.stopPropagation(); toggle(); }} disabled={!cur} aria-label={playing ? 'Pause' : 'Play'}><svg viewBox="0 0 24 24">{playing ? PAUSE : PLAY}</svg></button>
             {playErr && <span className="lplayerr" role="status">{playErr}</span>}
           </div>
@@ -484,7 +498,7 @@ export default function SharedListen() {
         </div>
       )}
       {quickMsg && !quick && mainGone && <p className="lqtoast" role="status">{quickMsg}</p>}
-      {cur && big && <SharePlayer key={`${cur.id}-${big.compose}`} cur={cur} p={p} name={name} artSrc={artSrc} artSeed={artSeed} playing={playing} toggle={toggle} time={time} dur={dur} seek={seek}
+      {cur && big && <SharePlayer key={`${cur.id}-${big.compose}`} cur={cur} p={p} name={name} artSrc={artSrc} artFull={artFull} artSeed={artSeed} playing={playing} toggle={toggle} time={time} dur={dur} seek={seek}
         songs={songs} idx={idx} pick={pick} token={token} canComment={canComment} startComposing={big.compose} onClose={() => setBig(null)} />}
     </main>
   );

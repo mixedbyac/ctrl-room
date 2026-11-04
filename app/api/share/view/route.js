@@ -42,11 +42,8 @@ export async function GET(req) {
     const own = s.cover_path, gen = own && own.startsWith('gen:');
     const artPath = gen ? null : own || project.cover_path || null;
     const artSeed = gen ? Number(own.slice(4)) || s.seed : own ? s.seed : project.seed;
-    let cover = null;
-    if (artPath) {
-      const { data: c } = await db.storage.from('mixes').createSignedUrl(artPath, 60 * 60 * 6);
-      cover = c?.signedUrl || null;
-    }
+    let cover = null, coverFull = null;
+    if (artPath) ({ cover, coverFull } = await signCover(db, artPath));
     // every version, so people on the link can flip between them (on unless the engineer turned it off)
     let vlist = null;
     if (project.settings?.share_versions !== false && vs.length > 1) {
@@ -59,13 +56,13 @@ export async function GET(req) {
       vlist = vs.map((x) => (byPath.get(x.storage_path) ? shape(x, byPath.get(x.storage_path)) : null)).filter(Boolean)
         .sort((a, b) => (a.id === act ? -1 : b.id === act ? 1 : a.demo !== b.demo ? (a.demo ? 1 : -1) : String(b.created_at).localeCompare(String(a.created_at))));
     }
-    list.push({ id: s.id, title: s.title, seed: artSeed, cover, approved: s.status === 'approved', approvedVersion: s.approved_version || null, vlist,
+    list.push({ id: s.id, title: s.title, seed: artSeed, cover, coverFull, approved: s.status === 'approved', approvedVersion: s.approved_version || null, vlist,
       bpm: s.bpm || null, key: s.musical_key || null, versions: vs.filter((x) => !isDemo(x)).length,
       steps: { received: s.received_at || null, mixing: s.mixing_at || null, review: (vs.filter((x) => !isDemo(x)).at(-1)?.created_at || '').slice(0, 10) || null, approved: s.approved_at ? String(s.approved_at).slice(0, 10) : null },
       version: { id: v.id, label: v.label, duration: v.duration, peaks: v.peaks, url: u.signedUrl, file_format: v.file_format, bit_depth: v.bit_depth, sample_rate: v.sample_rate, created_at: v.created_at } });
   }
-  let pcover = null;
-  if (project.cover_path) { const { data: c } = await db.storage.from('mixes').createSignedUrl(project.cover_path, 60 * 60 * 6); pcover = c?.signedUrl || null; }
+  let pcover = null, pcoverFull = null;
+  if (project.cover_path) ({ cover: pcover, coverFull: pcoverFull } = await signCover(db, project.cover_path));
   const { data: artist } = await db.from('artists').select('name, display_name, image_url, header_url, bio, spotify_url, accent').ilike('name', project.artist).maybeSingle().then((r) => r, () => ({ data: null }));
   let credit = null;
   try {
@@ -80,8 +77,23 @@ export async function GET(req) {
     downloads: project.settings?.share_downloads || 'off',
     approve: project.settings?.share_approve !== false,
     showVersions: project.settings?.share_versions !== false,
-    project: { title: project.title, artist: project.artist, type: project.type, release: project.release, seed: project.seed, cover: pcover },
+    project: { title: project.title, artist: project.artist, type: project.type, release: project.release, seed: project.seed, cover: pcover, coverFull: pcoverFull },
     artist: artist || null,
     songs: list,
   });
+}
+
+// covers can be huge photos (Safari stops drawing parts of the page with several of those): a 900px copy, plus the original as a fallback
+const coverCache = new Map();
+async function signCover(db, path) {
+  const hit = coverCache.get(path);
+  if (hit && Date.now() - hit.at < 3600_000) return hit;
+  const [{ data: small }, { data: full }] = await Promise.all([
+    db.storage.from('mixes').createSignedUrl(path, 60 * 60 * 6, { transform: { width: 900, height: 900, resize: 'cover', quality: 82 } }).catch(() => ({ data: null })),
+    db.storage.from('mixes').createSignedUrl(path, 60 * 60 * 6),
+  ]);
+  const out = { cover: small?.signedUrl || full?.signedUrl || null, coverFull: full?.signedUrl || null, at: Date.now() };
+  if (coverCache.size > 500) coverCache.clear();
+  coverCache.set(path, out);
+  return out;
 }

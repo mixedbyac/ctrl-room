@@ -269,8 +269,8 @@ export default function SharedListen() {
       if (done) return; done = true; setReady(true); setBooted(true);
       Object.values(els).forEach((x) => { if (x !== first && x.preload !== 'auto') x.preload = 'auto'; }); // now the other versions
     };
-    const cap = setTimeout(isReady, 2500); // never hold the page longer than this
-    first.addEventListener('canplay', isReady, { once: true });
+    const cap = setTimeout(isReady, 1500); // never hold the page longer than this
+    first.addEventListener('canplay', isReady, { once: true }); first.addEventListener('loadeddata', isReady, { once: true });
     if (first.readyState >= 3) isReady();
     const all = Object.values(els);
     const onMeta = (e) => { if (e.target === audio.current) setDur(e.target.duration || cur.version.duration || 0); };

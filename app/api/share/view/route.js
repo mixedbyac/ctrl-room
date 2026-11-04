@@ -31,13 +31,13 @@ export async function GET(req) {
 
   const ids = (songs || []).map((s) => s.id);
   const { data: allV } = ids.length ? await db.from('versions').select('*').in('song_id', ids).order('created_at') : { data: [] };
-  const list = [];
-  for (const s of songs || []) {
+  // every song at once (was one after another)
+  const built = await Promise.all((songs || []).map(async (s) => {
     const vs = (allV || []).filter((v) => v.song_id === s.id);
-    if (!vs.length) continue;
+    if (!vs.length) return null;
     const v = pickVersion(s, vs);
     const { data: u } = await db.storage.from('mixes').createSignedUrl(v.storage_path, 60 * 60 * 6);
-    if (!u?.signedUrl) continue;
+    if (!u?.signedUrl) return null;
     // same artwork rule as the app: the project's cover unless the song has its own
     const own = s.cover_path, gen = own && own.startsWith('gen:');
     const artPath = gen ? null : own || project.cover_path || null;
@@ -56,18 +56,21 @@ export async function GET(req) {
       vlist = vs.map((x) => (byPath.get(x.storage_path) ? shape(x, byPath.get(x.storage_path)) : null)).filter(Boolean)
         .sort((a, b) => (a.id === act ? -1 : b.id === act ? 1 : a.demo !== b.demo ? (a.demo ? 1 : -1) : String(b.created_at).localeCompare(String(a.created_at))));
     }
-    list.push({ id: s.id, title: s.title, seed: artSeed, cover, coverFull, approved: s.status === 'approved', approvedVersion: s.approved_version || null, vlist,
+    return ({ id: s.id, title: s.title, seed: artSeed, cover, coverFull, approved: s.status === 'approved', approvedVersion: s.approved_version || null, vlist,
       bpm: s.bpm || null, key: s.musical_key || null, versions: vs.filter((x) => !isDemo(x)).length,
       steps: { received: s.received_at || null, mixing: s.mixing_at || null, review: (vs.filter((x) => !isDemo(x)).at(-1)?.created_at || '').slice(0, 10) || null, approved: s.approved_at ? String(s.approved_at).slice(0, 10) : null },
       version: { id: v.id, label: v.label, duration: v.duration, peaks: v.peaks, url: u.signedUrl, file_format: v.file_format, bit_depth: v.bit_depth, sample_rate: v.sample_rate, created_at: v.created_at } });
-  }
-  let pcover = null, pcoverFull = null;
-  if (project.cover_path) ({ cover: pcover, coverFull: pcoverFull } = await signCover(db, project.cover_path));
-  const { data: artist } = await db.from('artists').select('name, display_name, image_url, header_url, bio, spotify_url, accent').ilike('name', project.artist).maybeSingle().then((r) => r, () => ({ data: null }));
+  }));
+  const list = built.filter(Boolean);
+  const [pc, { data: artist }, { data: eps }] = await Promise.all([
+    project.cover_path ? signCover(db, project.cover_path) : { cover: null, coverFull: null },
+    db.from('artists').select('name, display_name, image_url, header_url, bio, spotify_url, accent').ilike('name', project.artist).maybeSingle().then((r) => r, () => ({ data: null })),
+    db.from('engineer_profiles').select('*').then((r) => r, () => ({ data: null })),
+  ]);
+  const pcover = pc.cover, pcoverFull = pc.coverFull;
   let credit = null;
   try {
     const want = String(project.settings?.engineer || '').toLowerCase();
-    const { data: eps } = await db.from('engineer_profiles').select('*');
     const e = (want && (eps || []).find((x) => x.email === want)) || (eps || []).find((x) => x.is_main);
     if (e) credit = { text: creditLine(e), verified: e.verified, photo: e.photo_url, profile: { display_name: e.display_name, full_name: e.full_name, roles: e.roles, credit: e.credit, photo_url: e.photo_url, bio: e.bio, instagram: e.instagram || null, verified: e.verified } };
   } catch {}

@@ -255,7 +255,8 @@ export default function SharedListen() {
     list.forEach((v) => {
       const x = preloaded.current[v.url] || onlyOne(new Audio()); // the next song may already be loaded
       delete preloaded.current[v.url];
-      if (!x.src) { x.preload = 'auto'; x.src = v.url; }
+      // the one you hear loads first; the others wait their turn so they don't fight it for bandwidth
+      if (!x.src) { x.preload = v.id === cur.version.id ? 'auto' : 'metadata'; x.src = v.url; }
       x.volume = 1; x.muted = v.id !== cur.version.id;
       els[v.id] = x;
     });
@@ -264,8 +265,11 @@ export default function SharedListen() {
     audio.current = first;
     track.current = { songId: cur.id, vid: cur.version.id, id: null, listened: 0, duration: cur.version.duration, bins: new Set(), last: 0, saved: 0 };
     let done = false;
-    const isReady = () => { if (done) return; done = true; setReady(true); setBooted(true); };
-    const cap = setTimeout(isReady, 6000); // never hold the page longer than this
+    const isReady = () => {
+      if (done) return; done = true; setReady(true); setBooted(true);
+      Object.values(els).forEach((x) => { if (x !== first && x.preload !== 'auto') x.preload = 'auto'; }); // now the other versions
+    };
+    const cap = setTimeout(isReady, 2500); // never hold the page longer than this
     first.addEventListener('canplay', isReady, { once: true });
     if (first.readyState >= 3) isReady();
     const all = Object.values(els);

@@ -25,6 +25,6 @@ export async function POST(req) {
   const code = data?.properties?.email_otp;
   if (!code) return fail('Couldn’t make a sign-in code.', 500);
   const r = await sendSigninCode(email, code);
-  if (!r.sent) return fail('The sign-in email didn’t go out. Try again, or sign in with a password.', 502);
+  if (!r.sent) return fail(`The sign-in email didn’t go out (${r.reason || 'email error'}). Try again, or sign in with a password.`, 502);
   return json({ ok: true });
 }

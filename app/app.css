@@ -2104,3 +2104,14 @@ h2 .rdemo { font-size: 11px; vertical-align: 6px; }
 .ldemonote .ldemo { margin-left: 0; }
 @keyframes lminiup { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 .lmini { animation: lminiup .28s cubic-bezier(.2,.8,.2,1); }
+/* Post an update (project + menu, song ⋯ menu) */
+.postupd { display: grid; gap: 12px; }
+.postupd h3 { margin: 0; }
+.postupd textarea { width: 100%; resize: vertical; }
+.puquick { display: flex; flex-wrap: wrap; gap: 6px; }
+.puquick button { font-size: 12.5px; padding: 6px 11px; border-radius: 999px; border: 1px solid var(--line); background: none; color: var(--ink); cursor: pointer; }
+.puquick button:hover { border-color: var(--sig); color: var(--sig); }
+.pusongs { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13.5px; max-height: 160px; overflow-y: auto; }
+.pusongs label { display: inline-flex; align-items: center; gap: 6px; }
+.pusongs .puall { font-weight: 700; width: 100%; }
+.purow { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

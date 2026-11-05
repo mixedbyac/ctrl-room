@@ -17,7 +17,7 @@ const ACCEPT = 'audio/*,.wav,.aif,.aiff,.mp3,.m4a,.flac';
  * The ⋯ menu for one song: play, comment, versions, share, more info, and (engineer) deliver new versions / add a demo,
  * rename and move. Used on the tracklist rows and on the song page.
  */
-export default function SongMenu({ song, versions = [], project, eng, canEdit, queue, onChange, onVersions, versionsOpen, onRename, onMove, index, count, onPlay, onComment, page = false, setMsg }) {
+export default function SongMenu({ song, versions = [], project, eng, canEdit, queue, onChange, onVersions, versionsOpen, onRename, onMove, index, count, onPlay, onComment, onUpdate, page = false, setMsg }) {
   const pl = usePlayer();
   const [open, setOpen] = useState(false);
   const [view, setView] = useState('menu'); // 'menu' | 'info'
@@ -130,6 +130,7 @@ export default function SongMenu({ song, versions = [], project, eng, canEdit, q
               {has && <button role="menuitem" onClick={() => { shut(); setSharing(true); }}>Share</button>}
               {canDownload && <button role="menuitem" onClick={download}>Download {last.label}</button>}
               {eng && song.status === 'approved' && project?.id && <button role="menuitem" onClick={async () => { shut(); say('Sending the final file…'); try { const r = await api('/api/send-finals', { projectId: project.id, songIds: [song.id] }); say(`Sent ${song.title} to ${r.sent} ${r.sent === 1 ? 'person' : 'people'}.`); } catch (e) { say(e.message); } }}>Send file to artist</button>}
+              {eng && onUpdate && <button role="menuitem" onClick={() => { shut(); onUpdate(); }}>Post an update</button>}
               {eng && <button role="menuitem" onClick={() => { shut(); mixIn.current?.click(); }}>Deliver new versions</button>}
               {(eng || canEdit) && !demo && <button role="menuitem" onClick={() => { shut(); demoIn.current?.click(); }}>Add a demo</button>}
               {eng && demo && <button role="menuitem" className="danger" onClick={() => { shut(); removeDemo(); }}>Delete the demo</button>}

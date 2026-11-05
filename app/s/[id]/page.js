@@ -153,7 +153,7 @@ export default function SongPage() {
               <span>{[mixesOf(versions).length ? `${mixesOf(versions).length} version${mixesOf(versions).length > 1 ? 's' : ''}${demoOf(versions) ? ' + demo' : ''}` : demoOf(versions) ? 'Demo only' : ''].filter(Boolean).join(' · ')}</span></div>
             <div className="shbar">
               {hasMix && <ShareButton kind="song" id={song.id} eng={eng} title={song.title} />}
-              <SongMenu page song={song} versions={versions} project={p} eng={eng} canEdit={eng || canEditArtist(p?.artist)} queue={queueIds.length ? queueIds : [id]} onChange={load} setMsg={setMsg}
+              <SongMenu page song={song} versions={versions} project={p} eng={eng} canEdit={eng || canEditArtist(p?.artist)} queue={queueIds.length ? queueIds : [id]} onChange={load} setMsg={setMsg} onUpdate={eng ? () => { setTab('updates'); setTimeout(() => { document.querySelector('.stab[data-k="updates"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); document.querySelector('.composer textarea')?.focus(); }, 60); } : undefined}
                 onPlay={toggle} onComment={async () => { if (locked) return setMsg('Mixes unlock once the invoice is paid.'); if (isCur && pl.expanded) return pl.setExpanded(false); if (!isCur) await start(0); pl.openComment(); }} />
             </div>
             {hasMix && (

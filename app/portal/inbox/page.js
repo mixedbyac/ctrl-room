@@ -1,4 +1,5 @@
 'use client';
+import { useLive } from '@/lib/live';
 import { PORTAL_URL } from '@/lib/site';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
@@ -40,6 +41,7 @@ export default function Inbox() {
     } catch {}
   }, []);
   useEffect(() => { if (eng) load(); }, [eng, load]);
+  useLive(() => { if (eng) load(); });
 
   if (!session) return null;
   if (!eng) return <><TopBar crumbs={[{ label: 'Portal' }]} /><section className="page"><div className="empty-state"><strong>This page is for your engineer</strong><Link className="btn primary" href="/portal">Send files instead</Link></div></section></>;

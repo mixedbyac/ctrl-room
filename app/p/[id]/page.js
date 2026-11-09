@@ -1,4 +1,5 @@
 'use client';
+import { useLive } from '@/lib/live';
 import { pingPush } from '@/lib/pushclient';
 import { SITE_URL } from '@/lib/site';
 import NotifyClient from '@/components/NotifyClient';
@@ -83,6 +84,7 @@ export default function ProjectPage() {
     }
   }, [id]);
   useEffect(() => { load(); }, [load]);
+  useLive(load);
   const keys = useRef({});
   useEffect(() => {
     const on = (e) => {

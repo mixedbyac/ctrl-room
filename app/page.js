@@ -1,4 +1,5 @@
 'use client';
+import { useLive } from '@/lib/live';
 import { TitleInput, ArtistPicker } from '@/components/TitleCase';
 import { selectWithVersions } from '@/lib/embed';
 import { useEffect, useMemo, useState } from 'react';
@@ -42,6 +43,7 @@ function EngineerHome() {
 
   const loadProjects = () => selectWithVersions((V) => supabase().from('projects').select(`*, songs(*, ${V}(id,label,created_at))`).eq('archived', false).order('created_at', { ascending: false }))
     .then(({ data }) => setProjects(data || []));
+  useLive(loadProjects); // statuses stay in sync with every other page
   useEffect(() => {
     const sb = supabase();
     loadProjects();

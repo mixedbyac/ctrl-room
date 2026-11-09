@@ -2115,3 +2115,9 @@ h2 .rdemo { font-size: 11px; vertical-align: 6px; }
 .pusongs label { display: inline-flex; align-items: center; gap: 6px; }
 .pusongs .puall { font-weight: 700; width: 100%; }
 .purow { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+/* engineer's "done" tick on each note */
+.cdone { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,.28); background: none; color: transparent; display: grid; place-items: center; cursor: pointer; padding: 0; transition: background .15s, border-color .15s, color .15s; }
+.cdone svg { width: 14px; height: 14px; }
+.cdone:hover { border-color: var(--ok, #72d39c); color: rgba(114,211,156,.7); }
+.cdone.on { background: var(--ok, #72d39c); border-color: var(--ok, #72d39c); color: #0b0b0c; }
+.cthread.done .ctext { opacity: .5; text-decoration: line-through; text-decoration-color: rgba(255,255,255,.3); }

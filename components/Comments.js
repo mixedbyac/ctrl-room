@@ -82,15 +82,19 @@ function Comment({ n, replies, rx, nameOf, canResolve, canDelete, actions, seek,
       {menu === note.id && (
         <div className="cmenu" onMouseLeave={() => setMenu(false)}>
           {note.t != null && <button onClick={() => { setMenu(false); seek(note.t, note.version_id); }}>Play from {fmt(note.t)}</button>}
-          {canResolve && !note.parent_id && <button onClick={() => { setMenu(false); actions.resolve(note); }}>{note.resolved ? 'Reopen' : 'Mark resolved'}</button>}
+          {canResolve && !note.parent_id && <button onClick={() => { setMenu(false); actions.resolve(note); }}>{note.resolved ? 'Reopen' : 'Mark done'}</button>}
           {canDelete(note) && <button className="danger" onClick={() => { setMenu(false); if (window.confirm('Delete this comment?')) actions.remove(note); }}>Delete</button>}
         </div>
       )}
     </span>
   );
   return (
-    <li className={`cthread ${n.resolved ? 'done' : ''} ${replies.length || replying ? 'hasreplies' : ''}`}>
+    <li className={`cthread ${n.resolved && canResolve ? 'done' : ''} ${replies.length || replying ? 'hasreplies' : ''}`}>
       <div className="chead">
+        {/* engineer only: tick a note off once it's done in the mix */}
+        {canResolve && <button className={`cdone ${n.resolved ? 'on' : ''}`} onClick={() => actions.resolve(n)} aria-pressed={!!n.resolved} aria-label={n.resolved ? 'Done. Click to reopen' : 'Mark this note done'} title={n.resolved ? 'Done (click to reopen)' : 'Mark done'}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+        </button>}
         <Avatar name={name} />
         <b className="cname">{name}</b>
         {n.t != null ? (
@@ -99,7 +103,7 @@ function Comment({ n, replies, rx, nameOf, canResolve, canDelete, actions, seek,
             {n.t_end != null && <><span className="cdash">–</span><button className="ctime" onClick={() => seek(n.t_end, n.version_id)}>{fmt(n.t_end)}</button></>}
           </span>
         ) : <span className="ctime general">General</span>}
-        <span className="cwhen">{ago(n.created_at)}{versionLabel ? ` · ${versionLabel(n.version_id)}` : ''}{n.resolved ? ' · resolved' : ''}</span>
+        <span className="cwhen">{ago(n.created_at)}{versionLabel ? ` · ${versionLabel(n.version_id)}` : ''}{n.resolved && canResolve ? ' · done' : ''}</span>
         {(canResolve || canDelete(n) || n.t != null) && <Menu note={n} />}
       </div>
       <div className="cbody">

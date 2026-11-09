@@ -649,7 +649,7 @@ function NowPlaying() {
           {deck === 'notes' && (
             <div className="npnotes">
               {songNotes.length ? songNotes.map((n) => (
-                <button key={n.id} className={`npnote ${n.resolved ? 'done' : ''}`} onClick={() => { if (n.version_id && n.version_id !== c.versionId) pl.switchVersion(n.version_id); if (n.t != null) pl.seek(n.t); }}>
+                <button key={n.id} className={`npnote ${n.resolved && pl.eng ? 'done' : ''}`} onClick={() => { if (n.version_id && n.version_id !== c.versionId) pl.switchVersion(n.version_id); if (n.t != null) pl.seek(n.t); }}>
                   <span className="npnt mono">{n.t != null ? mmss(n.t) : '—'}</span>
                   <span className="npnb"><b>{n.author_name || (n.from_client ? 'Client' : 'Engineer')}{n.version_id ? ` · ${c.versions.find((v) => v.id === n.version_id)?.label || ''}` : ''}</b><span>{n.body}</span></span>
                 </button>

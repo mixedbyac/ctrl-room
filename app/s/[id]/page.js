@@ -1,4 +1,5 @@
 'use client';
+import { useLive } from '@/lib/live';
 import { exportToLogic } from '@/lib/midimarkers';
 import { emailArtistOn, setEmailArtist, notifyArtist } from '@/lib/notifyartist';
 import { drawWave } from '@/lib/wavedraw';
@@ -75,6 +76,7 @@ export default function SongPage() {
     }
   }, [id]);
   useEffect(() => { load(); }, [load]);
+  useLive(load);
   useEffect(() => {
     if (!eng) return;
     supabase().from('plays').select('*').eq('song_id', id).order('updated_at', { ascending: false }).then(({ data }) => setPlays(data || []));
@@ -310,7 +312,7 @@ function Scrub({ v, notes, time, dur, seek, eng, plays, header = null }) {
       </div>
       <div className="lane">
         {dur > 0 && vNotes.map((n, i) => (
-          <button key={n.id} className={`mk ${n.resolved ? 'done' : ''}`} style={{ left: `${(n.t / dur) * 100}%` }} title={`${fmt(n.t)} · ${n.body}`} onClick={() => seek(n.t)} aria-label={`Note ${i + 1} at ${fmt(n.t)}`}>{i + 1}</button>
+          <button key={n.id} className={`mk ${n.resolved && eng ? 'done' : ''}`} style={{ left: `${(n.t / dur) * 100}%` }} title={`${fmt(n.t)} · ${n.body}`} onClick={() => seek(n.t)} aria-label={`Note ${i + 1} at ${fmt(n.t)}`}>{i + 1}</button>
         ))}
       </div>
       <div className="times"><span className="mono">{fmt(time)}</span><span className="mono fmtinfo" title="Played straight from the uploaded file: no compression, no limiting, no volume changes."><QualityBadge v={v} size="md" showLossy />{" "}{describeFormat(v) ? <><b>{describeFormat(v)}</b> · {v.lossless === false ? 'as uploaded, no extra compression' : 'original, untouched'}</> : 'Original file, untouched'}{v?.peak_db != null ? ` · Peak ${v.peak_db} dBFS` : ''}</span><span className="mono">{fmt(dur)}</span></div>

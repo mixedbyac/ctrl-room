@@ -1,4 +1,5 @@
 'use client';
+import { useLive } from '@/lib/live';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { supabase, api } from '@/lib/supabase';
@@ -27,6 +28,7 @@ export default function CalendarPage() {
     setProjects(data || []);
   }, []);
   useEffect(() => { if (eng) load(); }, [eng, load]);
+  useLive(() => { if (eng) load(); });
 
   const { byDay, unscheduled } = useMemo(() => {
     const byDay = {}, unscheduled = [];

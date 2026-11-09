@@ -1,4 +1,5 @@
 'use client';
+import { useLive } from '@/lib/live';
 import { SITE_URL } from '@/lib/site';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -82,6 +83,7 @@ export default function AppShell({ children }) {
     supabase().rpc('is_engineer').then(({ data }) => setEng(!!data));
     reloadProjects();
   }, [session, needMfa, reloadProjects]);
+  useLive(() => { if (session && !needMfa) reloadProjects(); }, { every: 45000 });
 
   useEffect(() => {
     if (session === null && !isPublic) router.replace(`/login?next=${encodeURIComponent(pathname)}`);

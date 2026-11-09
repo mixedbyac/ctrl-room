@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { parseMixName, matchSong } from '@/lib/filename';
 import { deliverFile } from '@/lib/deliver';
+import { fmtSpeed, fmtLeft } from '@/lib/upload';
 import { takePending } from '@/lib/native';
 
 const AUDIO = /\.(wav|aiff?|mp3|m4a|flac)$/i;
@@ -74,7 +75,7 @@ export default function QuickDrop({ projects, onDone }) {
               song = data; songs.push(song);
             }
             const { data: vs } = await sb.from('versions').select('id,label,created_at').eq('song_id', song.id).order('created_at');
-            const r = await deliverFile({ song, versions: vs || [], file: f.file, project, text: false, onStatus: (m) => setFile(gi, fi, { status: m }) });
+            const r = await deliverFile({ song, versions: vs || [], file: f.file, project, text: false, onStatus: (m) => setFile(gi, fi, { status: m }), onProgress: (pr) => setFile(gi, fi, { pct: pr.pct, status: pr.pct < 1 ? ['Uploading', `${Math.round(pr.pct * 100)}%`, fmtSpeed(pr.speed), fmtLeft(pr.left)].filter(Boolean).join(' · ') : 'Saving…' }) });
             setFile(gi, fi, { state: 'done', status: `${song.title} · ${r.label}`, songId: song.id, songTitle: song.title, doneLabel: r.label });
           } catch (e) { setFile(gi, fi, { state: 'error', status: e.message }); }
         }
@@ -149,7 +150,8 @@ export default function QuickDrop({ projects, onDone }) {
                 )}
                 <ul className="act">
                   {g.files.map((f, fi) => (
-                    <li key={fi} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr) 64px', gap: 10, alignItems: 'center' }}>
+                    <li key={fi} className="addrow" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr) 64px', gap: 10, alignItems: 'center' }}>
+                      {f.state === 'working' && <span className="upbar" aria-hidden="true"><i style={{ width: `${Math.round((f.pct || 0) * 100)}%` }} /></span>}
                       <span className="small muted" style={{ overflowWrap: 'anywhere' }}>{f.file.name}</span>
                       {f.state === 'ready'
                         ? <TitleInput className="sinput" value={f.title} onChange={(v) => setFile(gi, fi, { title: v })} ariaLabel="Song title" />

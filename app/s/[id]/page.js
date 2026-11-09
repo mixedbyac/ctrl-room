@@ -77,6 +77,14 @@ export default function SongPage() {
   }, [id]);
   useEffect(() => { load(); }, [load]);
   useLive(load);
+  // ?tab=notes (from Home, emails, the project list): open that tab and bring it into view
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('tab');
+    if (!t) return;
+    setTab(t);
+    const go = () => document.querySelector('.stabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(go, 500); setTimeout(go, 1200);
+  }, [id]);
   useEffect(() => {
     if (!eng) return;
     supabase().from('plays').select('*').eq('song_id', id).order('updated_at', { ascending: false }).then(({ data }) => setPlays(data || []));
@@ -146,6 +154,7 @@ export default function SongPage() {
             <p className="partist"><ArtistName name={p.artist} link /></p>
             <p className="pcredit"><Credit project={p} /></p>
             <div className="meta"><span className={`dot ${song.status}`}>{statusText(song, versions)}</span>
+              {openNotes > 0 && <button className="snotes" onClick={() => { setTab('notes'); setTimeout(() => document.querySelector('.stabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30); }}>{openNotes} open note{openNotes > 1 ? 's' : ''} ↓</button>}
               {eng ? <>
                 <InlineText value={song.bpm ? String(song.bpm) : ''} placeholder="BPM" suffix=" BPM" width={4} inputMode="decimal" label="BPM"
                   onSave={async (t) => { const n = Number(String(t).replace(',', '.')); if (t && !(n > 20 && n < 400)) return setMsg('BPM should be a number like 92 or 140.'); await supabase().from('songs').update({ bpm: t ? Math.round(n * 10) / 10 : null }).eq('id', song.id); load(); }} />

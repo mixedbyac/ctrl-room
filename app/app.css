@@ -2121,3 +2121,8 @@ h2 .rdemo { font-size: 11px; vertical-align: 6px; }
 .cdone:hover { border-color: var(--ok, #72d39c); color: rgba(114,211,156,.7); }
 .cdone.on { background: var(--ok, #72d39c); border-color: var(--ok, #72d39c); color: #0b0b0c; }
 .cthread.done .ctext { opacity: .5; text-decoration: line-through; text-decoration-color: rgba(255,255,255,.3); }
+/* quick ways to the notes */
+.dnotes { font-size: 12px; font-weight: 700; color: var(--sig); cursor: pointer; }
+.dnotes:hover { text-decoration: underline; }
+.snotes { font: inherit; font-size: 13px; font-weight: 700; color: #0b0b0c; background: var(--sig); border: 0; border-radius: 999px; padding: 3px 10px; cursor: pointer; }
+.snotes:hover { filter: brightness(1.08); }

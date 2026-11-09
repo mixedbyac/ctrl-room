@@ -1,5 +1,6 @@
 'use client';
 import { useLive } from '@/lib/live';
+import { mergeDuplicateSongs } from '@/lib/mergesongs';
 import { pingPush } from '@/lib/pushclient';
 import { SITE_URL } from '@/lib/site';
 import NotifyClient from '@/components/NotifyClient';
@@ -75,6 +76,7 @@ export default function ProjectPage() {
     if (error && /column/i.test(error.message)) ({ data, error } = await selectWithVersions((V) => sb.from('projects').select(`*, songs(*, ${V}(*))`).eq('id', id).single())); // older database
     if (data) data.songs = (data.songs || []).sort((a, b) => a.position - b.position || a.created_at.localeCompare(b.created_at));
     setP(data || null);
+    if (data && eng && (await mergeDuplicateSongs([data]))) { load(); reloadProjects(); return; } // fold a files-only twin into the real song
     const ids = (data?.songs || []).map((x) => x.id);
     if (ids.length) {
       sb.from('notes').select('version_id').in('song_id', ids).then(({ data: ns }) => {
@@ -82,7 +84,7 @@ export default function ProjectPage() {
         setNoteCounts(c);
       });
     }
-  }, [id]);
+  }, [id, eng]); // eslint-disable-line
   useEffect(() => { load(); }, [load]);
   useLive(load);
   const keys = useRef({});

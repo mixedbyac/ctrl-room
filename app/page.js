@@ -13,7 +13,7 @@ import { artOf } from '@/lib/art';
 import QuickDrop from '@/components/QuickDrop';
 import ArtistName from '@/components/ArtistName';
 import { useNames, nameFor } from '@/components/Names';
-import { fmtDate, todayISO, addDaysISO, statusText, ago, mmss, fmtBytes, latestMix, mixesOf, nextLabel } from '@/lib/format';
+import { fmtDate, todayISO, addDaysISO, statusText, ago, mmss, fmtBytes, latestMix, mixesOf, nextLabel, stillDue } from '@/lib/format';
 
 export default function HomePage() {
   const { eng, session } = useApp();
@@ -71,8 +71,8 @@ function EngineerHome() {
   const songs = useMemo(() => (projects || []).flatMap((p) => (p.songs || []).map((s) => ({ p, s }))), [projects]);
   const today = todayISO();
   const week = Array.from({ length: 7 }, (_, i) => addDaysISO(today, i));
-  const dueOn = (d) => songs.filter(({ s }) => s.eta === d && s.status !== 'approved');
-  const overdue = songs.filter(({ s }) => s.eta && s.eta < today && s.status !== 'approved');
+  const dueOn = (d) => songs.filter(({ s }) => s.eta === d && stillDue(s));
+  const overdue = songs.filter(({ s }) => s.eta && s.eta < today && stillDue(s));
   const waiting = songs.filter(({ s }) => s.status === 'review');
   const list = day === today ? [...overdue, ...dueOn(day)] : dueOn(day);
 
@@ -133,7 +133,7 @@ function EngineerHome() {
             <div className="shelf">
               {projects.map((p) => {
                 const n = p.songs?.length || 0, ap = (p.songs || []).filter((s) => s.status === 'approved').length;
-                const next = (p.songs || []).filter((s) => s.eta && s.status !== 'approved').map((s) => s.eta).sort()[0];
+                const next = (p.songs || []).filter((s) => stillDue(s)).map((s) => s.eta).sort()[0];
                 return (
                   <Link key={p.id} className="pcard" href={`/p/${p.id}`}>
                     <span className="pc-art"><span className="pc-rec" /><Cover seed={p.seed} path={p.cover_path} size={360} /></span>

@@ -26,6 +26,7 @@ import { fmtDate, shortDate, statusText, mmss, latestMix, mixesOf, currentMix, f
 import { uploadDemo } from '@/lib/demo';
 import { parseMixName, matchSong } from '@/lib/filename';
 import { deliverFile } from '@/lib/deliver';
+import { fmtSpeed, fmtLeft } from '@/lib/upload';
 import { usePlayer } from '@/components/Player';
 import CoverMenu from '@/components/CoverMenu';
 import SongMenu, { CommentIcon } from '@/components/SongMenu';
@@ -512,7 +513,7 @@ function DemoPanel({ p, onSaved }) {
           if (hit) songId = hit.id;
           else { const { data, error } = await sb.from('songs').insert({ project_id: p.id, title: title.trim(), position: ++pos, seed: Math.floor(Math.random() * 1e9) }).select('id').single(); if (error) throw error; songId = data.id; }
         }
-        await uploadDemo({ songId, file, onStatus: (m) => setBusy(files.length > 1 ? `${i + 1}/${files.length} · ${m}` : m) });
+        await uploadDemo({ songId, file, onStatus: (m) => setBusy(files.length > 1 ? `${i + 1}/${files.length} · ${m}` : m), onProgress: (pr) => setBusy(`${files.length > 1 ? `${i + 1}/${files.length} · ` : ''}${pr.pct < 1 ? `Uploading ${Math.round(pr.pct * 100)}% · ${fmtSpeed(pr.speed)}` : 'Saving…'}`) });
         done.push(file.name);
       } catch (e) { bad.push(`${file.name}: ${e.message}`); }
     }
@@ -658,14 +659,14 @@ function AddMixes({ p, onSaved }) {
           created.current[r.title.toLowerCase()] = song;
         }
         const { data: vs } = await sb.from('versions').select('id,label,created_at').eq('song_id', song.id).order('created_at');
-        const res = await deliverFile({ song, versions: vs || [], file: r.file, project: p, text: false, onStatus: (m) => setRow(r.id, { status: m }) });
+        const res = await deliverFile({ song, versions: vs || [], file: r.file, project: p, text: false, onStatus: (m) => setRow(r.id, { status: m }), onProgress: (pr) => setRow(r.id, { pct: pr.pct, status: pr.pct < 1 ? ['Uploading', `${Math.round(pr.pct * 100)}%`, fmtSpeed(pr.speed), fmtLeft(pr.left)].filter(Boolean).join(' · ') : 'Saving…' }) });
         setRow(r.id, { state: 'done', status: `${song.title} · ${res.label}` });
         setDone((d) => [...d, { songId: song.id, songTitle: song.title, label: res.label }]);
       } catch (e) { setRow(r.id, { state: 'error', status: e.message }); }
     };
     let next = 0;
     const worker = async () => { while (next < lanes.length) { const lane = lanes[next++]; for (const r of lane) await one(r); } };
-    await Promise.all(Array.from({ length: Math.min(3, lanes.length) }, worker));
+    await Promise.all(Array.from({ length: Math.min(4, lanes.length) }, worker));
     setBusy(false);
     onSaved();
   };
@@ -704,6 +705,7 @@ function AddMixes({ p, onSaved }) {
           <li key={r.id} className={`addrow ${r.state}`}>
             <span className="addname">{r.file.name}</span>
             <span className="addstat">{r.state === 'done' ? `✓ ${r.status}` : r.status}</span>
+            {(r.state === 'working' || r.state === 'waiting') && <span className="upbar" aria-hidden="true"><i style={{ width: `${Math.round((r.pct || 0) * 100)}%` }} /></span>}
           </li>
         ))}
       </ul>

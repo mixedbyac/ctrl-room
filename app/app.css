@@ -2126,3 +2126,8 @@ h2 .rdemo { font-size: 11px; vertical-align: 6px; }
 .dnotes:hover { text-decoration: underline; }
 .snotes { font: inherit; font-size: 13px; font-weight: 700; color: #0b0b0c; background: var(--sig); border: 0; border-radius: 999px; padding: 3px 10px; cursor: pointer; }
 .snotes:hover { filter: brightness(1.08); }
+/* upload progress */
+.addrow { position: relative; }
+.upbar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255,255,255,.08); border-radius: 2px; overflow: hidden; }
+.upbar i { display: block; height: 100%; background: var(--sig); transition: width .3s ease; }
+.btn.upbtn { position: relative; overflow: hidden; opacity: 1 !important; background: linear-gradient(90deg, rgba(245,213,71,.28) var(--up, 0%), transparent var(--up, 0%)); font-variant-numeric: tabular-nums; transition: background .3s; }

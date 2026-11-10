@@ -103,8 +103,8 @@ export default function AppShell({ children }) {
   // Mac app: files dropped on the Dock icon go to the Home upload box
   useEffect(() => {
     if (!eng) return;
-    // files dropped on the Mac app's Dock icon or window: Home's box takes them there, anywhere else the delivery window opens
-    return installNativeBridge(() => { if (pathname !== '/') window.dispatchEvent(new CustomEvent('ctrl-room:upload')); });
+    // files dropped on the Mac app's Dock icon or window open the delivery window
+    return installNativeBridge(() => window.dispatchEvent(new CustomEvent('ctrl-room:upload')));
   }, [eng, pathname, router]);
 
   const signOut = async () => { await fetch('/api/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clear: true }) }).catch(() => {}); await supabase().auth.signOut(); router.replace('/login'); };

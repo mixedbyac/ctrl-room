@@ -11,7 +11,7 @@ const AUDIO = /\.(wav|aiff?|mp3|m4a|flac)$/i;
 /**
  * Engineer, any page: drag mixes onto the window (or hit Upload in the sidebar) and a delivery window opens.
  * Files go to the song with the same name (new versions), or set up new songs/projects, same as Home's drop box.
- * Project pages keep their own drop (straight into that project); Home has the box built in.
+ * Project pages keep their own drop (straight into that project).
  */
 export default function GlobalDrop({ eng, onDone }) {
   const pathname = usePathname() || '/';
@@ -19,7 +19,7 @@ export default function GlobalDrop({ eng, onDone }) {
   const [open, setOpen] = useState(false);
   const [projects, setProjects] = useState(null);
   const depth = useRef(0);
-  const ownDrop = pathname === '/' || pathname.startsWith('/p/'); // these pages handle drops themselves
+  const ownDrop = pathname.startsWith('/p/'); // project pages drop straight into that project
 
   const load = () => selectWithVersions((V) => supabase().from('projects').select(`*, songs(*, ${V}(id,label,created_at))`).eq('archived', false).order('created_at', { ascending: false }))
     .then(({ data }) => setProjects(data || []));

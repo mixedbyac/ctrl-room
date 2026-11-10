@@ -10,7 +10,6 @@ import { supabase } from '@/lib/supabase';
 import { useApp, TopBar } from '@/components/AppShell';
 import Cover from '@/components/Cover';
 import { artOf } from '@/lib/art';
-import QuickDrop from '@/components/QuickDrop';
 import ArtistName from '@/components/ArtistName';
 import { useNames, nameFor } from '@/components/Names';
 import { fmtDate, todayISO, addDaysISO, statusText, ago, mmss, fmtBytes, latestMix, mixesOf, nextLabel, stillDue } from '@/lib/format';
@@ -92,7 +91,6 @@ function EngineerHome() {
           </p>
         </div>
 
-        <QuickDrop projects={projects} onDone={() => { loadProjects(); reloadProjects(); }} />
 
         <div className="week" role="group" aria-label="This week">
           {week.map((d) => {

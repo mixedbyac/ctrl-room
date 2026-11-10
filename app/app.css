@@ -2171,3 +2171,6 @@ h2 .rdemo { font-size: 11px; vertical-align: 6px; }
   .sidewho small { display: none; }
   .sidewho b { font-size: 13.5px; }
 }
+.apswitch { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--s1); border: 1px solid var(--line); margin: 0 0 18px; }
+.apswitch a { padding: 6px 16px; border-radius: 999px; font-size: 13.5px; font-weight: 700; color: var(--muted); text-decoration: none; }
+.apswitch a[aria-current="page"] { background: var(--ink); color: var(--bg, #111); }

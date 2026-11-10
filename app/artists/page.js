@@ -1,4 +1,5 @@
 'use client';
+import ApSwitch from '@/components/ApSwitch';
 import { selectWithVersions } from '@/lib/embed';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -117,6 +118,7 @@ function Artists() {
     <>
       <TopBar crumbs={[{ label: 'Home', href: '/' }, { label: 'Artists' }]} />
       <section className="page">
+        {eng && <ApSwitch on="artists" />}
         <div className="hhead"><h1 className="up">Artists</h1><p className="lede">{artists.length} artist{artists.length === 1 ? '' : 's'} · {live} song{live === 1 ? '' : 's'} in progress</p>
           {eng && <button className="btn primary small" onClick={() => setAdding(!adding)} aria-expanded={adding}>{adding ? 'Close' : '+ Add artist'}</button>}</div>
         {eng && adding && <AddArtist onDone={() => setTick((t) => t + 1)} />}

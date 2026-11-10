@@ -1,4 +1,5 @@
 'use client';
+import ApSwitch from '@/components/ApSwitch';
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/supabase';
 import { useApp, TopBar } from '@/components/AppShell';
@@ -60,6 +61,7 @@ export default function PeoplePage() {
     <>
       <TopBar crumbs={[{ label: 'Home', href: '/' }, { label: 'People' }]} />
       <section className="page">
+        <ApSwitch on="people" />
         <div className="hhead"><h1 className="up">People</h1><p className="lede">{counts.all} account{counts.all === 1 ? '' : 's'}{counts.new ? ` · ${counts.new} not on an artist yet` : ''}</p></div>
         <div className="pplbar">
           <input type="search" placeholder="Search names, emails, artists" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search people" />

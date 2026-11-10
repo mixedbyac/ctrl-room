@@ -2228,3 +2228,6 @@ h2 .rdemo { font-size: 11px; vertical-align: 6px; }
 .vs-name.inl { display: flex; width: 100%; max-width: 100%; }
 .vs-name.inl input { width: 100%; max-width: 100%; min-width: 0; text-overflow: ellipsis; overflow: hidden; }
 .vs-label .inl input { width: auto; max-width: 64px; text-align: right; }
+/* phone "You" sheet open: slide the mini player out of the way */
+.mini { transition: transform .25s ease, opacity .2s ease; }
+body.moreopen .mini { transform: translateY(140%); opacity: 0; pointer-events: none; }

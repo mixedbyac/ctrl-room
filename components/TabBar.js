@@ -28,7 +28,8 @@ export default function TabBar({ eng, projects, email, signOut, unseen, verified
     const k = (e) => { if (e.key === 'Escape') setMore(false); };
     document.addEventListener('keydown', k);
     document.body.style.overflow = 'hidden';
-    return () => { document.removeEventListener('keydown', k); document.body.style.overflow = ''; };
+    document.body.classList.add('moreopen'); // the mini player steps aside while this sheet is up
+    return () => { document.removeEventListener('keydown', k); document.body.style.overflow = ''; document.body.classList.remove('moreopen'); };
   }, [more]);
   const tabs = eng
     ? [['/', 'Home', I.home], ['/calendar', 'Calendar', I.cal], ['/portal/inbox', 'Portal', I.portal], ['/artists', 'Artists', I.artist]]

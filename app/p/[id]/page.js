@@ -472,8 +472,8 @@ function AddPlus({ p, onSaved, onPick, unpaid }) {
   const Row = ({ k, icon, title, sub, dot }) => k === 'mixes'
     // a label opens the file picker in the same tap (Safari needs that)
     // open the file picker inside the tap itself, then close the menu a beat later (closing first made the Mac app and some browsers drop the tap)
-    ? <button role="menuitem" onClick={() => { document.getElementById('addmix-file')?.click(); setTimeout(() => setOpen(false), 50); }}><span className="pmi">{icon}</span><span><b>{title}</b><small>{sub}</small></span></button>
-    : <button role="menuitem" onClick={() => pick(k)}><span className="pmi">{icon}</span><span><b>{title}{dot ? <span className="gdot" aria-label="unpaid" style={{ position: 'static', display: 'inline-block', marginLeft: 6 }} /> : null}</b><small>{sub}</small></span></button>;
+    ? <button role="menuitem" onClick={() => { document.getElementById('addmix-file')?.click(); setTimeout(() => setOpen(false), 50); }}><span className="pmi">{icon}</span><span><b>{title}</b>{sub && <small>{sub}</small>}</span></button>
+    : <button role="menuitem" onClick={() => pick(k)}><span className="pmi">{icon}</span><span><b>{title}{dot ? <span className="gdot" aria-label="unpaid" style={{ position: 'static', display: 'inline-block', marginLeft: 6 }} /> : null}</b>{sub && <small>{sub}</small>}</span></button>;
   return (
     <span className="addplus" ref={box}>
       <button className="bigplus" onClick={() => setOpen(!open)} aria-expanded={open} aria-label="Add to this project" title="Add & manage">
@@ -482,14 +482,15 @@ function AddPlus({ p, onSaved, onPick, unpaid }) {
       {unpaid && !open && <span className="gdot" aria-label="unpaid invoice" />}
       {open && (
         <div className="plusmenu" role="menu">
-          <Row k="mixes" icon="↑" title="Add files / mixes" sub="Pick files, they go straight in (or drag them onto the page)" />
-          <Row k="demo" icon="◐" title="Add demos" sub="The artist’s rough version, for before/after" />
-          <Row k="update" icon="✉" title="Post an update" sub="Tell the artist’s team where things are" />
-          <Row k="request" icon="⇣" title="Request files" sub="A drop link for this project, copy it or email it" />
-          <Row k="share" icon="@" title="Client access" sub="Who can open it, downloads" />
-          <button role="menuitemcheckbox" aria-checked={dl} className="pmdl" onClick={toggleDl}><span className="pmi">↓</span><span><b>Allow downloads</b><small>{dlMsg || (dl ? 'On: the artist’s team can download mixes' : 'Off: they can listen, not download')}</small></span><span className={`switch sm ${dl ? 'on' : ''}`} aria-hidden="true"><i /></span></button>
-          <Row k="invoice" icon="$" title="Invoices" sub="Attach, show, lock until paid" dot={unpaid} />
-          <Row k="edit" icon="✎" title="Edit details" sub="Title, artist, type, release" />
+          <Row k="mixes" icon="↑" title="Add mixes" />
+          <Row k="demo" icon="◐" title="Add demos" />
+          <Row k="request" icon="⇣" title="Request files" />
+          <Row k="update" icon="✉" title="Post an update" />
+          <span className="pmsep" role="separator" />
+          <Row k="share" icon="@" title="Client access" />
+          <button role="menuitemcheckbox" aria-checked={dl} className="pmdl" onClick={toggleDl} title={dlMsg || (dl ? 'The artist’s team can download mixes' : 'They can listen, not download')}><span className="pmi">↓</span><span><b>Downloads</b>{dlMsg && <small>{dlMsg}</small>}</span><span className={`switch sm ${dl ? 'on' : ''}`} aria-hidden="true"><i /></span></button>
+          <Row k="invoice" icon="$" title="Invoices" dot={unpaid} />
+          <Row k="edit" icon="✎" title="Edit details" />
         </div>
       )}
     </span>

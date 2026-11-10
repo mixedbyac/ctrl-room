@@ -2149,3 +2149,8 @@ h2 .rdemo { font-size: 11px; vertical-align: 6px; }
 .gmodalhead h3 { margin: 0; }
 .gmodalbox .hsec { margin: 0; }
 @media (max-width: 900px) { .navupload { display: none; } }
+/* project + menu: short, one line each */
+.plusmenu { min-width: 220px; }
+.plusmenu > button { padding-top: 8px; padding-bottom: 8px; align-items: center; }
+.plusmenu > button b { font-size: 14px; }
+.pmsep { display: block; height: 1px; background: var(--line); margin: 4px 8px; }

@@ -19,6 +19,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import PostUpdate from '@/components/PostUpdate';
 import RequestFiles from '@/components/RequestFiles';
+import ProjectNotes from '@/components/ProjectNotes';
 import { useParams } from 'next/navigation';
 import { supabase, api } from '@/lib/supabase';
 import { useApp, TopBar } from '@/components/AppShell';
@@ -258,6 +259,7 @@ export default function ProjectPage() {
           let seen = new Set(); try { seen = new Set(JSON.parse(localStorage.getItem('ctrl-files-seen') || '[]')); } catch {}
           const fr = p.songs.filter((s) => filesOnly(s) && !s.downloaded_at && !seen.has(s.id)); if (!eng || !fr.length) return null; return (
           <Link className="newfiles" href="/portal/inbox"><span className="nfdot" aria-hidden="true" /><span><b>New files received</b> for this project{fr.length > 1 ? ` (${fr.length} sends)` : ''}</span><span className="nfgo">Portal inbox ›</span></Link>); })()}
+        {eng && <ProjectNotes songs={p.songs.filter((x) => (x.versions || []).length)} tick={p} />}
         <div className={`rows dyn ${selecting ? 'selecting' : ''}`} style={{ '--tpl': tpl }}>
           {p.songs.length > 0 && (
             <div className="rowhead" aria-hidden="true">

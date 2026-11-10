@@ -2182,3 +2182,19 @@ h2 .rdemo { font-size: 11px; vertical-align: 6px; }
   .barback svg { width: 18px; height: 18px; flex: none; }
   .barback span { white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
 }
+/* project page: all open notes in one place */
+.pnotes { margin: 0 0 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--s1); padding: 4px 14px 10px; }
+.pnhead { display: flex; align-items: center; gap: 8px; width: 100%; background: none; border: 0; color: var(--ink); font: inherit; padding: 10px 0 6px; cursor: pointer; text-align: left; }
+.pncount { font-size: 12px; font-weight: 800; background: var(--sig); color: #0b0b0c; border-radius: 999px; padding: 1px 8px; }
+.pnchev { margin-left: auto; color: var(--muted); }
+.pnsong { padding: 6px 0; border-top: 1px solid var(--line); }
+.pnstitle { display: inline-block; font-weight: 700; font-size: 13.5px; color: var(--ink); text-decoration: none; margin: 4px 0 6px; }
+.pnstitle span { color: var(--muted); }
+.pnsong ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.pnsong li { display: flex; align-items: flex-start; gap: 10px; }
+.pnsong .cdone { margin-top: 1px; }
+.pnbody { flex: 1; min-width: 0; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; color: var(--ink); text-decoration: none; font-size: 14px; padding: 2px 6px; border-radius: 8px; }
+.pnbody:hover { background: var(--s2); }
+.pnt { color: var(--sig); font-size: 12.5px; }
+.pntext { flex: 1; min-width: 0; }
+.pnbody small { color: var(--muted); font-size: 12px; }

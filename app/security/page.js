@@ -1,5 +1,7 @@
 'use client';
 import PushSettings from '@/components/PushSettings';
+import Link from 'next/link';
+import Cover from '@/components/Cover';
 import { useEffect, useRef, useState } from 'react';
 import { supabase, api } from '@/lib/supabase';
 import { ENGINEER_KINDS, CLIENT_KINDS, prefOf } from '@/lib/notify';
@@ -15,7 +17,7 @@ function Settings() {
   const { session, eng } = useApp();
   const router = useRouter();
   const params = useSearchParams();
-  const tabs = [['profile', eng ? 'Profile' : 'Account'], ['notifications', 'Notifications'], ['security', 'Security'], ...(eng ? [['studio', 'Studio']] : [])];
+  const tabs = [['profile', eng ? 'Profile' : 'Account'], ['notifications', 'Notifications'], ['security', 'Security'], ...(eng ? [['archive', 'Archive'], ['studio', 'Studio']] : [])];
   const hashTab = typeof window !== 'undefined' && window.location.hash === '#notifications' ? 'notifications' : null;
   const tab = tabs.some(([k]) => k === params.get('tab')) ? params.get('tab') : hashTab || 'profile';
   const go = (k) => router.replace(`/settings?tab=${k}`, { scroll: false });
@@ -104,6 +106,7 @@ function Settings() {
         <RememberedDevices />
         <ProtectionInfo eng={eng} />
         </>}
+        {tab === 'archive' && eng && <ArchiveList />}
         {tab === 'studio' && eng && <>
         {(
           <div className="panel secpanel">
@@ -332,6 +335,35 @@ function Engineers() {
         </form>
       )}
       {msg && <p className="toast-inline" style={{ margin: 0 }}>{msg}</p>}
+    </div>
+  );
+}
+
+/** Settings › Archive: projects you've put away. Open one, or bring it back to the sidebar. */
+function ArchiveList() {
+  const { projects = [], reloadProjects } = useApp();
+  const [busy, setBusy] = useState('');
+  const list = projects.filter((p) => p.archived);
+  const restore = async (p) => {
+    setBusy(p.id);
+    await supabase().from('projects').update({ archived: false }).eq('id', p.id);
+    await reloadProjects?.();
+    setBusy('');
+  };
+  return (
+    <div className="panel secpanel">
+      <b>Archived projects</b>
+      <span className="muted small">Out of the sidebar, still saved with every mix, note and link. Archive a project from its right-click menu in the sidebar.</span>
+      {!list.length ? <p className="muted small" style={{ margin: 0 }}>Nothing archived.</p> : (
+        <ul className="arclist">
+          {list.map((p) => (
+            <li key={p.id}>
+              <Link href={`/p/${p.id}`} className="arcp"><Cover seed={p.seed} path={p.cover_path} size={64} /><span><b>{p.title}</b><small>{p.artist}</small></span></Link>
+              <button className="btn small" disabled={busy === p.id} onClick={() => restore(p)}>{busy === p.id ? 'Restoring…' : 'Restore'}</button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

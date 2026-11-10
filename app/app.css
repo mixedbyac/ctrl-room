@@ -2198,3 +2198,10 @@ h2 .rdemo { font-size: 11px; vertical-align: 6px; }
 .pnt { color: var(--sig); font-size: 12.5px; }
 .pntext { flex: 1; min-width: 0; }
 .pnbody small { color: var(--muted); font-size: 12px; }
+.arclist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.arclist li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px; border-radius: 12px; }
+.arclist li:hover { background: var(--s2); }
+.arcp { display: flex; align-items: center; gap: 12px; min-width: 0; color: var(--ink); text-decoration: none; }
+.arcp img, .arcp .cover { width: 40px !important; height: 40px !important; border-radius: 8px; flex: none; }
+.arcp span { display: grid; min-width: 0; }
+.arcp small { color: var(--muted); }

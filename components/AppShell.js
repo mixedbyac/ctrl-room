@@ -167,18 +167,6 @@ export default function AppShell({ children }) {
               </div>
             </div>
           )}
-          {eng && projects.some((p) => p.archived) && (
-            <div>
-              <button className="navlabel navtoggle" onClick={() => setShowArchived(!showArchived)} aria-expanded={showArchived}>Archived ({projects.filter((p) => p.archived).length}) {showArchived ? '▾' : '▸'}</button>
-              {showArchived && <div style={{ display: 'grid', gap: 2 }}>
-                {projects.filter((p) => p.archived).map((p) => (
-                  <Link key={p.id} className="navitem archived" href={`/p/${p.id}`} onContextMenu={(e) => { e.preventDefault(); setPmenu({ project: p, x: e.clientX, y: e.clientY }); }}>
-                    <Cover seed={p.seed} path={p.cover_path} size={64} />{p.title}
-                  </Link>
-                ))}
-              </div>}
-            </div>
-          )}
           <ProjectMenu menu={pmenu} onClose={() => setPmenu(null)} onChanged={reloadProjects} router={router} />
           <div className="sidefoot">
             {session ? (

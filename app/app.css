@@ -2174,3 +2174,11 @@ h2 .rdemo { font-size: 11px; vertical-align: 6px; }
 .apswitch { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--s1); border: 1px solid var(--line); margin: 0 0 18px; }
 .apswitch a { padding: 6px 16px; border-radius: 999px; font-size: 13.5px; font-weight: 700; color: var(--muted); text-decoration: none; }
 .apswitch a[aria-current="page"] { background: var(--ink); color: var(--bg, #111); }
+/* desktop: no breadcrumb trail up top, just a Back link on the left (the sidebar covers Home and the rest) */
+@media (min-width: 901px) {
+  .bar .crumbs { visibility: hidden; }
+  .barback { display: inline-flex; align-items: center; gap: 2px; font-size: 14px; font-weight: 600; color: var(--muted); padding: 6px 10px 6px 4px; border-radius: 10px; text-decoration: none; }
+  .barback:hover { color: var(--ink); background: var(--s1); }
+  .barback svg { width: 18px; height: 18px; flex: none; }
+  .barback span { white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+}

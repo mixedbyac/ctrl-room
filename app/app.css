@@ -2209,3 +2209,7 @@ h2 .rdemo { font-size: 11px; vertical-align: 6px; }
 .sidelinks { display: flex; flex-wrap: nowrap; align-items: center; gap: 2px; padding: 4px 0 0; }
 .sidelinks a, .sidelinks button { padding: 5px 8px; font-size: 12px; white-space: nowrap; }
 .sidelinks button { margin-left: auto; }
+/* phones: keep the lists minimal; notes and extras live on the song itself */
+@media (max-width: 900px) {
+  .pnotes, .dnotes, .newfiles { display: none !important; }
+}

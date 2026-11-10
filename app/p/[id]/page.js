@@ -18,6 +18,7 @@ import { selectWithVersions } from '@/lib/embed';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import PostUpdate from '@/components/PostUpdate';
+import RequestFiles from '@/components/RequestFiles';
 import { useParams } from 'next/navigation';
 import { supabase, api } from '@/lib/supabase';
 import { useApp, TopBar } from '@/components/AppShell';
@@ -228,6 +229,7 @@ export default function ProjectPage() {
         {eng && <AddMixes p={p} onSaved={load} />}
         {eng && panel === 'add' && <PanelShell onClose={() => setPanel(null)}><AddSong p={p} onSaved={() => { load(); setPanel(null); }} /></PanelShell>}
         {eng && panel === 'demo' && <PanelShell onClose={() => setPanel(null)}><DemoPanel p={p} onSaved={load} /></PanelShell>}
+        {eng && panel === 'request' && <PanelShell onClose={() => setPanel(null)}><RequestFiles project={p} /></PanelShell>}
         {eng && panel === 'update' && <PanelShell onClose={() => { setPanel(null); setUpdFor(null); }}><PostUpdate project={p} songs={p.songs} preselect={updFor} onDone={load} /></PanelShell>}
         {eng && panel === 'edit' && <PanelShell onClose={() => setPanel(null)}><EditProject p={p} onSaved={() => { load(); reloadProjects(); setPanel(null); }} /></PanelShell>}
 
@@ -483,6 +485,7 @@ function AddPlus({ p, onSaved, onPick, unpaid }) {
           <Row k="mixes" icon="↑" title="Add files / mixes" sub="Pick files, they go straight in (or drag them onto the page)" />
           <Row k="demo" icon="◐" title="Add demos" sub="The artist’s rough version, for before/after" />
           <Row k="update" icon="✉" title="Post an update" sub="Tell the artist’s team where things are" />
+          <Row k="request" icon="⇣" title="Request files" sub="A drop link for this project, copy it or email it" />
           <Row k="share" icon="@" title="Client access" sub="Who can open it, downloads" />
           <button role="menuitemcheckbox" aria-checked={dl} className="pmdl" onClick={toggleDl}><span className="pmi">↓</span><span><b>Allow downloads</b><small>{dlMsg || (dl ? 'On: the artist’s team can download mixes' : 'Off: they can listen, not download')}</small></span><span className={`switch sm ${dl ? 'on' : ''}`} aria-hidden="true"><i /></span></button>
           <Row k="invoice" icon="$" title="Invoices" sub="Attach, show, lock until paid" dot={unpaid} />

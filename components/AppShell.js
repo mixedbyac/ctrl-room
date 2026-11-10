@@ -15,6 +15,7 @@ import ProjectMenu from '@/components/ProjectMenu';
 import ProjectFolders from '@/components/ProjectFolders';
 import Bell from '@/components/Bell';
 import SideMe from '@/components/SideMe';
+import GlobalDrop from '@/components/GlobalDrop';
 import EnterAnimation, { LogoLoader } from '@/components/EnterAnimation';
 import VerifyBanner from '@/components/VerifyBanner';
 import UpdateWatcher, { getSeen } from '@/components/UpdateWatcher';
@@ -102,7 +103,8 @@ export default function AppShell({ children }) {
   // Mac app: files dropped on the Dock icon go to the Home upload box
   useEffect(() => {
     if (!eng) return;
-    return installNativeBridge(() => { if (pathname !== '/') router.push('/'); });
+    // files dropped on the Mac app's Dock icon or window: Home's box takes them there, anywhere else the delivery window opens
+    return installNativeBridge(() => { if (pathname !== '/') window.dispatchEvent(new CustomEvent('ctrl-room:upload')); });
   }, [eng, pathname, router]);
 
   const signOut = async () => { await fetch('/api/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clear: true }) }).catch(() => {}); await supabase().auth.signOut(); router.replace('/login'); };
@@ -127,6 +129,12 @@ export default function AppShell({ children }) {
           <Link href="/" className="word"><img className="logo" src="/logo.png" alt="" /><span className="wtxt">CTRL ROOM</span></Link>
           {session && (
             <div style={{ display: 'grid', gap: 2 }}>
+              {eng && (
+                <button type="button" className="navupload" onClick={() => document.getElementById('gdrop-pick')?.click()} title="Deliver mixes from any page (or just drag them onto the window)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 15V4M7 9l5-5 5 5M4 15v4a1 1 0 001 1h14a1 1 0 001-1v-4" /></svg>Deliver mixes
+                </button>
+              )}
+              {eng && <input id="gdrop-pick" className="vh" type="file" multiple accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.flac" onChange={(e) => { const f = [...(e.target.files || [])]; e.target.value = ''; if (f.length) window.dispatchEvent(new CustomEvent('ctrl-room:upload', { detail: { files: f } })); }} />}
               <Link className="navitem" href="/" aria-current={pathname === '/'}>
                 <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 11l8-7 8 7v8a1 1 0 01-1 1h-4v-6H9v6H5a1 1 0 01-1-1z" /></svg></span>Home
               </Link>
@@ -150,6 +158,9 @@ export default function AppShell({ children }) {
                   <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c1-3.5 3.5-5.5 6.5-5.5s5.5 2 6.5 5.5" /><circle cx="17" cy="9" r="2.8" /><path d="M16 14.6c2.6.2 4.6 2 5.5 5.4" /></svg></span>People
                 </Link>
               )}
+              <Link className="navitem" href={eng ? '/portal/inbox' : '/portal'} aria-current={pathname.startsWith('/portal')}>
+                <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 13h4l1.5 3h5L16 13h4M5 6h14l1 7v5a1 1 0 01-1 1H5a1 1 0 01-1-1v-5z" /></svg></span>Portal
+              </Link>
             </div>
           )}
           {eng ? (
@@ -179,30 +190,10 @@ export default function AppShell({ children }) {
             </div>
           )}
           <ProjectMenu menu={pmenu} onClose={() => setPmenu(null)} onChanged={reloadProjects} router={router} />
-          <div>
-            <p className="navlabel">Files</p>
-            <Link className="navitem" href={eng ? '/portal/inbox' : '/portal'} aria-current={pathname.startsWith('/portal')}>
-              <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15V4M7 9l5-5 5 5M4 15v4a1 1 0 001 1h14a1 1 0 001-1v-4" /></svg></span>Portal
-            </Link>
-          </div>
-          {session && (
-            <Link className="navitem" href="/whats-new" aria-current={pathname === '/whats-new'}>
-              <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l2.4 5.6L20 10l-4.5 3.9L17 20l-5-3-5 3 1.5-6.1L4 10l5.6-1.4z" /></svg></span>What’s new
-              {unseen && <span className="newdot" aria-label="New" />}
-            </Link>
-          )}
-          <Link className="navitem" href="/about">
-            <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg></span>About CTRL ROOM
-          </Link>
-          {session && eng && !inMacApp && (
-            <a className="navitem" href="/mac">
-              <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /></svg></span>Get the Mac app
-            </a>
-          )}
           <div className="sidefoot">
             {session ? (
               <>
-                <SideMe session={session} eng={eng} signOut={signOut} />
+                <SideMe session={session} eng={eng} signOut={signOut} unseen={unseen} macLink={eng && !inMacApp} />
               </>
             ) : (
               <Link className="btn small" href="/login">Sign in</Link>
@@ -218,6 +209,7 @@ export default function AppShell({ children }) {
         </div>
         <EnterAnimation active={!!session && !needMfa} ready={loaded} />
         {session && <UpdateWatcher eng={eng} />}
+        {session && eng && <GlobalDrop eng={eng} onDone={reloadProjects} />}
         {session && <TabBar eng={eng} projects={projects} meta={session.user.user_metadata || {}} verified={!session.user.app_metadata?.needs_verify} email={session.user.email} signOut={signOut} unseen={unseen} />}
       </div>
       </PlayerProvider>

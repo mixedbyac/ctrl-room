@@ -2131,3 +2131,21 @@ h2 .rdemo { font-size: 11px; vertical-align: 6px; }
 .upbar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255,255,255,.08); border-radius: 2px; overflow: hidden; }
 .upbar i { display: block; height: 100%; background: var(--sig); transition: width .3s ease; }
 .btn.upbtn { position: relative; overflow: hidden; opacity: 1 !important; background: linear-gradient(90deg, rgba(245,213,71,.28) var(--up, 0%), transparent var(--up, 0%)); font-variant-numeric: tabular-nums; transition: background .3s; }
+/* tidier sidebar footer: small links in a wrap */
+.sidelinks { display: flex; flex-wrap: wrap; gap: 0 2px; padding: 2px 0 0 4px; }
+.sidelinks a, .sidelinks button { padding: 4px 8px; font-size: 12px; position: relative; }
+.sidelinks .newdot { position: absolute; top: 3px; right: 1px; }
+/* Deliver mixes: from any page */
+.navupload { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 0 8px; padding: 9px 12px; border-radius: 12px; border: 1px dashed rgba(245,213,71,.45); background: rgba(245,213,71,.07); color: var(--sig); font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.navupload svg { width: 16px; height: 16px; }
+.navupload:hover { background: rgba(245,213,71,.14); }
+.gdrop { position: fixed; inset: 0; z-index: 400; display: grid; place-items: center; background: rgba(8,8,10,.72); backdrop-filter: blur(3px); pointer-events: none; }
+.gdrop > div { display: grid; gap: 6px; text-align: center; padding: 48px 56px; border: 2px dashed var(--sig); border-radius: 24px; }
+.gdrop b { font-size: 28px; }
+.gdrop span { color: var(--muted); }
+.gmodal { position: fixed; inset: 0; z-index: 390; background: rgba(0,0,0,.6); display: grid; place-items: start center; padding: 6vh 16px; overflow-y: auto; }
+.gmodalbox { width: min(820px, 100%); background: var(--bg, #111); border: 1px solid var(--line); border-radius: 20px; padding: 20px; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+.gmodalhead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.gmodalhead h3 { margin: 0; }
+.gmodalbox .hsec { margin: 0; }
+@media (max-width: 900px) { .navupload { display: none; } }

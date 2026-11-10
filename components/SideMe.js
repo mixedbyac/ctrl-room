@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useProfiles, BlueCheck } from '@/components/Credit';
 
 /** Bottom of the sidebar: your picture, name, email and role, then Your profile / Security / Sign out, all lined up. */
-export default function SideMe({ session, eng, signOut }) {
+export default function SideMe({ session, eng, signOut, unseen = false, macLink = false }) {
   const list = useProfiles();
   const email = session.user.email || '';
   const prof = eng ? list.find((p) => p.email === email.toLowerCase()) : null;
@@ -23,6 +23,9 @@ export default function SideMe({ session, eng, signOut }) {
       </Link>
       <nav className="sidelinks">
         <Link href="/settings">Settings</Link>
+        <Link href="/whats-new" className="swn">What’s new{unseen && <span className="newdot" aria-label="New" />}</Link>
+        <Link href="/about">About</Link>
+        {macLink && <a href="/mac">Mac app</a>}
         <button type="button" onClick={signOut}>Sign out</button>
       </nav>
     </div>

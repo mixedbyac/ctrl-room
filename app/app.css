@@ -2205,3 +2205,7 @@ h2 .rdemo { font-size: 11px; vertical-align: 6px; }
 .arcp img, .arcp .cover { width: 40px !important; height: 40px !important; border-radius: 8px; flex: none; }
 .arcp span { display: grid; min-width: 0; }
 .arcp small { color: var(--muted); }
+/* sidebar footer: card on top, then one neat row (What's new · Mac app ... Sign out) */
+.sidelinks { display: flex; flex-wrap: nowrap; align-items: center; gap: 2px; padding: 4px 0 0; }
+.sidelinks a, .sidelinks button { padding: 5px 8px; font-size: 12px; white-space: nowrap; }
+.sidelinks button { margin-left: auto; }

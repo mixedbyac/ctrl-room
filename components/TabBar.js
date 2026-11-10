@@ -51,12 +51,7 @@ export default function TabBar({ eng, projects, email, signOut, unseen, verified
             <div className="moregrid">
               {eng && <Link href="/insights">Insights</Link>}
               {eng && <Link href="/dropbox">Dropbox</Link>}
-              {eng && <Link href="/people">People</Link>}
               <Link href="/whats-new">What’s new{unseen && <i className="tabdot" />}</Link>
-              <Link href="/settings">Settings</Link>
-              <Link href="/protect">How your music is protected</Link>
-              <Link href="/about">About CTRL ROOM</Link>
-              {eng && <a href="/mac">Get the Mac app</a>}
             </div>
             <div className="morefoot">
               <button className="btn small" onClick={signOut} style={{ width: '100%' }}>Sign out</button>

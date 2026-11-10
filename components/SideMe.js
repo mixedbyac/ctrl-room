@@ -22,9 +22,7 @@ export default function SideMe({ session, eng, signOut, unseen = false, macLink 
         </span>
       </Link>
       <nav className="sidelinks">
-        <Link href="/settings">Settings</Link>
         <Link href="/whats-new" className="swn">What’s new{unseen && <span className="newdot" aria-label="New" />}</Link>
-        <Link href="/about">About</Link>
         {macLink && <a href="/mac">Mac app</a>}
         <button type="button" onClick={signOut}>Sign out</button>
       </nav>

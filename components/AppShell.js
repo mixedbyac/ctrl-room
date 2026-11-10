@@ -129,12 +129,6 @@ export default function AppShell({ children }) {
           <Link href="/" className="word"><img className="logo" src="/logo.png" alt="" /><span className="wtxt">CTRL ROOM</span></Link>
           {session && (
             <div style={{ display: 'grid', gap: 2 }}>
-              {eng && (
-                <button type="button" className="navupload" onClick={() => document.getElementById('gdrop-pick')?.click()} title="Deliver mixes from any page (or just drag them onto the window)">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 15V4M7 9l5-5 5 5M4 15v4a1 1 0 001 1h14a1 1 0 001-1v-4" /></svg>Deliver mixes
-                </button>
-              )}
-              {eng && <input id="gdrop-pick" className="vh" type="file" multiple accept="audio/*,.wav,.aif,.aiff,.mp3,.m4a,.flac" onChange={(e) => { const f = [...(e.target.files || [])]; e.target.value = ''; if (f.length) window.dispatchEvent(new CustomEvent('ctrl-room:upload', { detail: { files: f } })); }} />}
               <Link className="navitem" href="/" aria-current={pathname === '/'}>
                 <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 11l8-7 8 7v8a1 1 0 01-1 1h-4v-6H9v6H5a1 1 0 01-1-1z" /></svg></span>Home
               </Link>

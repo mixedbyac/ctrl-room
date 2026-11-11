@@ -62,6 +62,18 @@ function hex(h, s, l) {
   return `#${f(0)}${f(8)}${f(4)}`;
 }
 
+// the app's font (Geist), fetched once per server instance as TTF (the preview renderer can't read woff2)
+const fonts = {};
+async function geist(weight) {
+  if (!fonts[weight]) fonts[weight] = (async () => {
+    const css = await (await fetch(`https://fonts.googleapis.com/css2?family=Geist:wght@${weight}`, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1)' }, signal: AbortSignal.timeout(4000) })).text();
+    const url = /src:\s*url\((https:[^)]+)\)\s*format\('(?:truetype|opentype|woff)'\)/.exec(css)?.[1];
+    if (!url) throw new Error('no font');
+    return (await fetch(url, { signal: AbortSignal.timeout(4000) })).arrayBuffer();
+  })().catch((e) => { delete fonts[weight]; throw e; });
+  return fonts[weight];
+}
+
 // 1200×630 cards: logo, a big line, and (for a request link) the project's cover
 async function card(key, req) {
   const { ImageResponse } = await import('next/og');
@@ -78,9 +90,10 @@ async function card(key, req) {
   const kicker = key === 'brand' ? 'CTRL ROOM' : key === 'portal' ? 'SEND FILES HERE' : 'FILE REQUEST';
   const big = key === 'brand' ? 'Listen, leave notes, approve.' : key === 'portal' ? 'Send your files.' : `Send files for ${info?.title || 'your project'}`;
   const sub = key === 'brand' ? 'Mixes from your engineer, in one place.' : key === 'portal' ? 'Up to 5 GB. No account needed.' : `${info?.artist ? `${info.artist} · ` : ''}Up to 5 GB. No account needed.`;
+  const fontList = (await Promise.all([[800, 'Geist'], [500, 'Geist']].map(async ([w, name]) => ({ name, weight: w, style: 'normal', data: await geist(w) })).map((p) => p.catch(() => null)))).filter(Boolean);
   return new ImageResponse(
     (
-      <div style={{ width: 1200, height: 630, display: 'flex', alignItems: 'center', padding: 80, gap: 64, background: '#0B0B0C', color: '#fff', fontFamily: 'sans-serif' }}>
+      <div style={{ width: 1200, height: 630, display: 'flex', alignItems: 'center', padding: 80, gap: 64, background: '#0B0B0C', color: '#fff', fontFamily: fontList.length ? 'Geist' : 'sans-serif' }}>
         {key.startsWith('req_') && (
           <div style={{ width: 400, height: 400, borderRadius: 28, overflow: 'hidden', display: 'flex', flexShrink: 0,
             background: `linear-gradient(135deg, ${hex(h, 70, 55)}, ${hex((h + 70) % 360, 65, 32)} 60%, ${hex((h + 150) % 360, 60, 14)})` }}>
@@ -90,13 +103,13 @@ async function card(key, req) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 22, flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
             <img src={logo} width={64} height={64} />
-            <div style={{ display: 'flex', fontSize: 30, fontWeight: 700, letterSpacing: 4, color: '#bdbdc4' }}>{kicker}</div>
+            <div style={{ display: 'flex', fontSize: 24, fontWeight: 500, letterSpacing: 5, color: '#9a9aa2' }}>{kicker}</div>
           </div>
-          <div style={{ display: 'flex', fontSize: big.length > 26 ? 66 : 84, fontWeight: 800, lineHeight: 1.02, letterSpacing: -2 }}>{big}</div>
-          <div style={{ display: 'flex', fontSize: 32, color: '#9a9aa2' }}>{sub}</div>
+          <div style={{ display: 'flex', fontSize: big.length > 26 ? 64 : 80, fontWeight: 800, lineHeight: 0.98, letterSpacing: -2.5, textTransform: 'uppercase' }}>{big}</div>
+          <div style={{ display: 'flex', fontSize: 28, fontWeight: 500, color: '#9a9aa2' }}>{sub}</div>
         </div>
       </div>
     ),
-    { width: 1200, height: 630, headers: { 'Cache-Control': key.startsWith('req_') ? 'public, max-age=3600, s-maxage=86400' : CACHE } },
+    { width: 1200, height: 630, fonts: fontList, headers: { 'Cache-Control': key.startsWith('req_') ? 'public, max-age=3600, s-maxage=86400' : CACHE } },
   );
 }

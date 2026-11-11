@@ -104,10 +104,10 @@ async function card(key, req) {
       <div style={{ width: 1200, height: 630, display: 'flex', alignItems: 'center', padding: 80, gap: 64, background: '#0B0B0C', color: '#fff', fontFamily: fontList.length ? 'Geist' : 'sans-serif', position: 'relative' }}>
         {wall.length > 0 && (
           <div style={{ position: 'absolute', left: -40, top: -50, width: 1300, height: 760, display: 'flex', flexWrap: 'wrap', gap: 14, transform: 'rotate(-6deg)' }}>
-            {Array.from({ length: 24 }, (_, i) => wall[i % wall.length]).map((src, i) => <img key={i} src={src} width={200} height={200} style={{ borderRadius: 14, opacity: 0.55 }} />)}
+            {Array.from({ length: 24 }, (_, i) => wall[i % wall.length]).map((src, i) => <img key={i} src={src} width={200} height={200} style={{ borderRadius: 14, opacity: 0.7 }} />)}
           </div>
         )}
-        {wall.length > 0 && <div style={{ position: 'absolute', inset: 0, display: 'flex', background: 'linear-gradient(90deg, rgba(11,11,12,.96) 0%, rgba(11,11,12,.88) 45%, rgba(11,11,12,.55) 100%)' }} />}
+        {wall.length > 0 && <div style={{ position: 'absolute', left: 0, top: 0, width: 1200, height: 630, display: 'flex', backgroundImage: 'linear-gradient(90deg, rgba(11,11,12,0.97) 0%, rgba(11,11,12,0.9) 48%, rgba(11,11,12,0.45) 100%)' }} />}
         {key.startsWith('req_') && (
           <div style={{ width: 400, height: 400, borderRadius: 28, overflow: 'hidden', display: 'flex', flexShrink: 0,
             background: `linear-gradient(135deg, ${hex(h, 70, 55)}, ${hex((h + 70) % 360, 65, 32)} 60%, ${hex((h + 150) % 360, 60, 14)})` }}>

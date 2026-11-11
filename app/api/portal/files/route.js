@@ -1,4 +1,4 @@
-import { admin, engineerFrom, dropboxApi, dropboxFolder, json, fail } from '@/lib/server';
+import { admin, engineerFrom, dropboxApi, dropboxFolder, json, fail, signDownload, verifyDownload } from '@/lib/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -7,9 +7,17 @@ export const maxDuration = 60;
 // Engineer only: every file in a Portal send, with a short-lived download link for each (4 hours).
 // Paths keep the song folder and any sub-folders, so the download can rebuild the same layout.
 export async function POST(req) {
-  const { user, why } = await engineerFrom(req);
-  if (!user) return fail(why || 'Engineers only.', 403);
   const b = await req.json().catch(() => ({}));
+  // a ticket from the app (opened in the regular browser) stands in for signing in, for that one send
+  const ticketId = b.ticket ? verifyDownload(b.ticket) : null;
+  if (b.ticket && !ticketId) return fail('This download link expired. Click Download in CTRL ROOM again.', 403);
+  if (!ticketId) {
+    const { user, why } = await engineerFrom(req);
+    if (!user) return fail(why || 'Engineers only.', 403);
+    if (b.ticketFor) return json({ ticket: signDownload(b.ticketFor) });
+    if (Array.isArray(b.ticketsFor)) return json({ tickets: Object.fromEntries(b.ticketsFor.slice(0, 200).map((id) => [id, signDownload(id, 12 * 60)])) });
+  }
+  if (ticketId) b.uploadId = ticketId;
   if (!b.uploadId) return fail('Missing send.');
   const db = admin();
   const { data: up } = await db.from('uploads').select('id, artist, created_at, songs, projects(title)').eq('id', b.uploadId).single();

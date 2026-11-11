@@ -19,6 +19,11 @@ export default function Inbox() {
   const [view, setView] = useState('inbox');
   const [msg, setMsg] = useState('');
   const [dl, setDl] = useState({}); // uploadId -> 'label'
+  const [tickets, setTickets] = useState({}); // older Mac app: download links made ahead, so a click opens the browser right away
+  useEffect(() => {
+    if (!isMacApp() || macCanDownload() || !rows?.length) return;
+    api('/api/portal/files', { ticketsFor: rows.map((u) => u.id) }).then((r) => setTickets(r.tickets || {})).catch(() => {});
+  }, [rows?.length]); // eslint-disable-line
   const load = useCallback(async () => {
     const sb = supabase();
     const { data } = await sb.from('uploads').select('*, projects(id,title,seed,artist,cover_path)').order('created_at', { ascending: false }).limit(100);
@@ -64,8 +69,14 @@ export default function Inbox() {
     const say = (t) => setDl((x) => ({ ...x, [u.id]: t }));
     say('Getting files…');
     try {
-      // an older Mac app can't save a zip itself: point to the update
-      if (isMacApp() && !macCanDownload()) throw new Error('Download the new Mac app to get sends as one zip (github.com/mixedbyac/ctrl-room/releases).');
+      // an older Mac app can't save a zip itself: the zip gets made in your regular browser instead (it opens there and downloads)
+      if (isMacApp() && !macCanDownload()) {
+        const ticket = tickets[u.id] || (await api('/api/portal/files', { ticketFor: u.id })).ticket;
+        window.open(`https://www.ctrl-room.app/get?k=${encodeURIComponent(ticket)}`, '_blank');
+        say('');
+        if (!u.downloaded_at) await markDownloaded(u);
+        return;
+      }
       const r = await api('/api/portal/files', { uploadId: u.id });
       const total = r.files.length;
       if (macCanDownload()) {

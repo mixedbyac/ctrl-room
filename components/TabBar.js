@@ -14,7 +14,7 @@ const I = {
 const Icon = ({ d }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>;
 
 /** Phone navigation: tabs along the bottom, with a "More" sheet for everything else and signing out. */
-export default function TabBar({ eng, projects, email, signOut, unseen, verified, meta = {} }) {
+export default function TabBar({ eng, projects, email, signOut, unseen, verified, portalCount = 0, meta = {} }) {
   const pathname = usePathname();
   const [more, setMore] = useState(false);
   const profiles = useProfiles();
@@ -39,7 +39,7 @@ export default function TabBar({ eng, projects, email, signOut, unseen, verified
     <>
       <nav className="tabbar" aria-label="Main">
         {tabs.map(([href, label, d]) => (
-          <Link key={href} href={href} className={`tab ${on(href) ? 'on' : ''}`} aria-current={on(href) ? 'page' : undefined}><Icon d={d} /><span>{label}</span></Link>
+          <Link key={href} href={href} className={`tab ${on(href) ? 'on' : ''}`} aria-current={on(href) ? 'page' : undefined}><Icon d={d} /><span>{label}</span>{eng && href === '/portal/inbox' && portalCount > 0 && <i className="tabcount">{portalCount}</i>}</Link>
         ))}
         <button className={`tab tabme ${more ? 'on' : ''}`} onClick={() => setMore(!more)} aria-expanded={more} aria-label="You: settings and more">{av}<span>You</span>{unseen && <i className="tabdot" />}</button>
       </nav>

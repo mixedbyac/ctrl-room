@@ -109,6 +109,15 @@ export default function AppShell({ children }) {
 
   const signOut = async () => { await fetch('/api/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clear: true }) }).catch(() => {}); await supabase().auth.signOut(); router.replace('/login'); };
   const canEditArtist = (artist) => eng || adminArtists.includes(String(artist || '').toLowerCase());
+  // little number on Portal: sends still waiting in the inbox (not downloaded, not archived)
+  const [portalCount, setPortalCount] = useState(0);
+  const countPortal = useCallback(() => {
+    if (!session || !eng) return;
+    supabase().from('uploads').select('id', { count: 'exact', head: true }).eq('archived', false).is('downloaded_at', null)
+      .then(({ count }) => setPortalCount(count || 0), () => {});
+  }, [session, eng]);
+  useEffect(() => { countPortal(); }, [countPortal, pathname]);
+  useLive(countPortal, { every: 45000 });
   const value = { session, email: session?.user?.email || '', eng, projects, reloadProjects, signOut, canEditArtist };
 
   if (session && needMfa && !(portalHost || pathname.startsWith('/l/'))) {
@@ -150,6 +159,7 @@ export default function AppShell({ children }) {
 
               <Link className="navitem" href={eng ? '/portal/inbox' : '/portal'} aria-current={pathname.startsWith('/portal')}>
                 <span className="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 13h4l1.5 3h5L16 13h4M5 6h14l1 7v5a1 1 0 01-1 1H5a1 1 0 01-1-1v-5z" /></svg></span>Portal
+                {eng && portalCount > 0 && <span className="navcount" aria-label={`${portalCount} new`}>{portalCount}</span>}
               </Link>
             </div>
           )}
@@ -188,7 +198,7 @@ export default function AppShell({ children }) {
         <EnterAnimation active={!!session && !needMfa} ready={loaded} />
         {session && <UpdateWatcher eng={eng} />}
         {session && eng && <GlobalDrop eng={eng} onDone={reloadProjects} />}
-        {session && <TabBar eng={eng} projects={projects} meta={session.user.user_metadata || {}} verified={!session.user.app_metadata?.needs_verify} email={session.user.email} signOut={signOut} unseen={unseen} />}
+        {session && <TabBar eng={eng} portalCount={portalCount} projects={projects} meta={session.user.user_metadata || {}} verified={!session.user.app_metadata?.needs_verify} email={session.user.email} signOut={signOut} unseen={unseen} />}
       </div>
       </PlayerProvider>
     </Ctx.Provider>

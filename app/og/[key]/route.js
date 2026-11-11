@@ -1,5 +1,5 @@
 import { shareInfo, requestInfo } from '@/lib/sharemeta';
-import { admin } from '@/lib/server';
+import { admin, getConfig } from '@/lib/server';
 import { SITE_URL } from '@/lib/site';
 
 export const runtime = 'nodejs';
@@ -87,13 +87,27 @@ async function card(key, req) {
     if (got) cover = `data:${got.type};base64,${Buffer.from(got.buf).toString('base64')}`;
   }
   const h = hue(info?.seed);
+  // behind the brand and Portal cards: a wall of the covers from the engineer's playlist (same as the sign-in page)
+  let wall = [];
+  if (!key.startsWith('req_')) {
+    try {
+      const list = (JSON.parse((await getConfig('login_covers')) || 'null')?.covers || []).slice(0, 24);
+      wall = (await Promise.all(list.map((c) => grab(String(c.img).replace(/\d+x\d+bb/, '220x220bb'), 3500).then((g) => `data:${g.type};base64,${Buffer.from(g.buf).toString('base64')}`, () => null)))).filter(Boolean).slice(0, 18);
+    } catch {}
+  }
   const kicker = key === 'brand' ? 'CTRL ROOM' : key === 'portal' ? 'SEND FILES HERE' : 'FILE REQUEST';
   const big = key === 'brand' ? 'Listen, leave notes, approve.' : key === 'portal' ? 'Send your files.' : `Send files for ${info?.title || 'your project'}`;
   const sub = key === 'brand' ? 'Mixes from your engineer, in one place.' : key === 'portal' ? 'Up to 5 GB. No account needed.' : `${info?.artist ? `${info.artist} · ` : ''}Up to 5 GB. No account needed.`;
   const fontList = (await Promise.all([[800, 'Geist'], [500, 'Geist']].map(async ([w, name]) => ({ name, weight: w, style: 'normal', data: await geist(w) })).map((p) => p.catch(() => null)))).filter(Boolean);
   return new ImageResponse(
     (
-      <div style={{ width: 1200, height: 630, display: 'flex', alignItems: 'center', padding: 80, gap: 64, background: '#0B0B0C', color: '#fff', fontFamily: fontList.length ? 'Geist' : 'sans-serif' }}>
+      <div style={{ width: 1200, height: 630, display: 'flex', alignItems: 'center', padding: 80, gap: 64, background: '#0B0B0C', color: '#fff', fontFamily: fontList.length ? 'Geist' : 'sans-serif', position: 'relative' }}>
+        {wall.length > 0 && (
+          <div style={{ position: 'absolute', left: -40, top: -50, width: 1300, height: 760, display: 'flex', flexWrap: 'wrap', gap: 14, transform: 'rotate(-6deg)' }}>
+            {Array.from({ length: 24 }, (_, i) => wall[i % wall.length]).map((src, i) => <img key={i} src={src} width={200} height={200} style={{ borderRadius: 14, opacity: 0.55 }} />)}
+          </div>
+        )}
+        {wall.length > 0 && <div style={{ position: 'absolute', inset: 0, display: 'flex', background: 'linear-gradient(90deg, rgba(11,11,12,.96) 0%, rgba(11,11,12,.88) 45%, rgba(11,11,12,.55) 100%)' }} />}
         {key.startsWith('req_') && (
           <div style={{ width: 400, height: 400, borderRadius: 28, overflow: 'hidden', display: 'flex', flexShrink: 0,
             background: `linear-gradient(135deg, ${hex(h, 70, 55)}, ${hex((h + 70) % 360, 65, 32)} 60%, ${hex((h + 150) % 360, 60, 14)})` }}>

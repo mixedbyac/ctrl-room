@@ -9,7 +9,7 @@ export async function generateMetadata({ searchParams }) {
   const info = to ? await requestInfo(to).catch(() => null) : null;
   const title = info ? `Send files for ${info.title}` : 'Send files';
   const description = info ? `Drop stems, sessions and references straight into ${info.title}${info.artist ? ` · ${info.artist}` : ''}. Up to 5 GB.` : 'Send your files to your engineer. Up to 5 GB, no account needed.';
-  const image = { url: `${SITE_URL}/og/${info ? `req_${encodeURIComponent(to)}` : 'portal'}.jpg?v=2`, width: 1200, height: 630, alt: title, type: 'image/jpeg' };
+  const image = { url: `${SITE_URL}/og/${info ? `req_${encodeURIComponent(to)}` : 'portal'}.jpg?v=3`, width: 1200, height: 630, alt: title, type: 'image/jpeg' };
   return {
     title, description, robots: { index: false, follow: false },
     openGraph: { title, description, type: 'website', siteName: 'Send files here', url: `${PORTAL_URL}/${to ? `?to=${to}` : ''}`, images: [image] },

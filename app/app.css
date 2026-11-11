@@ -2251,3 +2251,4 @@ body::after {
   .side .navitem:active { transform: translateX(2px) scale(.98); }
 }
 @media (prefers-reduced-motion: reduce) { .side .navitem, .side .navitem * { transition: none !important; transform: none !important; } }
+.portalhost .ownpb { display: none; } /* sendfileshere.com already adds one at the bottom */

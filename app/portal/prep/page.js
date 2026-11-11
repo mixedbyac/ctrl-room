@@ -30,7 +30,7 @@ export default function Prep() {
         ))}
       </ol>
       <div className="prepcta"><Link className="btn primary" href="/portal">I’m ready, send my files</Link></div>
-      <PoweredBy />
+      <div className="ownpb"><PoweredBy /></div>
     </main>
   );
 }

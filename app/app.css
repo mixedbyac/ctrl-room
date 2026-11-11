@@ -2241,3 +2241,13 @@ body::after {
 .navcount { margin-left: auto; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--sig); color: #0b0b0c; font-size: 11px; font-weight: 800; display: grid; place-items: center; line-height: 1; }
 .tab { position: relative; }
 .tabcount { position: absolute; top: 2px; left: calc(50% + 6px); min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--sig); color: #0b0b0c; font-size: 10px; font-weight: 800; font-style: normal; display: grid; place-items: center; }
+/* sidebar: a small nudge on hover */
+@media (hover: hover) and (min-width: 901px) {
+  .side .navitem { transition: transform .22s cubic-bezier(.2,.8,.2,1), background .18s ease, color .18s ease; will-change: transform; }
+  .side .navitem:hover { transform: translateX(4px); }
+  .side .navitem .navicon, .side .navitem img, .side .navitem .cover { transition: transform .25s cubic-bezier(.2,.8,.2,1); }
+  .side .navitem:hover .navicon { transform: scale(1.12) rotate(-4deg); }
+  .side .navitem:hover img, .side .navitem:hover .cover { transform: scale(1.08); }
+  .side .navitem:active { transform: translateX(2px) scale(.98); }
+}
+@media (prefers-reduced-motion: reduce) { .side .navitem, .side .navitem * { transition: none !important; transform: none !important; } }

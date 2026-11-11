@@ -1,4 +1,4 @@
-import { shareInfo } from '@/lib/sharemeta';
+import { shareInfo, requestInfo } from '@/lib/sharemeta';
 import { admin } from '@/lib/server';
 import { SITE_URL } from '@/lib/site';
 
@@ -22,6 +22,8 @@ async function grab(url, ms, headers) {
 // Lives outside /api so Vercel's CDN can cache it (iMessage gives up on slow images and shows a tiny icon instead).
 export async function GET(req, { params }) {
   const key = String(params.key || '').replace(/\.(jpe?g|png)$/i, '');
+  // brand cards: the app itself, the Portal, and a project's file-request link
+  if (key === 'brand' || key === 'portal' || key.startsWith('req_')) return card(key, req);
   const info = await shareInfo(key, { light: !0 }).catch(() => null);
   if (info?.coverPath && info.cover) {
     const tries = [];
@@ -58,4 +60,43 @@ function hex(h, s, l) {
   const k = (n) => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
   const f = (n) => Math.round(255 * (l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))))).toString(16).padStart(2, '0');
   return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+// 1200×630 cards: logo, a big line, and (for a request link) the project's cover
+async function card(key, req) {
+  const { ImageResponse } = await import('next/og');
+  const origin = new URL(req.url).origin;
+  const logo = `${origin}/logo.png`;
+  let info = null;
+  if (key.startsWith('req_')) info = await requestInfo(decodeURIComponent(key.slice(4))).catch(() => null);
+  let cover = null;
+  if (info?.cover) {
+    const got = await grab(`${SITE_URL}/_next/image?url=${encodeURIComponent(info.cover)}&w=640&q=80`, 6000, { Accept: 'image/jpeg' }).catch(() => grab(info.cover, 6000).catch(() => null));
+    if (got) cover = `data:${got.type};base64,${Buffer.from(got.buf).toString('base64')}`;
+  }
+  const h = hue(info?.seed);
+  const kicker = key === 'brand' ? 'CTRL ROOM' : key === 'portal' ? 'SEND FILES HERE' : 'FILE REQUEST';
+  const big = key === 'brand' ? 'Listen, leave notes, approve.' : key === 'portal' ? 'Send your files.' : `Send files for ${info?.title || 'your project'}`;
+  const sub = key === 'brand' ? 'Mixes from your engineer, in one place.' : key === 'portal' ? 'Up to 5 GB. No account needed.' : `${info?.artist ? `${info.artist} · ` : ''}Up to 5 GB. No account needed.`;
+  return new ImageResponse(
+    (
+      <div style={{ width: 1200, height: 630, display: 'flex', alignItems: 'center', padding: 80, gap: 64, background: '#0B0B0C', color: '#fff', fontFamily: 'sans-serif' }}>
+        {key.startsWith('req_') && (
+          <div style={{ width: 400, height: 400, borderRadius: 28, overflow: 'hidden', display: 'flex', flexShrink: 0,
+            background: `linear-gradient(135deg, ${hex(h, 70, 55)}, ${hex((h + 70) % 360, 65, 32)} 60%, ${hex((h + 150) % 360, 60, 14)})` }}>
+            {cover && <img src={cover} width={400} height={400} style={{ objectFit: 'cover' }} />}
+          </div>
+        )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 22, flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+            <img src={logo} width={64} height={64} />
+            <div style={{ display: 'flex', fontSize: 30, fontWeight: 700, letterSpacing: 4, color: '#bdbdc4' }}>{kicker}</div>
+          </div>
+          <div style={{ display: 'flex', fontSize: big.length > 26 ? 66 : 84, fontWeight: 800, lineHeight: 1.02, letterSpacing: -2 }}>{big}</div>
+          <div style={{ display: 'flex', fontSize: 32, color: '#9a9aa2' }}>{sub}</div>
+        </div>
+      </div>
+    ),
+    { width: 1200, height: 630, headers: { 'Cache-Control': key.startsWith('req_') ? 'public, max-age=3600, s-maxage=86400' : CACHE } },
+  );
 }

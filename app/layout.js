@@ -1,10 +1,14 @@
 import './globals.css';
 import './app.css';
 import AppShell from '@/components/AppShell';
+import { SITE_URL } from '@/lib/site';
+import { brandMeta } from '@/lib/previewmeta';
 
 export const metadata = {
+  metadataBase: new URL(SITE_URL),
   title: 'CTRL ROOM',
   description: 'Listen, leave notes, and approve your mixes.',
+  ...brandMeta(), // every page previews as the CTRL ROOM card unless it has its own
   appleWebApp: { capable: true, title: 'CTRL ROOM', statusBarStyle: 'black-translucent' },
   icons: { icon: [{ url: '/icon-32.png', sizes: '32x32', type: 'image/png' }, { url: '/icon-192.png', sizes: '192x192', type: 'image/png' }], apple: '/apple-icon.png' },
 };

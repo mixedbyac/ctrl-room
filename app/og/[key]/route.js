@@ -6,7 +6,11 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 20;
 
-const CACHE = 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000';
+const LONG = 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000';
+// a preview address carries ?v=<fingerprint of cover + name>: a new cover or name means a new address, so the old picture can stay cached.
+// Without it (old links), keep it short so changes show up within minutes.
+const SHORT = 'public, max-age=300, s-maxage=600, stale-while-revalidate=3600';
+const cacheFor = (req) => (new URL(req.url).searchParams.get('v') ? LONG : SHORT);
 const hue = (seed) => Math.abs(Number(seed) || 7) % 360;
 
 async function grab(url, ms, headers) {
@@ -22,6 +26,7 @@ async function grab(url, ms, headers) {
 // Lives outside /api so Vercel's CDN can cache it (iMessage gives up on slow images and shows a tiny icon instead).
 export async function GET(req, { params }) {
   const key = String(params.key || '').replace(/\.(jpe?g|png)$/i, '');
+  const CACHE = cacheFor(req);
   // brand cards: the app itself, the Portal, and a project's file-request link
   if (key === 'brand' || key === 'portal' || key.startsWith('req_')) return card(key, req);
   const info = await shareInfo(key, { light: !0 }).catch(() => null);
@@ -76,6 +81,7 @@ async function geist(weight) {
 
 // 1200×630 cards: logo, a big line, and (for a request link) the project's cover
 async function card(key, req) {
+  const CACHE = cacheFor(req);
   const { ImageResponse } = await import('next/og');
   const origin = new URL(req.url).origin;
   const logo = `${origin}/logo.png`;
@@ -124,6 +130,6 @@ async function card(key, req) {
         </div>
       </div>
     ),
-    { width: 1200, height: 630, fonts: fontList, headers: { 'Cache-Control': key.startsWith('req_') ? 'public, max-age=3600, s-maxage=86400' : CACHE } },
+    { width: 1200, height: 630, fonts: fontList, headers: { 'Cache-Control': CACHE } },
   );
 }

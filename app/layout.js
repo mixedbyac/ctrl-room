@@ -10,7 +10,7 @@ export const metadata = {
   description: 'Listen, leave notes, and approve your mixes.',
   ...brandMeta(), // every page previews as the CTRL ROOM card unless it has its own
   appleWebApp: { capable: true, title: 'CTRL ROOM', statusBarStyle: 'black-translucent' },
-  icons: { icon: [{ url: '/icon-32.png', sizes: '32x32', type: 'image/png' }, { url: '/icon-192.png', sizes: '192x192', type: 'image/png' }], apple: '/apple-icon.png' },
+  icons: { icon: [{ url: '/icon-32.png?v=3', sizes: '32x32', type: 'image/png' }, { url: '/icon-192.png?v=3', sizes: '192x192', type: 'image/png' }], apple: '/apple-icon.png?v=3' },
 };
 
 export const viewport = {

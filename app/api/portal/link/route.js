@@ -1,4 +1,5 @@
 import { limit } from '@/lib/ratelimit';
+import { sendTitle } from '@/lib/heldsend';
 import { admin, json, fail, dropboxFolder, dropboxPath, dropboxUploadLink } from '@/lib/server';
 
 export const runtime = 'nodejs';
@@ -17,7 +18,7 @@ export async function POST(req) {
   if (Date.now() - new Date(up.created_at).getTime() > 24 * 3600 * 1000) return fail('This send has expired. Start a new one.', 410);
   const song = (up.songs || []).find((s) => s.songId === b.songId);
   if (!song) return fail('That song is not part of this send.', 403);
-  const { data: p } = await db.from('projects').select('title').eq('id', up.project_id).single();
+  const p = { title: await sendTitle(db, up) };
 
   try {
     const folder = await dropboxFolder(up.artist, p?.title, song.title, up.created_at);

@@ -1,4 +1,5 @@
 import { limit } from '@/lib/ratelimit';
+import { sendTitle } from '@/lib/heldsend';
 import { admin, json, fail, dropboxFolder, dropboxPath, dropboxChunk } from '@/lib/server';
 
 export const runtime = 'nodejs';
@@ -38,7 +39,7 @@ export async function POST(req) {
       catch (e) { if (!/incorrect_offset/.test(e.message)) throw e; } // a retry of a piece that already arrived
       return json({ ok: true });
     }
-    const { data: p } = await db.from('projects').select('title').eq('id', up.project_id).single();
+    const p = { title: await sendTitle(db, up) };
     const folder = await dropboxFolder(up.artist, p?.title, song.title, up.created_at);
     const r = await dropboxChunk('finish', { session, offset, path: dropboxPath(folder, name), data });
     return json({ ok: true, path: r.path_display });

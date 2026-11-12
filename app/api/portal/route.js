@@ -1,5 +1,5 @@
 import { limit } from '@/lib/ratelimit';
-import { admin, userFrom, canSee, json, fail, setConfig } from '@/lib/server';
+import { admin, userFrom, canSee, isEngineer, json, fail, setConfig } from '@/lib/server';
 import { TITLES } from '@/lib/titles';
 import { fetchSpotifyArtist, spotifyArtistId } from '@/lib/spotify';
 
@@ -23,9 +23,11 @@ export async function POST(req) {
   if (TITLES.includes(b.who)) await setConfig(`sender_title:${email}`, b.who).catch(() => {});
   const deadline = /^\d{4}-\d{2}-\d{2}$/.test(String(b.deadline || '')) ? b.deadline : null; // client's "need it by" becomes the song's due date
   const db = admin();
+  const user = await userFrom(req);
+  // a send from anyone but the engineer waits in the Portal inbox: nothing lands on a project until the engineer adds it
+  const engineer = !!user && (await isEngineer(user));
   let project;
   if (b.projectId) {
-    const user = await userFrom(req);
     const { data: p } = await db.from('projects').select('*').eq('id', b.projectId).single();
     // a project's own Portal link lets anyone with it send straight in; otherwise you need to be on the team
     const viaLink = p && b.portalToken && p.settings?.portal_token && b.portalToken === p.settings.portal_token;
@@ -35,11 +37,13 @@ export async function POST(req) {
     project = p;
     if (!artist) artist = p.artist || '';
     if (!name) name = 'Send link';
+    if (!engineer) return holdSend(db, { b, project, name, email, phone, artist, songs, deadline });
     const patch = {};
     if (phone && !p.phone) patch.phone = phone;
     if (!p.contact_name && name !== 'Send link') patch.contact_name = name;
     if (Object.keys(patch).length) await db.from('projects').update(patch).eq('id', p.id);
   } else {
+    if (!engineer) return holdSend(db, { b, project: null, name, email, phone, artist, songs, deadline });
     const t = b.project || {};
     const fallback = songs.length === 1 ? String(songs[0].title).trim() : `${artist} – ${songs.length} songs`;
     const title = (String(t.title || '').trim() || fallback).slice(0, 120);
@@ -94,4 +98,31 @@ export async function POST(req) {
   }
 
   return json({ uploadId: up.id, projectId: project.id, projectTitle: project.title, songs: out });
+}
+
+const songInfo = (s, deadline) => ({
+  ...(Number(s.bpm) ? { bpm: Number(s.bpm) } : {}),
+  ...(s.key ? { musical_key: String(s.key).slice(0, 40) } : {}),
+  ...(s.ref ? { reference: String(s.ref).slice(0, 500) } : {}),
+  ...(s.notes ? { artist_notes: String(s.notes).slice(0, 2000) } : {}),
+  ...(deadline ? { eta: deadline } : {}),
+});
+
+// Held send: only an uploads row (files still go to Dropbox). The engineer's "Add to projects" makes the project and songs.
+async function holdSend(db, { b, project, name, email, phone, artist, songs, deadline }) {
+  const t = b.project || {};
+  const fallback = songs.length === 1 ? String(songs[0].title).trim() : `${artist} – ${songs.length} songs`;
+  const title = project ? project.title : (String(t.title || '').trim() || fallback).slice(0, 120);
+  const hold = {
+    title, type: t.type || (songs.length <= 1 ? 'Single' : songs.length <= 6 ? 'EP' : 'Album'), release: t.release || null,
+    seed: Number(t.seed) || Math.floor(Math.random() * 1e9), spotify: b.spotify ? String(b.spotify).slice(0, 300) : null,
+  };
+  const entries = songs.map((s, i) => ({ songId: `h${i + 1}`, title: String(s.title).trim().slice(0, 120), held: true, hold, info: songInfo(s, deadline), files: 0, bytes: 0 }));
+  const { data: up, error } = await db.from('uploads').insert({
+    project_id: project?.id || null, name, email: email || null, phone: phone || null, artist,
+    message: [deadline ? `Needed by ${deadline}.` : '', String(b.message || '')].filter(Boolean).join(' ').slice(0, 2000),
+    songs: entries,
+  }).select('id').single();
+  if (error) return fail(error.message, 500);
+  return json({ uploadId: up.id, projectId: null, projectTitle: title, held: true, songs: entries.map((e) => ({ songId: e.songId, title: e.title })) });
 }

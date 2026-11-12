@@ -189,10 +189,11 @@ export default function Portal() {
             <Cover seed={mode === 'new' ? seed : project?.seed} path={mode === 'new' ? null : project?.cover_path} size={400} />
             <div>
               <h2 className="up">You're set up</h2>
+              {result.held ? <p>Your engineer got {result.files} file{result.files > 1 ? 's' : ''} ({fmtBytes(result.bytes)}) for {result.projectTitle}. They’ll add it to CTRL ROOM, and you’ll see it there once they do.</p> : <>
               <p>{result.projectTitle} has {result.songs.length} song{result.songs.length > 1 ? 's' : ''} and {result.files} file{result.files > 1 ? 's' : ''} ({fmtBytes(result.bytes)}) in the CTRL ROOM.
-                {session ? ' Your project page shows every step from here.' : ` Sign in with ${f.email} to follow progress and hear every mix.`}{f.phone ? ` You'll get a text at ${f.phone} when a mix is ready.` : ''}</p>
+                {session ? ' Your project page shows every step from here.' : ` Sign in with ${f.email} to follow progress and hear every mix.`}{f.phone ? ` You'll get a text at ${f.phone} when a mix is ready.` : ''}</p></>}
               <div className="dzbtns">
-                {session ? <a className="btn primary" href={`${appBase()}/p/${result.projectId}`}>Open the project</a> : <a className="btn primary" href={`${appBase()}/signup?email=${encodeURIComponent(f.email)}&next=${encodeURIComponent(`/p/${result.projectId}`)}`}>Create an account to follow along</a>}
+                {result.held ? null : session ? <a className="btn primary" href={`${appBase()}/p/${result.projectId}`}>Open the project</a> : <a className="btn primary" href={`${appBase()}/signup?email=${encodeURIComponent(f.email)}&next=${encodeURIComponent(`/p/${result.projectId}`)}`}>Create an account to follow along</a>}
                 <button className="btn" onClick={() => { setSongs([blank()]); setState('idle'); setF({ ...f, message: '' }); }}>Send more files</button>
               </div>
             </div>
@@ -253,7 +254,7 @@ export default function Portal() {
                 <label htmlFor="fDue">Need it by <span className="opt">optional</span></label>
                 <input id="fDue" type="date" min={todayISO()} value={f.deadline} onChange={set('deadline')} />
               </div>
-              {target && <p className="portaltarget">Sending to <b>{target.title}</b>{target.artist ? <> · {target.artist}</> : null}. Your files go straight into this project.{target.songs?.length ? <> Songs here: {target.songs.slice(0, 8).join(', ')}{target.songs.length > 8 ? '…' : ''}. Use the same name to add to one.</> : null}</p>}
+              {target && <p className="portaltarget">Sending to <b>{target.title}</b>{target.artist ? <> · {target.artist}</> : null}. Your files go to your engineer for this project.{target.songs?.length ? <> Songs here: {target.songs.slice(0, 8).join(', ')}{target.songs.length > 8 ? '…' : ''}. Use the same name to add to one.</> : null}</p>}
               {!target && session && projects.filter((p) => !p.archived).length > 0 && (
                 <div className="fld addto">
                   <label htmlFor="fAddTo">Add to</label>

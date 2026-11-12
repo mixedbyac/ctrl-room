@@ -55,7 +55,7 @@ export default function Inbox() {
     const sb = supabase();
     await sb.from('uploads').update({ downloaded_at: new Date().toISOString(), archived: true }).eq('id', u.id); // downloaded = done: straight to Archived
     for (const s of u.songs || []) {
-      if (!s.files) continue;
+      if (!s.files || s.held) continue;
       await sb.from('songs').update({ downloaded_at: todayISO() }).eq('id', s.songId);
       let texted = false;
       try { texted = (await api('/api/sms', { songId: s.songId, body: 'Downloaded your files. Everything looks good.' })).sent; } catch {}
@@ -100,6 +100,13 @@ export default function Inbox() {
       if (folder) window.open(`https://www.dropbox.com/home${folder.split('/').map(encodeURIComponent).join('/')}`, '_blank');
     }
   };
+  // a client's send waits here: nothing shows on a project until you add it
+  const place = async (u) => {
+    setDl((d) => ({ ...d, [`a${u.id}`]: 1 })); setMsg('');
+    try { await api('/api/portal/accept', { uploadId: u.id }); await load(); try { window.dispatchEvent(new Event('ctrl-room:changed')); } catch {} }
+    catch (e) { setMsg(e.message); }
+    setDl((d) => { const n = { ...d }; delete n[`a${u.id}`]; return n; });
+  };
   const archive = async (u, on) => {
     setMsg('');
     const { error } = await supabase().from('uploads').update({ archived: on }).eq('id', u.id);
@@ -137,12 +144,13 @@ export default function Inbox() {
             <article key={u.id} className="ucard">
               <Cover seed={u.projects?.seed} path={u.projects?.cover_path} size={120} />
               <div style={{ minWidth: 0 }}>
-                <h3 className="ttl">{u.projects?.title || 'Project'}{!u.downloaded_at && <span className="new">NEW</span>}</h3>
+                <h3 className="ttl">{u.projects?.title || u.songs?.[0]?.hold?.title || 'Project'}{!u.downloaded_at && <span className="new">NEW</span>}</h3>
+                {u.songs?.some((s) => s.held) && <div className="m heldnote">Not on your projects yet{u.projects ? ' · adds to this project' : ' · makes a new project'}</div>}
                 <div className="m">{u.name} · {u.artist}{u.phone ? ` · ${u.phone}` : ''} · {u.email} · {ago(u.created_at)}</div>
                 {u.message && <p className="msgq">“{u.message}”</p>}
                 <ul className="songsent">
                   {(u.songs || []).map((s) => (
-                    <li key={s.songId}><b><Link href={`/s/${s.songId}`}>{s.title}</Link></b><span className="m">{s.files ? `${s.files} files · ${fmtBytes(s.bytes)}` : 'No files yet'}</span>
+                    <li key={s.songId}><b>{s.held ? s.title : <Link href={`/s/${s.songId}`}>{s.title}</Link>}</b><span className="m">{s.files ? `${s.files} files · ${fmtBytes(s.bytes)}` : 'No files yet'}</span>
                       {s.files && s.folder ? <span className="path">Dropbox › {s.folder.replace(/^\//, '').replace(/\//g, ' / ')}</span> : null}</li>
                   ))}
                 </ul>
@@ -151,7 +159,8 @@ export default function Inbox() {
                 {(u.songs || []).some((s) => s.files) && <button className={`btn small ${u.downloaded_at ? '' : 'primary'}`} onClick={() => download(u)} disabled={!!dl[u.id]}>
                   {dl[u.id] || <><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ verticalAlign: '-2px', marginRight: 6 }}><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>Download</>}</button>}
                 {u.downloaded_at ? <span className="m">Downloaded {ago(u.downloaded_at)}</span> : <button className="btn small quiet" onClick={() => markDownloaded(u)}>Mark downloaded</button>}
-                {u.projects && <Link className="btn small" href={`/p/${u.projects.id}`}>Open project</Link>}
+                {u.songs?.some((s) => s.held) ? <button className="btn small primary" onClick={() => place(u)} disabled={!!dl[`a${u.id}`]}>{dl[`a${u.id}`] ? 'Adding…' : '+ Add to projects'}</button>
+                  : u.projects && <Link className="btn small" href={`/p/${u.projects.id}`}>Open project</Link>}
                 <button className="btn small quiet" onClick={() => archive(u, !u.archived)}>{u.archived ? 'Move to inbox' : 'Archive'}</button>
               </div>
             </article>

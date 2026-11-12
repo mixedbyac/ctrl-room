@@ -12,6 +12,24 @@ export async function POST(req) {
   const b = await req.json().catch(() => null);
   if (!b?.songId || !['start', 'done'].includes(b.step)) return fail('Missing details.');
   const db = admin();
+  // a held Portal send (songId h1, h2…): keep the demo with the send; it becomes the Demo version once the engineer adds the send
+  if (b.uploadId && /^h\d+$/.test(String(b.songId))) {
+    const { data: up } = await db.from('uploads').select('id, songs, created_at').eq('id', b.uploadId).maybeSingle();
+    const entry = (up?.songs || []).find((s) => s.songId === b.songId && s.held);
+    if (!entry || Date.now() - new Date(up.created_at).getTime() > 24 * 3600 * 1000) return fail('You don’t have access to this song.', 403);
+    const base = `held/${up.id}/${entry.songId}/demo-`;
+    if (b.step === 'start') {
+      const safe = String(b.name || 'demo').replace(/[^\w.\- ]+/g, '_').slice(-80);
+      const path = `${base}${Date.now()}-${safe}`;
+      const { data, error } = await db.storage.from('mixes').createSignedUploadUrl(path);
+      if (error) return fail(error.message, 500);
+      return json({ path, token: data.token });
+    }
+    if (!String(b.path || '').startsWith(base)) return fail('That file isn’t part of this song.', 400);
+    const songs = up.songs.map((s) => (s.songId === entry.songId ? { ...s, demo: { path: b.path, stats: b.stats || {}, info: b.info || {} } } : s));
+    await db.from('uploads').update({ songs }).eq('id', up.id);
+    return json({ id: null, label: 'Demo' });
+  }
   const { data: song } = await db.from('songs').select('id, project_id, title').eq('id', b.songId).maybeSingle();
   if (!song) return fail('Unknown song.', 404);
 

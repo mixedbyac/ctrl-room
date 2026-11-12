@@ -26,7 +26,7 @@ export async function POST(req) {
   const songs = (up.songs || []).filter((s) => s.files);
   try {
     for (const s of songs) {
-      const folder = s.folder || (await dropboxFolder(up.artist, up.projects?.title, s.title, up.created_at));
+      const folder = s.folder || (await dropboxFolder(up.artist, up.projects?.title || s.hold?.title, s.title, up.created_at));
       const songDir = folder.split('/').pop();
       let r = await dropboxApi('files/list_folder', { path: folder, recursive: true, limit: 2000 });
       const entries = [...r.entries];

@@ -31,6 +31,7 @@ export default function VersionStack({ song, project, versions, noteCounts = {},
   const latest = latestMix(versions), active = currentMix(song, versions);
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState('');
+  const [editing, setEditing] = useState(null); // `${versionId}:name` or `:label` while renaming from the ⋯ menu
   const [menu, setMenu] = useState(null);
   const [just, setJust] = useState([]);
   const file = useRef(null);
@@ -140,17 +141,20 @@ export default function VersionStack({ song, project, versions, noteCounts = {},
             onKeyDown={(e) => { if (e.key === 'Enter' && e.target === e.currentTarget) play(v); }} aria-label={`Play ${v.label}`}>
             <span className="vs-node" aria-hidden="true">{on && pl.playing ? <span className="eq"><span /><span /><span /></span> : null}</span>
             <span className="vs-main">
-              {eng ? <InlineText value={name} onSave={(t) => save(v, { note: t || null }, 'Saved.')} width={14} label="Version name" className="vs-name" /> : <b className="vs-name">{name}</b>}
+              {/* clicking the name plays it; renaming lives in the ⋯ menu */}
+              {eng && editing === `${v.id}:name` ? <InlineText autoFocus value={name} onSave={(t) => save(v, { note: t || null }, 'Saved.')} onDone={() => setEditing(null)} width={14} label="Version name" className="vs-name" /> : <b className="vs-name">{name}</b>}
               <small>{[isDemo(v) ? 'Demo' : v.id === active?.id ? (song.active_version ? 'Active' : 'Latest') : '', song.approved_version === v.id ? 'Approved' : '', shortDate(v.created_at), v.duration ? mmss(v.duration) : ''].filter(Boolean).join(' · ')}<QualityBadge v={v} short /></small>
             </span>
             <Link className={`vs-notes ${n ? '' : 'none'}`} href={`/s/${song.id}?v=${v.id}#notes`} onClick={(e) => e.stopPropagation()} title={n ? `${n} note${n > 1 ? 's' : ''}` : 'No notes yet'}><NoteIcon /><span>{n}</span></Link>
-            <span className="vs-label" onClick={(e) => e.stopPropagation()}>{eng ? <InlineText value={v.label} onSave={(t) => rename(v, t)} width={3} label={`Rename ${v.label}`} className="vs-lab" /> : <span className="mono">{v.label}</span>}</span>
+            <span className="vs-label" onClick={(e) => { if (editing === `${v.id}:label`) e.stopPropagation(); }}>{eng && editing === `${v.id}:label` ? <InlineText autoFocus value={v.label} onSave={(t) => rename(v, t)} onDone={() => setEditing(null)} width={3} label={`Rename ${v.label}`} className="vs-lab" /> : <span className="mono">{v.label}</span>}</span>
             <span className="vs-moreWrap" onClick={(e) => e.stopPropagation()}>
               <button className="vs-more" aria-label="More" onClick={() => setMenu(menu === v.id ? null : v.id)}>⋯</button>
               {menu === v.id && (
                 <div className="vs-menu" role="menu">
                   <button role="menuitem" onClick={() => { setMenu(null); play(v); }}>{on && pl.playing ? 'Pause' : 'Play'}</button>
                   <Link role="menuitem" href={`/s/${song.id}?v=${v.id}`}>Open with notes</Link>
+                  {eng && <button role="menuitem" onClick={() => { setMenu(null); setEditing(`${v.id}:name`); }}>Rename</button>}
+                  {eng && <button role="menuitem" onClick={() => { setMenu(null); setEditing(`${v.id}:label`); }}>Change number ({v.label})</button>}
                   {canEdit && !isDemo(v) && v.id !== active?.id && <button role="menuitem" onClick={() => reorder([v.id, ...list.filter((x) => !isDemo(x) && x.id !== v.id).map((x) => x.id)])}>Make active (move to top)</button>}
                   {canEdit && !isDemo(v) && list.filter((x) => !isDemo(x)).length > 1 && <>
                     {list.filter((x) => !isDemo(x))[0]?.id !== v.id && <button role="menuitem" onClick={() => move(v, -1)}>Move up</button>}

@@ -398,7 +398,7 @@ function Notes({ notes, reactions, v, versions, time, playing, seek, setVid, eng
         </span>}
       </div>
       <div className="composer">
-        <textarea rows={2} value={body} placeholder={mode === 'time' ? 'Comment on this moment, like “love the delay on the guitar here.”' : 'Comment on the whole mix, like “overall it could be louder.”'}
+        <textarea rows={2} value={body} placeholder={mode === 'time' ? `Leave a comment at ${fmt(at)}…` : 'Leave a comment on the whole mix…'}
           onChange={(e) => { setBody(e.target.value); if (mode === 'time' && pinned == null && e.target.value.trim()) setPinned(time); if (!e.target.value.trim()) { setPinned(null); setEnd(null); } }}
           onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) post(); }} aria-label="Comment" />
         <div className="row2">
@@ -412,7 +412,7 @@ function Notes({ notes, reactions, v, versions, time, playing, seek, setVid, eng
             {mode === 'time' && pinned != null && <button className="repin" onClick={() => { setPinned(time); setEnd(null); }}>Start from now</button>}
           </span>
           {eng && <label className="mailart" title="Replies to the artist's notes are always emailed to them"><input type="checkbox" checked={mailArtist} onChange={(e) => { setMailArtist(e.target.checked); setEmailArtist(e.target.checked); }} /> Email the artist</label>}
-          <button className="post" onClick={post} disabled={!body.trim() || busy}>{mode === 'time' ? `Post at ${fmt(at)}${end != null && end > at ? `–${fmt(end)}` : ''}` : 'Post'}</button>
+          <button className="csend" onClick={post} disabled={!body.trim() || busy} aria-label={mode === 'time' ? `Post at ${fmt(at)}` : 'Post'} title={mode === 'time' ? `Post at ${fmt(at)}${end != null && end > at ? `–${fmt(end)}` : ''}` : 'Post'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6" /></svg></button>
         </div>
       </div>
       {mailed && <p className="toast-inline">{mailed}</p>}

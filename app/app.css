@@ -2262,3 +2262,15 @@ body::after {
 }
 @media (prefers-reduced-motion: reduce) { .side .navitem, .side .navitem * { transition: none !important; transform: none !important; } }
 .portalhost .ownpb { display: none; } /* sendfileshere.com already adds one at the bottom */
+
+/* song rows, quieter: a "Comment" pill shows on hover; the versions badge turns into a white circle when open */
+.rcomment { border-radius: 999px; }
+.rcomment .rclabel { font-style: normal; font-size: 12.5px; font-weight: 600; display: none; }
+.row:hover .rcomment, .rcomment:focus-visible { background: rgba(255,255,255,.07); opacity: 1; }
+.row:hover .rcomment .rclabel, .rcomment:focus-visible .rclabel { display: inline; }
+.row:not(:hover) .rcomment.none { opacity: 0; }
+@media (hover: none) { .row:not(:hover) .rcomment.none { opacity: .55; } }
+.vstackbtn { background: none; border-radius: 999px; padding: 4px 8px; }
+.vstackbtn:hover { background: rgba(255,255,255,.07); }
+.vstackbtn.on { width: 32px; height: 32px; padding: 0; justify-content: center; background: #f2f2f4; color: #111; }
+.vstackbtn.on span { display: none; }

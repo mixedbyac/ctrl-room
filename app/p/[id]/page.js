@@ -300,16 +300,10 @@ export default function ProjectPage() {
                   ? <RowRename song={s} onDone={(t) => renameSong(s, t)} />
                   : <span className="t ttl">{s.title}{last && isDemo(last) && <em className="rdemo">Demo</em>}</span>}<span className="rsub"><span className={`dot ${s.status}`}>{sub}</span>{last ? <span>· {shortDate(last.created_at)}</span> : null}</span></Link>
                 {cols.map((c) => cell[c.k])}
-                {canEdit && (
-                  <span className="rtools">
-                    <button onClick={() => moveSong(i, -1)} disabled={i === 0} aria-label={`Move ${s.title} up`} title="Move up">↑</button>
-                    <button onClick={() => moveSong(i, 1)} disabled={i === p.songs.length - 1} aria-label={`Move ${s.title} down`} title="Move down">↓</button>
-                    <button onClick={() => setRenaming(s.id)} disabled={renaming === s.id} aria-label={`Rename ${s.title}`} title="Rename">✎</button>
-                  </span>
-                )}
+                {canEdit && <span className="rtools" />}{/* move and rename live in the ⋯ menu (or drag the row) */}
                 <span className="rtrail">
                   {vs.length > 0 && (() => { const n = vs.reduce((m, v) => m + (noteCounts[v.id] || 0), 0); return (
-                    <button className={`rcomment ${n ? '' : 'none'}`} onClick={() => commentOn({ ...s, versions: vs })} aria-label={`Comment on ${s.title}${n ? ` (${n} so far)` : ''}`} title="Add a comment"><CommentIcon />{n ? <span>{n}</span> : null}</button>); })()}
+                    <button className={`rcomment ${n ? '' : 'none'}`} onClick={() => commentOn({ ...s, versions: vs })} aria-label={`Comment on ${s.title}${n ? ` (${n} so far)` : ''}`} title="Add a comment"><CommentIcon /><em className="rclabel">Comment</em>{n ? <span>{n}</span> : null}</button>); })()}
                   <SongMenu song={s} versions={vs} project={p} eng={eng} canEdit={canEdit} queue={queue} onChange={load}
                     onPlay={() => playSong({ ...s, versions: vs })} onComment={() => commentOn({ ...s, versions: vs })}
                     onVersions={() => toggleStack(s.id)} versionsOpen={!!stacks[s.id]} onRename={() => setRenaming(s.id)}

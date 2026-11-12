@@ -1,5 +1,6 @@
 'use client';
 import NotifyClient from '@/components/NotifyClient';
+import { pingDownload } from '@/lib/pushclient';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { supabase, api } from '@/lib/supabase';
@@ -107,6 +108,15 @@ export default function VersionStack({ song, project, versions, noteCounts = {},
     if (v.storage_path) await sb.storage.from('mixes').remove([v.storage_path]).catch(() => {});
     setMsg(`Deleted ${v.label}.`); onChange?.();
   };
+  const download = async (v) => {
+    setMenu(null);
+    const ext = (v.file_name || v.storage_path || '').match(/\.[a-z0-9]{2,5}$/i)?.[0] || '';
+    const name = `${String(song.title || 'Untitled').replace(/[\\/:*?"<>|]+/g, '-').trim()} ${v.label}${ext}`;
+    const { data, error } = await supabase().storage.from('mixes').createSignedUrl(v.storage_path, 300, { download: name });
+    if (error) return setMsg(error.message);
+    const a = document.createElement('a'); a.href = data.signedUrl; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    pingDownload([v.id]);
+  };
   const add = async (files) => {
     const picked = Array.from(files || []).filter((f) => /\.(wav|aiff?|mp3|m4a|flac)$/i.test(f.name)).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
     if (!picked.length) return;
@@ -153,6 +163,7 @@ export default function VersionStack({ song, project, versions, noteCounts = {},
                 <div className="vs-menu" role="menu">
                   <button role="menuitem" onClick={() => { setMenu(null); play(v); }}>{on && pl.playing ? 'Pause' : 'Play'}</button>
                   <Link role="menuitem" href={`/s/${song.id}?v=${v.id}`}>Open with notes</Link>
+                  {v.storage_path && (eng || project?.allow_download) && <button role="menuitem" onClick={() => download(v)}>Download {v.label}</button>}
                   {eng && <button role="menuitem" onClick={() => { setMenu(null); setEditing(`${v.id}:name`); }}>Rename</button>}
                   {eng && <button role="menuitem" onClick={() => { setMenu(null); setEditing(`${v.id}:label`); }}>Change number ({v.label})</button>}
                   {canEdit && !isDemo(v) && v.id !== active?.id && <button role="menuitem" onClick={() => reorder([v.id, ...list.filter((x) => !isDemo(x) && x.id !== v.id).map((x) => x.id)])}>Make active (move to top)</button>}

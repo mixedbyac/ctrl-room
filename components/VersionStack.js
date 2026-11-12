@@ -22,7 +22,7 @@ const baseName = (n) => String(n || '').replace(/\.[a-z0-9]{2,5}$/i, '').replace
  * The versions of one song, opened under its row: play any version, see notes per version,
  * and (engineer) rename on hover, add a version, or delete one.
  */
-export default function VersionStack({ song, project, versions, noteCounts = {}, eng, canEdit = eng, viaAdmin = false, queue, onChange, selectedId = null, onSelect = null, title = null }) {
+export default function VersionStack({ song, project, versions, noteCounts = {}, eng, canEdit = eng, viaAdmin = false, queue, onChange, selectedId = null, onSelect = null, title = null, onOpen = null }) {
   const pl = usePlayer();
   const [local, setLocal] = useState(null); // order while you drag, before it saves
   useEffect(() => { setLocal(null); }, [versions, song.active_version]);
@@ -45,6 +45,7 @@ export default function VersionStack({ song, project, versions, noteCounts = {},
 
   const playing = (v) => pl.current?.song?.id === song.id && pl.current?.versionId === v.id;
   const play = (v) => {
+    if (onOpen) { onOpen(v); if (!playing(v)) { if (pl.current?.song?.id === song.id) pl.switchVersion(v.id) || (!pl.playing && pl.resume()); else pl.play({ songId: song.id, project, versionId: v.id, queue }); } return; } // project page: open its comments right here
     if (onSelect && !playing(v)) { onSelect(v.id); return; } // song page: switch at the same spot (keeps playing if it was)
     if (playing(v)) return pl.toggle();
     if (pl.current?.song?.id === song.id) return pl.switchVersion(v.id) || (!pl.playing && pl.resume());
@@ -155,7 +156,7 @@ export default function VersionStack({ song, project, versions, noteCounts = {},
               {eng && editing === `${v.id}:name` ? <InlineText autoFocus value={name} onSave={(t) => save(v, { note: t || null }, 'Saved.')} onDone={() => setEditing(null)} width={14} label="Version name" className="vs-name" /> : <b className="vs-name">{name}</b>}
               <small>{[isDemo(v) ? 'Demo' : v.id === active?.id ? (song.active_version ? 'Active' : 'Latest') : '', song.approved_version === v.id ? 'Approved' : '', shortDate(v.created_at), v.duration ? mmss(v.duration) : ''].filter(Boolean).join(' · ')}<QualityBadge v={v} short /></small>
             </span>
-            <Link className={`vs-notes ${n ? '' : 'none'}`} href={`/s/${song.id}?v=${v.id}#notes`} onClick={(e) => e.stopPropagation()} title={n ? `${n} note${n > 1 ? 's' : ''}` : 'No notes yet'}><NoteIcon /><span>{n}</span></Link>
+            <Link className={`vs-notes ${n ? '' : 'none'}`} href={`/s/${song.id}?v=${v.id}#notes`} onClick={(e) => { e.stopPropagation(); if (onOpen) { e.preventDefault(); onOpen(v); } }} title={n ? `${n} note${n > 1 ? 's' : ''}` : 'No notes yet'}><NoteIcon /><span>{n}</span></Link>
             <span className="vs-label" onClick={(e) => { if (editing === `${v.id}:label`) e.stopPropagation(); }}>{eng && editing === `${v.id}:label` ? <InlineText autoFocus value={v.label} onSave={(t) => rename(v, t)} onDone={() => setEditing(null)} width={3} label={`Rename ${v.label}`} className="vs-lab" /> : <span className="mono">{v.label}</span>}</span>
             <span className="vs-moreWrap" onClick={(e) => e.stopPropagation()}>
               <button className="vs-more" aria-label="More" onClick={() => setMenu(menu === v.id ? null : v.id)}>⋯</button>

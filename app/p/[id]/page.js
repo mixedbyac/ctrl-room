@@ -9,6 +9,7 @@ import Credit, { useProfiles } from '@/components/Credit';
 import { TitleInput, ArtistPicker, CaseButtons, CASES } from '@/components/TitleCase';
 import QualityBadge from '@/components/QualityBadge';
 import VersionStack, { StackIcon } from '@/components/VersionStack';
+import TrackView from '@/components/TrackView';
 import { InvoicePanel, InvoiceNotice, useInvoices, lockingInvoice } from '@/components/Invoices';
 import ShareButton from '@/components/ShareButton';
 import DownloadAll from '@/components/DownloadAll';
@@ -61,6 +62,30 @@ export default function ProjectPage() {
   const toggleSel = (sid) => setSel((x) => { const n = new Set(x); n.has(sid) ? n.delete(sid) : n.add(sid); return n; });
   const [noteCounts, setNoteCounts] = useState({});
   const toggleStack = (sid) => setStacks((x) => ({ ...x, [sid]: !x[sid] }));
+  // a song's comments, right on this page (?t=<song>&v=<version>): Back returns to the list where you were
+  const [track, setTrack] = useState(null); // { songId, versionId }
+  const listY = useRef(0);
+  useEffect(() => {
+    const read = () => { const q = new URLSearchParams(window.location.search); const t = q.get('t'); setTrack(t ? { songId: t, versionId: q.get('v') } : null); };
+    read();
+    window.addEventListener('popstate', read);
+    return () => window.removeEventListener('popstate', read);
+  }, []);
+  const openTrack = (songId, versionId = null) => {
+    listY.current = window.scrollY;
+    const q = new URLSearchParams(window.location.search); q.set('t', songId); if (versionId) q.set('v', versionId); else q.delete('v');
+    window.history.pushState(null, '', `${window.location.pathname}?${q}`);
+    setTrack({ songId, versionId }); window.scrollTo(0, 0);
+  };
+  const closeTrack = () => {
+    if (new URLSearchParams(window.location.search).get('t')) window.history.back(); else setTrack(null);
+    setTimeout(() => window.scrollTo(0, listY.current), 30);
+  };
+  const trackVersion = (versionId) => {
+    setTrack((t) => (t ? { ...t, versionId } : t));
+    const q = new URLSearchParams(window.location.search); if (!q.get('t')) return; q.set('v', versionId);
+    window.history.replaceState(null, '', `${window.location.pathname}?${q}`);
+  };
   const renameSong = async (song, raw) => {
     setRenaming(null);
     const t = String(raw || '').trim();
@@ -191,6 +216,16 @@ export default function ProjectPage() {
   const projectPlaying = pl.playing && pl.current?.project?.id === p.id;
   const crumbs = eng ? [{ label: 'Home', href: '/' }, { label: p.title }] : [{ label: 'Projects', href: '/' }, { label: p.title }];
 
+  if (track && p.songs.some((x) => x.id === track.songId)) return (
+    <>
+      <TopBar crumbs={[...crumbs.slice(0, -1), { label: p.title, href: `/p/${p.id}` }, { label: p.songs.find((x) => x.id === track.songId)?.title || 'Song' }]} />
+      <section className="page">
+        <TrackView key={track.songId} songId={track.songId} versionId={track.versionId} project={p} queue={queue} onBack={closeTrack} onVersion={trackVersion}
+          locked={!eng && !!lockingInvoice(inv.list)} onLocked={() => { closeTrack(); }} />
+      </section>
+    </>
+  );
+
   return (
     <>
       <TopBar crumbs={crumbs} />
@@ -303,15 +338,15 @@ export default function ProjectPage() {
                 {canEdit && <span className="rtools" />}{/* move and rename live in the ⋯ menu (or drag the row) */}
                 <span className="rtrail">
                   {vs.length > 0 && (() => { const n = vs.reduce((m, v) => m + (noteCounts[v.id] || 0), 0); return (
-                    <button className={`rcomment ${n ? '' : 'none'}`} onClick={() => commentOn({ ...s, versions: vs })} aria-label={`Comment on ${s.title}${n ? ` (${n} so far)` : ''}`} title="Add a comment"><CommentIcon /><em className="rclabel">Comment</em>{n ? <span>{n}</span> : null}</button>); })()}
+                    <button className={`rcomment ${n ? '' : 'none'}`} onClick={() => openTrack(s.id)} aria-label={`Comment on ${s.title}${n ? ` (${n} so far)` : ''}`} title="Add a comment"><CommentIcon /><em className="rclabel">Comment</em>{n ? <span>{n}</span> : null}</button>); })()}
                   <SongMenu song={s} versions={vs} project={p} eng={eng} canEdit={canEdit} queue={queue} onChange={load}
-                    onPlay={() => playSong({ ...s, versions: vs })} onComment={() => commentOn({ ...s, versions: vs })}
+                    onPlay={() => playSong({ ...s, versions: vs })} onComment={() => openTrack(s.id)}
                     onVersions={() => toggleStack(s.id)} versionsOpen={!!stacks[s.id]} onRename={() => setRenaming(s.id)}
                     onMove={(d) => moveSong(i, d)} index={i} count={p.songs.length}
                     onUpdate={eng ? () => { setUpdFor([s.id]); setPanel('update'); window.scrollTo({ top: 0, behavior: 'smooth' }); } : undefined} />
                 </span>
               </div>
-              {stacks[s.id] && <VersionStack song={s} project={p} versions={vs.map((v) => ({ ...v }))} noteCounts={noteCounts} eng={eng} canEdit={canEdit} viaAdmin={viaAdmin} queue={queue} onChange={load} />}
+              {stacks[s.id] && <VersionStack song={s} project={p} versions={vs.map((v) => ({ ...v }))} noteCounts={noteCounts} eng={eng} canEdit={canEdit} viaAdmin={viaAdmin} queue={queue} onChange={load} onOpen={(v) => openTrack(s.id, v.id)} />}
               </div>
             );
           }) : <div className="empty-state"><strong>No songs yet</strong>{eng ? 'Add a song above, or have the client send files through the Portal.' : 'Send your files through the Portal to get started.'}</div>}

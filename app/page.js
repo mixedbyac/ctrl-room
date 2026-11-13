@@ -12,7 +12,7 @@ import Cover from '@/components/Cover';
 import { artOf } from '@/lib/art';
 import ArtistName from '@/components/ArtistName';
 import { useNames, nameFor } from '@/components/Names';
-import { fmtDate, todayISO, addDaysISO, statusText, ago, mmss, fmtBytes, latestMix, mixesOf, nextLabel, stillDue } from '@/lib/format';
+import { fmtDate, todayISO, addDaysISO, statusText, ago, mmss, fmtBytes, latestMix, mixesOf, nextLabel, stillDue, lastMixAt, stillOpen } from '@/lib/format';
 
 export default function HomePage() {
   const { eng, session } = useApp();
@@ -41,7 +41,7 @@ function EngineerHome() {
     return () => window.removeEventListener('ctrl-room:new-project', go);
   }, []);
 
-  const loadProjects = () => selectWithVersions((V) => supabase().from('projects').select(`*, songs(*, ${V}(id,label,created_at), notes(id,resolved,from_client,parent_id))`).eq('archived', false).order('created_at', { ascending: false }))
+  const loadProjects = () => selectWithVersions((V) => supabase().from('projects').select(`*, songs(*, ${V}(id,label,created_at), notes(id,resolved,from_client,parent_id,created_at))`).eq('archived', false).order('created_at', { ascending: false }))
     .then(async ({ data }) => {
       setProjects(data || []);
       // a files-only twin of a real song (same name) gets folded into it, so Home and the song page agree
@@ -116,7 +116,7 @@ function EngineerHome() {
                 <span className="dw">
                   <span className={`dot ${s.status}`}>{s.eta < today ? `Overdue · ${fmtDate(s.eta)}` : mixesOf(s.versions).length ? nextLabel(s.versions) : 'First mix'}</span>
                   <span className="dsub">{statusText(s, s.versions)}</span>
-                  {(() => { const open = (s.notes || []).filter((n) => n.from_client && !n.resolved && !n.parent_id).length; return open ? <span className="dnotes" role="link" tabIndex={0} onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push(`/s/${s.id}?tab=notes`); }}>{open} open note{open > 1 ? 's' : ''} ›</span> : null; })()}
+                  {(() => { const since = lastMixAt(s.versions || []); const open = (s.notes || []).filter((n) => stillOpen(n, since)).length; return open ? <span className="dnotes" role="link" tabIndex={0} onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push(`/s/${s.id}?tab=notes`); }}>{open} open note{open > 1 ? 's' : ''} ›</span> : null; })()}
                 </span>
                 <span className="chev" aria-hidden="true">›</span>
               </Link>

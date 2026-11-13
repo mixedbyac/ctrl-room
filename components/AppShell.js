@@ -122,8 +122,20 @@ export default function AppShell({ children }) {
   const [noteCounts, setNoteCounts] = useState({});
   const countNotes = useCallback(() => {
     if (!session || !eng) return;
-    supabase().from('notes').select('songs(project_id)').eq('from_client', true).eq('resolved', false).is('parent_id', null).limit(5000)
-      .then(({ data }) => { const m = {}; (data || []).forEach((n) => { const id = n.songs?.project_id; if (id) m[id] = (m[id] || 0) + 1; }); setNoteCounts(m); }, () => {});
+    // only notes that came in after the song's newest mix: sending a new version clears its number
+    (async () => {
+      const sb = supabase();
+      const { data } = await sb.from('notes').select('song_id, created_at, songs(project_id)').eq('from_client', true).eq('resolved', false).is('parent_id', null).limit(5000);
+      const ids = [...new Set((data || []).map((n) => n.song_id))];
+      const last = {};
+      if (ids.length) {
+        const { data: vs } = await sb.from('versions').select('song_id, label, created_at').in('song_id', ids).limit(10000);
+        (vs || []).forEach((v) => { if (!/^demo\b/i.test(v.label || '') && v.created_at > (last[v.song_id] || '')) last[v.song_id] = v.created_at; });
+      }
+      const m = {};
+      (data || []).forEach((n) => { const id = n.songs?.project_id; if (id && (!last[n.song_id] || n.created_at >= last[n.song_id])) m[id] = (m[id] || 0) + 1; });
+      setNoteCounts(m);
+    })().catch(() => {});
   }, [session, eng]);
   useEffect(() => { countNotes(); }, [countNotes, pathname]);
   useLive(countNotes, { every: 45000 });

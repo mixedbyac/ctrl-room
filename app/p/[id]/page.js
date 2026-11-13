@@ -337,7 +337,7 @@ export default function ProjectPage() {
                 {canEdit && <span className="rtools" />}{/* move and rename live in the ⋯ menu (or drag the row) */}
                 <span className="rtrail">
                   {vs.length > 0 && (() => { const n = vs.reduce((m, v) => m + (noteCounts[v.id] || 0), 0); return (
-                    <button className={`rcomment ${n ? '' : 'none'}`} onClick={() => openTrack(s.id)} aria-label={`Comment on ${s.title}${n ? ` (${n} so far)` : ''}`} title="Add a comment"><CommentIcon /><em className="rclabel">Comment</em>{n ? <span>{n}</span> : null}</button>); })()}
+                    <button className={`rcomment ${n ? '' : 'none'}`} onClick={() => openTrack(s.id)} aria-label={`Comment on ${s.title}${n ? ` (${n} so far)` : ''}`}><CommentIcon />{n ? <span>{n}</span> : null}</button>); })()}
                   <SongMenu song={s} versions={vs} project={p} eng={eng} canEdit={canEdit} queue={queue} onChange={load}
                     onPlay={() => playSong({ ...s, versions: vs })} onComment={() => openTrack(s.id)}
                     onVersions={() => toggleStack(s.id)} versionsOpen={!!stacks[s.id]} onRename={() => setRenaming(s.id)}

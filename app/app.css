@@ -2267,9 +2267,9 @@ body::after {
 
 /* song rows, quieter: a "Comment" pill shows on hover; the versions badge turns into a white circle when open */
 .rcomment { border-radius: 999px; }
-.rcomment .rclabel { font-style: normal; font-size: 12.5px; font-weight: 600; display: none; }
-.row:hover .rcomment, .rcomment:focus-visible { background: rgba(255,255,255,.07); opacity: 1; }
-.row:hover .rcomment .rclabel, .rcomment:focus-visible .rclabel { display: inline; }
+.rcomment .rclabel { display: none; }
+.row:hover .rcomment, .rcomment:focus-visible { opacity: 1; }
+.rcomment:hover { background: rgba(255,255,255,.1); color: var(--ink); }
 .row:not(:hover) .rcomment.none { opacity: 0; }
 @media (hover: none) { .row:not(:hover) .rcomment.none { opacity: .55; } }
 .vstackbtn { background: none; border-radius: 999px; padding: 4px 8px; }

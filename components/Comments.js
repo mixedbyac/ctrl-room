@@ -123,6 +123,7 @@ function Comment({ n, replies, rx, nameOf, canResolve, canDelete, actions, seek,
   const [replying, setReplying] = useState(false);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
+  const [act, setAct] = useState(false); // phones: tap a comment to show its tools
   const name = nameOf(n);
   const send = async () => {
     if (!text.trim()) return;
@@ -131,7 +132,7 @@ function Comment({ n, replies, rx, nameOf, canResolve, canDelete, actions, seek,
     setBusy(false); setText(''); setReplying(false); setOpen(true);
   };
   return (
-    <li className={`cthread ${n.resolved && canResolve ? 'done' : ''}`}>
+    <li className={`cthread ${n.resolved && canResolve ? 'done' : ''} ${act ? 'act' : ''}`} onClick={(e) => { if (!e.target.closest('button,a,textarea,input')) setAct(!act); }}>
       <div className="chead">
         <Avatar name={name} />
         <b className="cname">{name}</b>

@@ -641,7 +641,7 @@ body.playing .lbg { animation: breathe 9s ease-in-out infinite; }
 .ctool svg { width: 15px; height: 15px; }
 .ctool:hover { background: rgba(255,255,255,.08); color: var(--ink); }
 .ctool.on { color: var(--ok, #72d39c); }
-@media (hover: none) { .ctools { position: static; opacity: 1; pointer-events: auto; margin-left: auto; background: none; border: 0; padding: 0; } }
+@media (hover: none) { .ctools { top: -4px; } .cthread.act > .chead .ctools, .cthread.act .creplyitem .ctools { opacity: 1; pointer-events: auto; } .cthread.act { background: rgba(255,255,255,.04); } }
 .creacts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
 .creact { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,.07); border: 1px solid transparent; font-size: 13px; color: var(--ink); }
 .creact b { font-size: 12px; font-weight: 600; }
@@ -2317,3 +2317,18 @@ body::after {
 }
 
 .navitem .navtitle { min-width: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* track view on phones: one back button, version list stays on screen, simple times under the waveform */
+.tvacts { position: relative; }
+@media (max-width: 700px) {
+  .tview > .tvtop > .tvback { display: none; }
+  .tvpickwrap { position: static; }
+  .tvmenu { left: 0; right: 0; width: auto; }
+  .tvmenu button { grid-template-columns: 46px minmax(0, 1fr) auto; }
+  .tview .times .fmtinfo { display: none; }
+  .tview .scrub { padding: 14px 14px 10px; }
+  .tvplay { top: 69px; width: 48px; height: 48px; }
+  .tview .ctext { font-size: 15px; }
+  .tview .cbody { padding-left: 0; }
+  .tview .chead { gap: 7px; }
+}

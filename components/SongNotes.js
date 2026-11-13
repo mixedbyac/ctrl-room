@@ -22,6 +22,12 @@ export function Scrub({ v, notes, time, dur, seek, eng, plays, header = null }) 
   });
   const xToT = (e) => { const r = wrap.current.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * dur; };
   const vNotes = notes.filter((n) => n.version_id === v?.id && n.t != null).sort((a, b) => a.t - b.t);
+  // markers that would sit on top of each other drop to a second (or third) row
+  const [w, setW] = useState(800);
+  useEffect(() => { const el = wrap.current; if (!el || typeof ResizeObserver === 'undefined') return; const ro = new ResizeObserver(() => setW(el.clientWidth || 800)); ro.observe(el); return () => ro.disconnect(); }, []);
+  const rowOf = [], ends = [];
+  vNotes.forEach((n) => { const x = dur ? (n.t / dur) * w : 0; let r = ends.findIndex((e) => x - e >= 24); if (r < 0) r = ends.length < 3 ? ends.length : ends.indexOf(Math.min(...ends)); ends[r] = x; rowOf.push(r); });
+  const rows = Math.max(1, ends.length);
   return (
     <div className="scrub">
       {header}
@@ -33,9 +39,9 @@ export function Scrub({ v, notes, time, dur, seek, eng, plays, header = null }) 
         <canvas ref={cv} />
         {hover != null && <div className="hovert mono" style={{ left: hover }}>{fmt((hover / (wrap.current?.getBoundingClientRect().width || 1)) * dur)}</div>}
       </div>
-      <div className="lane">
+      <div className="lane" style={rows > 1 ? { height: 24 + (rows - 1) * 20 } : undefined}>
         {dur > 0 && vNotes.map((n, i) => (
-          <button key={n.id} className={`mk ${n.resolved && eng ? 'done' : ''}`} style={{ left: `${(n.t / dur) * 100}%` }} title={`${fmt(n.t)} · ${n.body}`} onClick={() => seek(n.t)} aria-label={`Note ${i + 1} at ${fmt(n.t)}`}>{i + 1}</button>
+          <button key={n.id} className={`mk ${n.resolved && eng ? 'done' : ''}`} style={{ left: `${(n.t / dur) * 100}%`, top: 4 + rowOf[i] * 20 }} title={`${fmt(n.t)} · ${n.body}`} onClick={() => seek(n.t)} aria-label={`Note ${i + 1} at ${fmt(n.t)}`}>{i + 1}</button>
         ))}
       </div>
       <div className="times"><span className="mono">{fmt(time)}</span><span className="mono fmtinfo" title="Played straight from the uploaded file: no compression, no limiting, no volume changes."><QualityBadge v={v} size="md" showLossy />{" "}{describeFormat(v) ? <><b>{describeFormat(v)}</b> · {v.lossless === false ? 'as uploaded, no extra compression' : 'original, untouched'}</> : 'Original file, untouched'}{v?.peak_db != null ? ` · Peak ${v.peak_db} dBFS` : ''}</span><span className="mono">{fmt(dur)}</span></div>

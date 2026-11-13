@@ -219,7 +219,7 @@ export default function ProjectPage() {
     <>
       <TopBar crumbs={[...crumbs.slice(0, -1), { label: p.title, href: `/p/${p.id}` }, { label: p.songs.find((x) => x.id === track.songId)?.title || 'Song' }]} />
       <section className="page">
-        <TrackView key={track.songId} songId={track.songId} versionId={track.versionId} project={p} queue={queue} onBack={closeTrack} onVersion={trackVersion}
+        <TrackView key={track.songId} songId={track.songId} versionId={track.versionId} project={p} queue={queue} onBack={closeTrack} onVersion={trackVersion} onRenamed={load}
           locked={!eng && !!lockingInvoice(inv.list)} onLocked={() => { closeTrack(); }} />
       </section>
     </>
@@ -330,7 +330,7 @@ export default function ProjectPage() {
                 ) : <button className="rplay" onClick={() => vs.length && playSong({ ...s, versions: vs })} disabled={!vs.length} aria-label={vs.length ? `Play ${s.title}` : 'No mix yet'}>
                   <span className="num">{i + 1}</span><svg viewBox="0 0 24 24">{pl.current?.song?.id === s.id && pl.playing ? <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" /> : <path d="M7 4.5v15l13-7.5z" />}</svg>
                   <span className="eq"><span /><span /><span /></span></button>}
-                <Link className="ropen" href={`/s/${s.id}`} onClick={(e) => { if (selecting) { e.preventDefault(); toggleSel(s.id); return; } if (renaming === s.id) return e.preventDefault(); if (vs.length) { e.preventDefault(); playSong({ ...s, versions: vs }); } }}>{canEdit && renaming === s.id
+                <Link className="ropen" href={`/s/${s.id}`} onDoubleClick={(e) => { if (canEdit && !selecting) { e.preventDefault(); setRenaming(s.id); } }} title={canEdit ? 'Double-click to rename' : undefined} onClick={(e) => { if (selecting) { e.preventDefault(); toggleSel(s.id); return; } if (renaming === s.id) return e.preventDefault(); if (vs.length) { e.preventDefault(); playSong({ ...s, versions: vs }); } }}>{canEdit && renaming === s.id
                   ? <RowRename song={s} onDone={(t) => renameSong(s, t)} />
                   : <span className="t ttl">{s.title}{last && isDemo(last) && <em className="rdemo">Demo</em>}</span>}<span className="rsub"><span className={`dot ${s.status}`}>{sub}</span>{last ? <span>· {shortDate(last.created_at)}</span> : null}</span></Link>
                 {cols.map((c) => cell[c.k])}
@@ -340,7 +340,7 @@ export default function ProjectPage() {
                     <button className={`rcomment ${n ? '' : 'none'}`} onClick={() => openTrack(s.id)} aria-label={`Comment on ${s.title}${n ? ` (${n} so far)` : ''}`}><CommentIcon />{n ? <span>{n}</span> : null}</button>); })()}
                   <SongMenu song={s} versions={vs} project={p} eng={eng} canEdit={canEdit} queue={queue} onChange={load}
                     onPlay={() => playSong({ ...s, versions: vs })} onComment={() => openTrack(s.id)}
-                    onVersions={() => toggleStack(s.id)} versionsOpen={!!stacks[s.id]} onRename={() => setRenaming(s.id)}
+                    onVersions={() => toggleStack(s.id)} versionsOpen={!!stacks[s.id]} onRename={() => setTimeout(() => setRenaming(s.id), 30)}
                     onMove={(d) => moveSong(i, d)} index={i} count={p.songs.length}
                     onUpdate={eng ? () => { setUpdFor([s.id]); setPanel('update'); window.scrollTo({ top: 0, behavior: 'smooth' }); } : undefined} />
                 </span>
@@ -389,10 +389,14 @@ function Deadline({ p, eng, onSaved }) {
 /** Rename a song right in the tracklist, with the AA / Aa / A. / aa buttons. Enter saves, Esc cancels. */
 function RowRename({ song, onDone }) {
   const [v, setV] = useState(song.title);
+  const box = useRef(null);
+  const born = useRef(Date.now());
+  // opened from a menu: the click that closes the menu can steal focus, so grab it back for a moment instead of saving right away
+  useEffect(() => { const t = setTimeout(() => { box.current?.focus(); box.current?.select(); }, 60); return () => clearTimeout(t); }, []);
   return (
-    <span className="rowrename titleedit-wrap" onClick={(e) => e.preventDefault()}>
-      <input className="rowedit ttl" value={v} autoFocus maxLength={120} aria-label="Rename song" onChange={(e) => setV(e.target.value)} onFocus={(e) => e.target.select()}
-        onBlur={() => onDone(v)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } if (e.key === 'Escape') { setV(song.title); onDone(song.title); } }} />
+    <span className="rowrename titleedit-wrap" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} onPointerDown={(e) => e.stopPropagation()}>
+      <input ref={box} className="rowedit ttl" value={v} autoFocus maxLength={120} aria-label="Rename song" onChange={(e) => setV(e.target.value)} onFocus={(e) => e.target.select()}
+        onBlur={(e) => { if (Date.now() - born.current < 500) { const el = e.currentTarget; setTimeout(() => el.focus(), 0); return; } onDone(v); }} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } if (e.key === 'Escape') { setV(song.title); onDone(song.title); } }} />
       <CaseButtons value={v} onChange={setV} className="floating" />
     </span>
   );

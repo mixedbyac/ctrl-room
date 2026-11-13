@@ -2332,3 +2332,5 @@ body::after {
   .tview .cbody { padding-left: 0; }
   .tview .chead { gap: 7px; }
 }
+
+.tvtitles .tvtitle input, input.tvtitle { font-size: 22px; font-weight: 800; }

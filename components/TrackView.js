@@ -11,6 +11,7 @@ import { orderVersions, currentMix, isDemo } from '@/lib/format';
 import { pingDownload } from '@/lib/pushclient';
 import { StackIcon } from '@/components/VersionStack';
 import { Scrub, Notes } from '@/components/SongNotes';
+import InlineText from '@/components/InlineText';
 
 const PLAY = <path d="M7 4.5v15l13-7.5z" />;
 const PAUSE = <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" />;
@@ -19,7 +20,7 @@ const PAUSE = <path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" />;
  * One song, right inside the project page (like a "Listen" view): cover, title, a version picker,
  * the waveform with note markers, the comment box and the comments for that version.
  */
-export default function TrackView({ songId, versionId, project, queue, onBack, onVersion, locked = false, onLocked }) {
+export default function TrackView({ songId, versionId, project, queue, onBack, onVersion, locked = false, onLocked, onRenamed }) {
   const { eng, email, session } = useApp();
   const pl = usePlayer();
   const [song, setSong] = useState(null);
@@ -27,6 +28,7 @@ export default function TrackView({ songId, versionId, project, queue, onBack, o
   const [notes, setNotes] = useState([]);
   const [reactions, setReactions] = useState([]);
   const [pick, setPick] = useState(false);
+  const [naming, setNaming] = useState(false);
   const pickBox = useRef(null);
 
   const load = useCallback(async () => {
@@ -92,7 +94,10 @@ export default function TrackView({ songId, versionId, project, queue, onBack, o
         <Cover as="div" {...artOf(song, project)} size={160} className="tvart" />
         <div className="tvtitles">
           <span className="tveyebrow">{project.title}</span>
-          <b className="tvtitle">{song.title}</b>
+          {eng && naming
+            ? <InlineText autoFocus value={song.title} label="Rename song" width={24} className="tvtitle" onDone={() => setNaming(false)}
+                onSave={async (t) => { if (!t) return; await supabase().from('songs').update({ title: t }).eq('id', song.id); setSong((x) => ({ ...x, title: t })); onRenamed?.(); }} />
+            : <b className="tvtitle" onDoubleClick={() => eng && setNaming(true)} title={eng ? 'Double-click to rename' : undefined}>{song.title}</b>}
         </div>
         <div className="tvacts">
           {versions.length > 0 && (
@@ -110,6 +115,7 @@ export default function TrackView({ songId, versionId, project, queue, onBack, o
               )}
             </span>
           )}
+          {eng && <button className="tvicon" onClick={() => setNaming(true)} aria-label="Rename song" title="Rename song"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" /></svg></button>}
           {canDownload && <button className="tvicon" onClick={download} aria-label={`Download ${v.label}`} title={`Download ${v.label}`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg></button>}
           <Link className="tvicon" href={`/s/${song.id}${vid ? `?v=${vid}` : ''}`} title="Progress, updates and details" aria-label="Open the full song page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></svg></Link>
         </div>

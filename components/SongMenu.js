@@ -118,7 +118,6 @@ export default function SongMenu({ song, versions = [], project, eng, canEdit, q
               <dl className="sinfo-list">{info.map(([k, v]) => <div key={k}><dt>{k}</dt><dd className="mono">{v}</dd></div>)}</dl>
               <span className="smore2">
                 {has && onVersions && <button role="menuitem" onClick={() => { shut(); onVersions(); }}>{versionsOpen ? 'Hide versions' : `Versions (${versions.length})`}</button>}
-                {canEdit && onRename && <button role="menuitem" onClick={() => { shut(); onRename(); }}>Rename</button>}
                 {canEdit && onMove && index > 0 && <button role="menuitem" onClick={() => { shut(); onMove(-1); }}>Move up</button>}
                 {canEdit && onMove && index < count - 1 && <button role="menuitem" onClick={() => { shut(); onMove(1); }}>Move down</button>}
                 {!page && <Link role="menuitem" href={`/s/${song.id}`} onClick={shut}>All notes &amp; details</Link>}
@@ -127,6 +126,7 @@ export default function SongMenu({ song, versions = [], project, eng, canEdit, q
           ) : (
             <>
               <p className="spoptitle ttl">{song.title}</p>
+              {canEdit && onRename && <button role="menuitem" onClick={() => { shut(); onRename(); }}>Rename</button>}
               {has && <button role="menuitem" onClick={() => { shut(); setSharing(true); }}>Share</button>}
               {canDownload && <button role="menuitem" onClick={download}>Download {last.label}</button>}
               {eng && song.status === 'approved' && project?.id && <button role="menuitem" onClick={async () => { shut(); say('Sending the final file…'); try { const r = await api('/api/send-finals', { projectId: project.id, songIds: [song.id] }); say(`Sent ${song.title} to ${r.sent} ${r.sent === 1 ? 'person' : 'people'}.`); } catch (e) { say(e.message); } }}>Send file to artist</button>}

@@ -118,6 +118,15 @@ export default function AppShell({ children }) {
   }, [session, eng]);
   useEffect(() => { countPortal(); }, [countPortal, pathname]);
   useLive(countPortal, { every: 45000 });
+  // a little number on each project in the sidebar: the client's open notes on it
+  const [noteCounts, setNoteCounts] = useState({});
+  const countNotes = useCallback(() => {
+    if (!session || !eng) return;
+    supabase().from('notes').select('songs(project_id)').eq('from_client', true).eq('resolved', false).is('parent_id', null).limit(5000)
+      .then(({ data }) => { const m = {}; (data || []).forEach((n) => { const id = n.songs?.project_id; if (id) m[id] = (m[id] || 0) + 1; }); setNoteCounts(m); }, () => {});
+  }, [session, eng]);
+  useEffect(() => { countNotes(); }, [countNotes, pathname]);
+  useLive(countNotes, { every: 45000 });
   const value = { session, email: session?.user?.email || '', eng, projects, reloadProjects, signOut, canEditArtist };
 
   if (session && needMfa && !(portalHost || pathname.startsWith('/l/'))) {
@@ -164,7 +173,7 @@ export default function AppShell({ children }) {
             </div>
           )}
           {eng ? (
-            <ProjectFolders projects={live} pathname={pathname} onProjectMenu={setPmenu} reloadProjects={reloadProjects} router={router} />
+            <ProjectFolders projects={live} noteCounts={noteCounts} pathname={pathname} onProjectMenu={setPmenu} reloadProjects={reloadProjects} router={router} />
           ) : live.length > 0 && (
             <div>
               <p className="navlabel">Projects</p>

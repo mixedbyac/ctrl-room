@@ -13,7 +13,7 @@ const FolderIcon = ({ open }) => (
 );
 
 /** Engineer sidebar: projects with folders. The + adds a project or a folder; drag a project onto a folder to file it. */
-export default function ProjectFolders({ projects, pathname, onProjectMenu, reloadProjects, router }) {
+export default function ProjectFolders({ projects, noteCounts = {}, pathname, onProjectMenu, reloadProjects, router }) {
   const [folders, setFolders] = useState([]);
   const [open, setOpen] = useState(() => { try { return JSON.parse(localStorage.getItem('ctrl-room:folders-open') || '{}'); } catch { return {}; } });
   const [plus, setPlus] = useState(false);
@@ -70,7 +70,7 @@ export default function ProjectFolders({ projects, pathname, onProjectMenu, relo
     <Link key={p.id} className="navitem" href={`/p/${p.id}`} aria-current={pathname.startsWith(`/p/${p.id}`)} draggable
       onDragStart={(e) => { e.dataTransfer.setData('application/x-ctrl-project', p.id); e.dataTransfer.effectAllowed = 'move'; }}
       onContextMenu={(e) => { e.preventDefault(); onProjectMenu({ project: p, x: e.clientX, y: e.clientY, folders, moveTo }); }}>
-      <Cover seed={p.seed} path={p.cover_path} size={64} />{p.title}
+      <Cover seed={p.seed} path={p.cover_path} size={64} /><span className="navtitle">{p.title}</span>{noteCounts[p.id] > 0 && <span className="navcount" title={`${noteCounts[p.id]} open note${noteCounts[p.id] > 1 ? 's' : ''}`} aria-label={`${noteCounts[p.id]} open notes`}>{noteCounts[p.id]}</span>}
     </Link>
   );
   const known = new Set(folders.map((f) => f.id));

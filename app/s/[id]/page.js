@@ -259,7 +259,7 @@ function Decision({ eng, song, v, versions, notes, reload, setMsg, setTab }) {
   const sb = supabase();
   if (eng) {
     const ap = versions.find((x) => x.id === song.approved_version);
-    return <div className="decision"><span className="grow">{song.status === 'approved' ? <><b>{ap?.label} is signed off.</b> You're clear to print final masters.</> : song.status === 'changes' ? <><b>The client asked for changes.</b> Their notes are in the Notes tab.</> : `Waiting on the client to review ${latestMix(versions)?.label}.`}</span></div>;
+    return <div className="decision"><span className="grow">{song.status === 'approved' ? <><b>{ap?.label} is signed off.</b></> : song.status === 'changes' ? <><b>The client asked for changes.</b> Their notes are in the Notes tab.</> : `Waiting on the client to review ${latestMix(versions)?.label}.`}</span></div>;
   }
   const latest = latestMix(versions);
   if (isDemo(v)) {
